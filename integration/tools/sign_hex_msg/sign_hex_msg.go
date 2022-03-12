@@ -7,7 +7,7 @@ import (
 
 	"github.com/thetatoken/theta/common"
 	ks "github.com/thetatoken/theta/wallet/softwallet/keystore"
-	"github.com/thetatoken/thetasubchain/cmd/thetacli/cmd/utils"
+	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
 )
 
 //

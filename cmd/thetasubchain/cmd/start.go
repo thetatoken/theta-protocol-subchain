@@ -23,7 +23,7 @@ import (
 	"github.com/thetatoken/theta/rlp"
 	"github.com/thetatoken/theta/store/database/backend"
 	ks "github.com/thetatoken/theta/wallet/softwallet/keystore"
-	"github.com/thetatoken/thetasubchain/cmd/thetacli/cmd/utils"
+	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
 	"github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/thetasubchain/node"
 	"github.com/thetatoken/thetasubchain/snapshot"

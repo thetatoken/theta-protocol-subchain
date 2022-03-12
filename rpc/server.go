@@ -16,19 +16,18 @@ import (
 	"github.com/gorilla/mux"
 
 	log "github.com/sirupsen/logrus"
-	"golang.org/x/net/netutil"
-    "golang.org/x/net/websocket"
 	"github.com/spf13/viper"
-	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/util"
 	"github.com/thetatoken/theta/dispatcher"
 	"github.com/thetatoken/theta/rpc/lib/rpc-codec/jsonrpc2"
+	scom "github.com/thetatoken/thetasubchain/common"
+	"golang.org/x/net/netutil"
+	"golang.org/x/net/websocket"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	sld "github.com/thetatoken/thetasubchain/ledger"
 	smp "github.com/thetatoken/thetasubchain/mempool"
-
 )
 
 var logger *log.Entry
@@ -79,7 +78,7 @@ func NewThetaRPCServer(mempool *smp.Mempool, ledger *sld.Ledger, dispatcher *dis
 
 	t.router = mux.NewRouter()
 	t.router.Handle("/", &defaultHTTPHandler{})
-	t.router.Handle("/rpc", corsMiddleware(TimeoutHandler(jsonrpc2.HTTPHandler(s), viper.GetDuration(common.CfgRPCTimeoutSecs)*time.Second, "")))
+	t.router.Handle("/rpc", corsMiddleware(TimeoutHandler(jsonrpc2.HTTPHandler(s), viper.GetDuration(scom.CfgRPCTimeoutSecs)*time.Second, "")))
 	t.router.Handle("/ws", websocket.Handler(func(ws *websocket.Conn) {
 		s.ServeCodec(jsonrpc2.NewServerCodec(ws, s))
 	}))
@@ -117,8 +116,8 @@ func (t *ThetaRPCServer) mainLoop() {
 }
 
 func (t *ThetaRPCServer) serve() {
-	address := viper.GetString(common.CfgRPCAddress)
-	port := viper.GetString(common.CfgRPCPort)
+	address := viper.GetString(scom.CfgRPCAddress)
+	port := viper.GetString(scom.CfgRPCPort)
 	l, err := net.Listen("tcp", address+":"+port)
 	if err != nil {
 		logger.WithFields(log.Fields{"error": err}).Fatal("Failed to create listener")
@@ -127,7 +126,7 @@ func (t *ThetaRPCServer) serve() {
 	}
 	defer l.Close()
 
-	ll := netutil.LimitListener(l, viper.GetInt(common.CfgRPCMaxConnections))
+	ll := netutil.LimitListener(l, viper.GetInt(scom.CfgRPCMaxConnections))
 	t.listener = ll
 
 	logger.Info(t.server.Serve(ll))

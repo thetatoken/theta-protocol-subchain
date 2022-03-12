@@ -8,11 +8,11 @@ import (
 	"sync"
 	"time"
 
-    "github.com/thetatoken/theta/crypto"
-    "github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/hexutil"
-    "github.com/thetatoken/thetasubchain/cmd/thetacli/cmd/utils"
+	"github.com/thetatoken/theta/crypto"
+	"github.com/thetatoken/theta/ledger/types"
+	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
 
 	score "github.com/thetatoken/thetasubchain/core"
 	smp "github.com/thetatoken/thetasubchain/mempool"
@@ -131,7 +131,7 @@ type BroadcastRawTransactionArgs struct {
 }
 
 type BroadcastRawTransactionResult struct {
-	TxHash string            `json:"hash"`
+	TxHash string             `json:"hash"`
 	Block  *score.BlockHeader `json:"block",rlp:"nil"`
 }
 

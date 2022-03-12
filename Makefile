@@ -19,8 +19,8 @@ docker:
 install: gen_version release
 
 exe:
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -o theta.exe ./cmd/theta/
-	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -o thetacli.exe ./cmd/thetacli/
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -o thetasubchain.exe ./cmd/thetasubchain/
+	CGO_ENABLED=1 GOOS=windows GOARCH=amd64 CC=x86_64-w64-mingw32-gcc CXX=x86_64-w64-mingw32-g++ go build -o thetasubcli.exe ./cmd/thetasubcli/
 
 release:
 	go install ./cmd/...
