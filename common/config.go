@@ -143,6 +143,13 @@ const (
 
 	// CfgDebugLogSelectedEENPs to enable logging of selected eenps
 	CfgDebugLogSelectedEENPs = "debug.logSelectedEENPs"
+
+	// CfgRegisterContractAddress defines the register contract address
+	CfgRegisterContractAddress = "contract.register"
+	// CfgERC20ContractAddress defines the erc20 contract address
+	CfgERC20ContractAddress = "contract.erc20"
+	// CfgMainchainAdaptorURL defines the URL of the mainchain adaptor
+	CfgMainchainAdaptorURL = "contract.clientURL"
 )
 
 // Starting block heights of features.
@@ -222,3 +229,4 @@ func init() {
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
+

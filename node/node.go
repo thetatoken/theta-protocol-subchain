@@ -1,8 +1,17 @@
+/*
+ * @Author: your name
+ * @Date: 2022-03-09 04:36:05
+ * @LastEditTime: 2022-03-20 13:54:03
+ * @LastEditors: Please set LastEditors
+ * @Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
+ * @FilePath: /theta-protocol-subchain-poc/node/node.go
+ */
 package node
 
 import (
 	"context"
 	"log"
+	"math/big"
 	"reflect"
 	"sync"
 
@@ -16,12 +25,14 @@ import (
 	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/theta/store/kvstore"
 
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
 	sld "github.com/thetatoken/thetasubchain/ledger"
+	"github.com/thetatoken/thetasubchain/mainchainMonitor"
 	smp "github.com/thetatoken/thetasubchain/mempool"
-	snsync"github.com/thetatoken/thetasubchain/netsync"
+	snsync "github.com/thetatoken/thetasubchain/netsync"
 	srp "github.com/thetatoken/thetasubchain/report"
 	srpc "github.com/thetatoken/thetasubchain/rpc"
 	ssnst "github.com/thetatoken/thetasubchain/snapshot"
@@ -39,6 +50,7 @@ type Node struct {
 	Mempool          *smp.Mempool
 	RPC              *srpc.ThetaRPCServer
 	reporter         *srp.Reporter
+	MainchainMonitor *mainchainMonitor.MainchainMonitor
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -49,16 +61,20 @@ type Node struct {
 }
 
 type Params struct {
-	ChainID             string
-	PrivateKey          *crypto.PrivateKey
-	Root                *score.Block
-	NetworkOld          p2p.Network
-	Network             p2pl.Network
-	DB                  database.Database
-	RollingDB           *srollingdb.RollingDB
-	SnapshotPath        string
-	ChainImportDirPath  string
-	ChainCorrectionPath string
+	ChainID              string
+	SubchainID           *big.Int
+	GasPriceLimit        *big.Int
+	RegisterContractAddr ethcommon.Address
+	ErcContractAddr      ethcommon.Address
+	PrivateKey           *crypto.PrivateKey
+	Root                 *score.Block
+	NetworkOld           p2p.Network
+	Network              p2pl.Network
+	DB                   database.Database
+	RollingDB            *srollingdb.RollingDB
+	SnapshotPath         string
+	ChainImportDirPath   string
+	ChainCorrectionPath  string
 }
 
 func NewNode(params *Params) *Node {
@@ -106,6 +122,8 @@ func NewNode(params *Params) *Node {
 			state.SetLastProposal(score.Proposal{})
 		}
 	}
+	// mainchainMonitor := mainchainMonitor.NewMainchainMonitor(params.PrivateKey, params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
+	mainchainMonitor := mainchainMonitor.NewMainchainMonitor(params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
 
 	node := &Node{
 		Store:            store,
@@ -117,6 +135,7 @@ func NewNode(params *Params) *Node {
 		Ledger:           ledger,
 		Mempool:          mempool,
 		reporter:         reporter,
+		MainchainMonitor: mainchainMonitor,
 	}
 
 	if viper.GetBool(common.CfgRPCEnabled) {
@@ -155,3 +174,4 @@ func (n *Node) Wait() {
 		n.RPC.Wait()
 	}
 }
+
