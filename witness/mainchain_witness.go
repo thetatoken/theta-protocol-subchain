@@ -1,4 +1,4 @@
-package mainchainMonitor
+package witness
 
 import (
 	// "context"
@@ -87,4 +87,3 @@ func NewMainchainMonitor(
 // 	// TODO: later test block height
 // 	return _MainchainMonitor.registerContract.GetLegalValidators(opts, subchainID)
 // }
-

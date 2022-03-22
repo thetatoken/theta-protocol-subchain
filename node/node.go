@@ -30,13 +30,13 @@ import (
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
 	sld "github.com/thetatoken/thetasubchain/ledger"
-	"github.com/thetatoken/thetasubchain/mainchainMonitor"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	snsync "github.com/thetatoken/thetasubchain/netsync"
 	srp "github.com/thetatoken/thetasubchain/report"
 	srpc "github.com/thetatoken/thetasubchain/rpc"
 	ssnst "github.com/thetatoken/thetasubchain/snapshot"
 	srollingdb "github.com/thetatoken/thetasubchain/store/rollingdb"
+	"github.com/thetatoken/thetasubchain/witness"
 )
 
 type Node struct {
@@ -50,7 +50,7 @@ type Node struct {
 	Mempool          *smp.Mempool
 	RPC              *srpc.ThetaRPCServer
 	reporter         *srp.Reporter
-	MainchainMonitor *mainchainMonitor.MainchainMonitor
+	MainchainMonitor *witness.MainchainMonitor
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -123,7 +123,7 @@ func NewNode(params *Params) *Node {
 		}
 	}
 	// mainchainMonitor := mainchainMonitor.NewMainchainMonitor(params.PrivateKey, params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
-	mainchainMonitor := mainchainMonitor.NewMainchainMonitor(params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
+	mainchainMonitor := witness.NewMainchainMonitor(params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
 
 	node := &Node{
 		Store:            store,
@@ -174,4 +174,3 @@ func (n *Node) Wait() {
 		n.RPC.Wait()
 	}
 }
-
