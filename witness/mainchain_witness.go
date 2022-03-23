@@ -10,7 +10,7 @@ import (
 	scom "github.com/thetatoken/thetasubchain/common"
 	// sct "github.com/thetatoken/thetasubchain/contracts"
 
-	// "github.com/ethereum/go-ethereum/accounts/abi/bind"
+	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/theta/common"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
