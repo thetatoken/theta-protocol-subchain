@@ -20,7 +20,7 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/thetatoken/thetasubchain/eth/core/types"
 
 	"github.com/thetatoken/theta/common"
 )

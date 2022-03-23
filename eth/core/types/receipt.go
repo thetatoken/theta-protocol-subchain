@@ -268,106 +268,108 @@ func (r *Receipt) Size() common.StorageSize {
 	return size
 }
 
-// ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
-// entire content of a receipt, as opposed to only the consensus fields originally.
-type ReceiptForStorage Receipt
+// FIXME: jieyi - temporarily comment out ReceiptForStorage to avoid a compilation error.
 
-// EncodeRLP implements rlp.Encoder, and flattens all content fields of a receipt
-// into an RLP stream.
-func (r *ReceiptForStorage) EncodeRLP(_w io.Writer) error {
-	w := rlp.NewEncoderBuffer(_w)
-	outerList := w.List()
-	w.WriteBytes((*Receipt)(r).statusEncoding())
-	w.WriteUint64(r.CumulativeGasUsed)
-	logList := w.List()
-	for _, log := range r.Logs {
-		if err := rlp.Encode(w, log); err != nil {
-			return err
-		}
-	}
-	w.ListEnd(logList)
-	w.ListEnd(outerList)
-	return w.Flush()
-}
+// // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
+// // entire content of a receipt, as opposed to only the consensus fields originally.
+// type ReceiptForStorage Receipt
 
-// DecodeRLP implements rlp.Decoder, and loads both consensus and implementation
-// fields of a receipt from an RLP stream.
-func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
-	// Retrieve the entire receipt blob as we need to try multiple decoders
-	blob, err := s.Raw()
-	if err != nil {
-		return err
-	}
-	// Try decoding from the newest format for future proofness, then the older one
-	// for old nodes that just upgraded. V4 was an intermediate unreleased format so
-	// we do need to decode it, but it's not common (try last).
-	if err := decodeStoredReceiptRLP(r, blob); err == nil {
-		return nil
-	}
-	if err := decodeV3StoredReceiptRLP(r, blob); err == nil {
-		return nil
-	}
-	return decodeV4StoredReceiptRLP(r, blob)
-}
+// // EncodeRLP implements rlp.Encoder, and flattens all content fields of a receipt
+// // into an RLP stream.
+// func (r *ReceiptForStorage) EncodeRLP(_w io.Writer) error {
+// 	w := erlp.NewEncoderBuffer(_w)
+// 	outerList := w.List()
+// 	w.WriteBytes((*Receipt)(r).statusEncoding())
+// 	w.WriteUint64(r.CumulativeGasUsed)
+// 	logList := w.List()
+// 	for _, log := range r.Logs {
+// 		if err := rlp.Encode(w, log); err != nil {
+// 			return err
+// 		}
+// 	}
+// 	w.ListEnd(logList)
+// 	w.ListEnd(outerList)
+// 	return w.Flush()
+// }
 
-func decodeStoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
-	var stored storedReceiptRLP
-	if err := rlp.DecodeBytes(blob, &stored); err != nil {
-		return err
-	}
-	if err := (*Receipt)(r).setStatus(stored.PostStateOrStatus); err != nil {
-		return err
-	}
-	r.CumulativeGasUsed = stored.CumulativeGasUsed
-	r.Logs = make([]*Log, len(stored.Logs))
-	for i, log := range stored.Logs {
-		r.Logs[i] = (*Log)(log)
-	}
-	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
+// // DecodeRLP implements rlp.Decoder, and loads both consensus and implementation
+// // fields of a receipt from an RLP stream.
+// func (r *ReceiptForStorage) DecodeRLP(s *rlp.Stream) error {
+// 	// Retrieve the entire receipt blob as we need to try multiple decoders
+// 	blob, err := s.Raw()
+// 	if err != nil {
+// 		return err
+// 	}
+// 	// Try decoding from the newest format for future proofness, then the older one
+// 	// for old nodes that just upgraded. V4 was an intermediate unreleased format so
+// 	// we do need to decode it, but it's not common (try last).
+// 	if err := decodeStoredReceiptRLP(r, blob); err == nil {
+// 		return nil
+// 	}
+// 	if err := decodeV3StoredReceiptRLP(r, blob); err == nil {
+// 		return nil
+// 	}
+// 	return decodeV4StoredReceiptRLP(r, blob)
+// }
 
-	return nil
-}
+// func decodeStoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
+// 	var stored storedReceiptRLP
+// 	if err := rlp.DecodeBytes(blob, &stored); err != nil {
+// 		return err
+// 	}
+// 	if err := (*Receipt)(r).setStatus(stored.PostStateOrStatus); err != nil {
+// 		return err
+// 	}
+// 	r.CumulativeGasUsed = stored.CumulativeGasUsed
+// 	r.Logs = make([]*Log, len(stored.Logs))
+// 	for i, log := range stored.Logs {
+// 		r.Logs[i] = (*Log)(log)
+// 	}
+// 	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
 
-func decodeV4StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
-	var stored v4StoredReceiptRLP
-	if err := rlp.DecodeBytes(blob, &stored); err != nil {
-		return err
-	}
-	if err := (*Receipt)(r).setStatus(stored.PostStateOrStatus); err != nil {
-		return err
-	}
-	r.CumulativeGasUsed = stored.CumulativeGasUsed
-	r.TxHash = stored.TxHash
-	r.ContractAddress = stored.ContractAddress
-	r.GasUsed = stored.GasUsed
-	r.Logs = make([]*Log, len(stored.Logs))
-	for i, log := range stored.Logs {
-		r.Logs[i] = (*Log)(log)
-	}
-	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
+// 	return nil
+// }
 
-	return nil
-}
+// func decodeV4StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
+// 	var stored v4StoredReceiptRLP
+// 	if err := rlp.DecodeBytes(blob, &stored); err != nil {
+// 		return err
+// 	}
+// 	if err := (*Receipt)(r).setStatus(stored.PostStateOrStatus); err != nil {
+// 		return err
+// 	}
+// 	r.CumulativeGasUsed = stored.CumulativeGasUsed
+// 	r.TxHash = stored.TxHash
+// 	r.ContractAddress = stored.ContractAddress
+// 	r.GasUsed = stored.GasUsed
+// 	r.Logs = make([]*Log, len(stored.Logs))
+// 	for i, log := range stored.Logs {
+// 		r.Logs[i] = (*Log)(log)
+// 	}
+// 	r.Bloom = CreateBloom(Receipts{(*Receipt)(r)})
 
-func decodeV3StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
-	var stored v3StoredReceiptRLP
-	if err := rlp.DecodeBytes(blob, &stored); err != nil {
-		return err
-	}
-	if err := (*Receipt)(r).setStatus(stored.PostStateOrStatus); err != nil {
-		return err
-	}
-	r.CumulativeGasUsed = stored.CumulativeGasUsed
-	r.Bloom = stored.Bloom
-	r.TxHash = stored.TxHash
-	r.ContractAddress = stored.ContractAddress
-	r.GasUsed = stored.GasUsed
-	r.Logs = make([]*Log, len(stored.Logs))
-	for i, log := range stored.Logs {
-		r.Logs[i] = (*Log)(log)
-	}
-	return nil
-}
+// 	return nil
+// }
+
+// func decodeV3StoredReceiptRLP(r *ReceiptForStorage, blob []byte) error {
+// 	var stored v3StoredReceiptRLP
+// 	if err := rlp.DecodeBytes(blob, &stored); err != nil {
+// 		return err
+// 	}
+// 	if err := (*Receipt)(r).setStatus(stored.PostStateOrStatus); err != nil {
+// 		return err
+// 	}
+// 	r.CumulativeGasUsed = stored.CumulativeGasUsed
+// 	r.Bloom = stored.Bloom
+// 	r.TxHash = stored.TxHash
+// 	r.ContractAddress = stored.ContractAddress
+// 	r.GasUsed = stored.GasUsed
+// 	r.Logs = make([]*Log, len(stored.Logs))
+// 	for i, log := range stored.Logs {
+// 		r.Logs[i] = (*Log)(log)
+// 	}
+// 	return nil
+// }
 
 // Receipts implements DerivableList for receipts.
 type Receipts []*Receipt

@@ -21,9 +21,10 @@ import (
 	"errors"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/thetatoken/theta/common"
+
+	ethereum "github.com/thetatoken/thetasubchain/eth"
+	"github.com/thetatoken/thetasubchain/eth/core/types"
 )
 
 var (

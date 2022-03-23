@@ -11,11 +11,11 @@ import (
 	// sct "github.com/thetatoken/thetasubchain/contracts"
 
 	// "github.com/ethereum/go-ethereum/accounts/abi/bind"
-	ethcommon "github.com/ethereum/go-ethereum/common"
-	ec "github.com/ethereum/go-ethereum/ethclient"
+	"github.com/thetatoken/theta/common"
+	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
-type MainchainMonitor struct {
+type MainchainWitness struct {
 	mu                   sync.RWMutex
 	MainchainBlockNumber *big.Int
 	SubchainID           *big.Int
@@ -24,22 +24,22 @@ type MainchainMonitor struct {
 
 	chainID *big.Int
 	// privateKey           *crypto.PrivateKey
-	registerContractAddr ethcommon.Address
-	ercContractAddr      ethcommon.Address
+	registerContractAddr common.Address
+	ercContractAddr      common.Address
 
 	// client *ethclient.Client
 	// registerContract *sct.SubchainRegister
 	// ercContract      *sct.SubchainERC
 }
 
-// NewMainchainMonitor creates a new MainchainMonitor
-func NewMainchainMonitor(
+// NewMainchainWitness creates a new MainchainWitness
+func NewMainchainWitness(
 	// privateKey *crypto.PrivateKey,
 	gasPriceLimit *big.Int,
 	subchainID *big.Int,
-	registerContractAddr ethcommon.Address,
-	ercContractAddr ethcommon.Address,
-) *MainchainMonitor {
+	registerContractAddr common.Address,
+	ercContractAddr common.Address,
+) *MainchainWitness {
 	client, err := ec.Dial(scom.CfgMainchainAdaptorURL)
 	if err != nil {
 		log.Fatalf("the eth client failed to connect %v\n", err)
@@ -63,7 +63,7 @@ func NewMainchainMonitor(
 	// 	log.Fatalf("failed to get the highest block number %v\n", err)
 	// }
 	// dynasty := new(big.Int).Div(tipBlockHeader.Number, big.NewInt(100))
-	// mm := &MainchainMonitor{
+	// mm := &MainchainWitness{
 	// 	MainchainBlockNumber: tipBlockHeader.Number,
 	// 	SubchainID:           subchainID,
 	// 	Dynasty:              dynasty,
@@ -79,11 +79,11 @@ func NewMainchainMonitor(
 	// 	// ercContract:          subchainERCContract,
 	// }
 
-	mm := &MainchainMonitor{}
+	mm := &MainchainWitness{}
 	return mm
 }
 
-// func (_MainchainMonitor *MainchainMonitor) GetValidatorSetWithBlockHeight(opts *bind.CallOpts, subchainID *big.Int) ([]ethcommon.Address, error) {
+// func (_MainchainWitness *MainchainWitness) GetValidatorSetWithBlockHeight(opts *bind.CallOpts, subchainID *big.Int) ([]ethcommon.Address, error) {
 // 	// TODO: later test block height
-// 	return _MainchainMonitor.registerContract.GetLegalValidators(opts, subchainID)
+// 	return _MainchainWitness.registerContract.GetLegalValidators(opts, subchainID)
 // }

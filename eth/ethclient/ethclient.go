@@ -30,7 +30,7 @@ import (
 
 	ethereum "github.com/thetatoken/thetasubchain/eth"
 
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/thetatoken/thetasubchain/eth/core/types"
 )
 
 // Client defines typed wrappers for the Ethereum RPC API.

@@ -25,7 +25,6 @@ import (
 	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/theta/store/kvstore"
 
-	ethcommon "github.com/ethereum/go-ethereum/common"
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
@@ -50,7 +49,7 @@ type Node struct {
 	Mempool          *smp.Mempool
 	RPC              *srpc.ThetaRPCServer
 	reporter         *srp.Reporter
-	MainchainMonitor *witness.MainchainMonitor
+	MainchainWitness *witness.MainchainWitness
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -64,8 +63,8 @@ type Params struct {
 	ChainID              string
 	SubchainID           *big.Int
 	GasPriceLimit        *big.Int
-	RegisterContractAddr ethcommon.Address
-	ErcContractAddr      ethcommon.Address
+	RegisterContractAddr common.Address
+	ErcContractAddr      common.Address
 	PrivateKey           *crypto.PrivateKey
 	Root                 *score.Block
 	NetworkOld           p2p.Network
@@ -122,8 +121,8 @@ func NewNode(params *Params) *Node {
 			state.SetLastProposal(score.Proposal{})
 		}
 	}
-	// mainchainMonitor := mainchainMonitor.NewMainchainMonitor(params.PrivateKey, params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
-	mainchainMonitor := witness.NewMainchainMonitor(params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
+	// mainchainWitness := mainchainWitness.NewMainchainMonitor(params.PrivateKey, params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
+	mainchainWitness := witness.NewMainchainWitness(params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
 
 	node := &Node{
 		Store:            store,
@@ -135,7 +134,7 @@ func NewNode(params *Params) *Node {
 		Ledger:           ledger,
 		Mempool:          mempool,
 		reporter:         reporter,
-		MainchainMonitor: mainchainMonitor,
+		MainchainWitness: mainchainWitness,
 	}
 
 	if viper.GetBool(common.CfgRPCEnabled) {
