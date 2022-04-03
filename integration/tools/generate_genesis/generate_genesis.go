@@ -2,15 +2,21 @@ package main
 
 import (
 	"bufio"
+	"bytes"
+	"encoding/json"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"math/big"
 	"os"
 	"time"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/theta/ledger/types"
+	"github.com/thetatoken/theta/rlp"
 	"github.com/thetatoken/theta/store/database/backend"
+	"github.com/thetatoken/theta/store/trie"
 
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
@@ -32,12 +38,12 @@ type StakeDeposit struct {
 //
 // Example:
 // pushd $THETA_HOME/integration/privatenet/node
-// generate_genesis -chainID=privatenet -genesis=./genesis
+// generate_genesis -chainID=privatenet -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
 //
 func main() {
-	chainID, erc20SnapshotJSONFilePath, stakeDepositFilePath, genesisSnapshotFilePath := parseArguments()
+	chainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
 
-	sv, metadata, err := generateGenesisSnapshot(chainID, erc20SnapshotJSONFilePath, stakeDepositFilePath)
+	sv, metadata, err := generateGenesisSnapshot(chainID, initValidatorSetPath, genesisSnapshotFilePath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
@@ -64,27 +70,27 @@ func main() {
 	fmt.Println("")
 }
 
-func parseArguments() (chainID, erc20SnapshotJSONFilePath, stakeDepositFilePath, genesisSnapshotFilePath string) {
+func parseArguments() (chainID, initValidatorSetPath, genesisSnapshotFilePath string) {
 	chainIDPtr := flag.String("chainID", "local_chain", "the ID of the chain")
-	erc20SnapshotJSONFilePathPtr := flag.String("erc20snapshot", "./theta_erc20_snapshot.json", "the json file contain the ERC20 balance snapshot")
-	stakeDepositFilePathPtr := flag.String("stake_deposit", "./stake_deposit.json", "the initial stake deposits")
+	initValidatorSetPathPtr := flag.String("init_validator_set", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
 	flag.Parse()
 
 	chainID = *chainIDPtr
-	erc20SnapshotJSONFilePath = *erc20SnapshotJSONFilePathPtr
-	stakeDepositFilePath = *stakeDepositFilePathPtr
+	initValidatorSetPath = *initValidatorSetPathPtr
 	genesisSnapshotFilePath = *genesisSnapshotFilePathPtr
 
 	return
 }
 
 // generateGenesisSnapshot generates the genesis snapshot.
-func generateGenesisSnapshot(chainID, erc20SnapshotJSONFilePath, stakeDepositFilePath string) (*slst.StoreView, *score.SnapshotMetadata, error) {
+func generateGenesisSnapshot(chainID, initValidatorSetPath, genesisSnapshotFilePath string) (*slst.StoreView, *score.SnapshotMetadata, error) {
 	metadata := &score.SnapshotMetadata{}
 	genesisHeight := score.GenesisBlockHeight
 
 	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
+	setInitialValidatorSet(initValidatorSetPath, genesisHeight, sv)
+
 	stateHash := sv.Hash()
 
 	genesisBlock := score.NewBlock()
@@ -102,6 +108,30 @@ func generateGenesisSnapshot(chainID, erc20SnapshotJSONFilePath, stakeDepositFil
 	}
 
 	return sv, metadata, nil
+}
+
+func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint64, sv *slst.StoreView) *score.ValidatorSet {
+	var validators []score.Validator
+	initValidatorSetFile, err := os.Open(initValidatorSetFilePath)
+	if err != nil {
+		panic(fmt.Sprintf("failed to open initial stake deposit file: %v", err))
+	}
+	initValidatorSetByteValue, err := ioutil.ReadAll(initValidatorSetFile)
+	if err != nil {
+		panic(fmt.Sprintf("failed to read initial stake deposit file: %v", err))
+	}
+
+	json.Unmarshal(initValidatorSetByteValue, &validators)
+	vs := score.NewValidatorSet()
+	vs.SetValidators(validators)
+
+	sv.UpdateValidatorSet(vs)
+
+	hl := &types.HeightList{}
+	hl.Append(genesisHeight)
+	sv.UpdateStakeTransactionHeightList(hl)
+
+	return vs
 }
 
 func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
@@ -147,7 +177,49 @@ func writeStoreView(sv *slst.StoreView, needAccountStorage bool, writer *bufio.W
 	writer.Flush()
 }
 
-// TODO: Add proper sanity checks
 func sanityChecks(sv *slst.StoreView) error {
+	vsAnalyzed := false
+	sv.GetStore().Traverse(nil, func(key, val common.Bytes) bool {
+		if bytes.Equal(key, slst.ValidatorSetKey()) {
+			var vs score.ValidatorSet
+			err := rlp.DecodeBytes(val, &vs)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to decode validator set: %v", err))
+			}
+			for _, validator := range vs.Validators() {
+				logger.Infof("--------------------------------------------------------")
+				logger.Infof("Initial validator: %v, stake  = %v", validator.Address.Hex(), validator.Stake)
+				logger.Infof("--------------------------------------------------------")
+			}
+			vsAnalyzed = true
+		} else if bytes.Equal(key, slst.StakeTransactionHeightListKey()) {
+			var hl types.HeightList
+			err := rlp.DecodeBytes(val, &hl)
+			if err != nil {
+				panic(fmt.Sprintf("Failed to decode Height List: %v", err))
+			}
+			if len(hl.Heights) != 1 {
+				panic(fmt.Sprintf("The genesis height list should contain only one height: %v", hl.Heights))
+			}
+			if hl.Heights[0] != uint64(0) {
+				panic("Only height 0 should be in the genesis height list")
+			}
+		}
+		return true
+	})
+
+	// Sanity checks for the initial validator set
+	vsProof, err := proveValidatorSet(sv)
+	if err != nil {
+		panic("Failed to get VCP proof from storeview")
+	}
+	_, _, err = trie.VerifyProof(sv.Hash(), slst.ValidatorSetKey(), vsProof)
+	if err != nil {
+		panic("Failed to verify VCP proof in storeview")
+	}
+	if !vsAnalyzed {
+		return fmt.Errorf("initial validator set not detected in the genesis file")
+	}
+
 	return nil
 }
