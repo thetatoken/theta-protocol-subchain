@@ -9,9 +9,7 @@ import (
 )
 
 const (
-	StakeForValidator     uint8 = 0
-	StakeForGuardian      uint8 = 1
-	StakeForEliteEdgeNode uint8 = 2
+	StakeForValidator uint8 = 0
 
 	ReturnLockingPeriod uint64 = 28800      // number of blocks, approximately 2 days with 6 second block time
 	InvalidReturnHeight uint64 = ^uint64(0) // max uint64

@@ -39,8 +39,6 @@ type ConsensusEngine struct {
 	dispatcher       *dispatcher.Dispatcher
 	validatorManager score.ValidatorManager
 	ledger           score.Ledger
-	// guardian         *GuardianEngine
-	// eliteEdgeNode    *EliteEdgeNodeEngine
 
 	incoming        chan interface{}
 	finalizedBlocks chan *score.Block
@@ -55,7 +53,6 @@ type ConsensusEngine struct {
 	mu         *sync.Mutex
 	voteTimer  *time.Timer
 	epochTimer *time.Timer
-	// guardianTimer *time.Ticker
 
 	voteTimerReady bool
 	blockProcessed bool

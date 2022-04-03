@@ -1,8 +1,6 @@
 package state
 
 import (
-	"strconv"
-
 	"github.com/thetatoken/theta/common"
 )
 
@@ -61,19 +59,4 @@ func StakeRewardDistributionRuleSetKeyPrefix() common.Bytes {
 func StakeRewardDistributionRuleSetKey(addr common.Address) common.Bytes {
 	prefix := StakeRewardDistributionRuleSetKeyPrefix()
 	return append(prefix, addr[:]...)
-}
-
-//EliteEdgeNodeStakeReturnsKeyPrefix returns the prefix of the elite edge node stake return key
-func EliteEdgeNodeStakeReturnsKeyPrefix() common.Bytes {
-	return common.Bytes("ls/eensrk/")
-}
-
-//EliteEdgeNodeStakeReturnsKey returns the EEN stake return key for the given height
-func EliteEdgeNodeStakeReturnsKey(height uint64) common.Bytes {
-	heightStr := strconv.FormatUint(height, 10)
-	return common.Bytes(string(EliteEdgeNodeStakeReturnsKeyPrefix()) + heightStr)
-}
-
-func EliteEdgeNodesTotalActiveStakeKey() common.Bytes {
-	return common.Bytes("ls/eentas")
 }

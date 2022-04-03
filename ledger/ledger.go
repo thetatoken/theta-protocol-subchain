@@ -256,8 +256,6 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, shouldIncludeValidator
 	execTxsTime := time.Since(start)
 	start = time.Now()
 
-	ledger.handleDelayedStateUpdates(view)
-
 	stateRootHash = view.Hash()
 
 	logger.Debugf("ProposeBlockTxs: delay update handled, block.height = %v", block.Height)
@@ -324,7 +322,6 @@ func (ledger *Ledger) ApplyBlockTxs(block *score.Block) result.Result {
 	logger.Debugf("ApplyBlockTxs: Finish applying block transactions, block.height=%v, txProcessTime=%v", block.Height, txProcessTime)
 
 	start := time.Now()
-	ledger.handleDelayedStateUpdates(view)
 	handleDelayedUpdateTime := time.Since(start)
 
 	newStateRoot := view.Hash()
@@ -400,8 +397,6 @@ func (ledger *Ledger) ApplyBlockTxsForChainCorrection(block *score.Block) (commo
 			return common.Hash{}, res
 		}
 	}
-
-	ledger.handleDelayedStateUpdates(view)
 
 	ledger.state.Commit() // commit to persistent storage
 
@@ -582,47 +577,6 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 	default:
 		return false
 	}
-}
-
-// handleDelayedStateUpdates handles delayed state updates, e.g. stake return, where the stake
-// is returned only after X blocks of its corresponding StakeWithdraw transaction
-func (ledger *Ledger) handleDelayedStateUpdates(view *slst.StoreView) {
-	ledger.handleValidatorStakeReturn(view)
-	// ledger.handleGuardianStakeReturn(view)
-
-	// blockHeight := view.Height() + 1
-	// if blockHeight >= common.HeightEnableTheta3 {
-	// 	ledger.handleEliteEdgeNodeStakeReturns(view)
-	// }
-}
-
-func (ledger *Ledger) handleValidatorStakeReturn(view *slst.StoreView) {
-	vcp := view.GetValidatorCandidatePool()
-	if vcp == nil {
-		return
-	}
-
-	currentHeight := view.Height()
-	returnedStakes := vcp.ReturnStakes(currentHeight)
-
-	for _, returnedStake := range returnedStakes {
-		if !returnedStake.Withdrawn || currentHeight < returnedStake.ReturnHeight {
-			log.Panicf("Cannot return stake: withdrawn = %v, returnHeight = %v, currentHeight = %v",
-				returnedStake.Withdrawn, returnedStake.ReturnHeight, currentHeight)
-		}
-		sourceAddress := returnedStake.Source
-		sourceAccount := view.GetAccount(sourceAddress)
-		if sourceAccount == nil {
-			log.Panicf("Failed to retrieve source account for stake return: %v", sourceAddress)
-		}
-		returnedCoins := types.Coins{
-			ThetaWei: returnedStake.Amount,
-			TFuelWei: types.Zero,
-		}
-		sourceAccount.Balance = sourceAccount.Balance.Plus(returnedCoins)
-		view.SetAccount(sourceAddress, sourceAccount)
-	}
-	view.UpdateValidatorCandidatePool(vcp)
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block

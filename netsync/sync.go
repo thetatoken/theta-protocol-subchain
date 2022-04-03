@@ -137,9 +137,6 @@ func (sm *SyncManager) GetChannelIDs() []common.ChannelIDEnum {
 		common.ChannelIDProposal,
 		common.ChannelIDCC,
 		common.ChannelIDVote,
-		common.ChannelIDGuardian,
-		// common.ChannelIDEliteEdgeNodeVote,
-		// common.ChannelIDAggregatedEliteEdgeNodeVotes,
 	}
 }
 
@@ -605,41 +602,6 @@ func (m *SyncManager) handleDataResponse(peerID string, data *dispatcher.DataRes
 			"peer":     peerID,
 		}).Debug("Received proposal")
 		m.handleProposal(proposal)
-	// case common.ChannelIDEliteEdgeNodeVote:
-	// 	vote := &score.EENVote{}
-	// 	err := rlp.DecodeBytes(data.Payload, vote)
-	// 	if err != nil {
-	// 		m.logger.WithFields(log.Fields{
-	// 			"channelID": data.ChannelID,
-	// 			"payload":   data.Payload,
-	// 			"error":     err,
-	// 			"peerID":    peerID,
-	// 		}).Warn("Failed to decode DataResponse payload")
-	// 		return
-	// 	}
-	// 	// m.logger.WithFields(log.Fields{
-	// 	// 	"vote.Block": vote.Block.Hex(),
-	// 	// 	"peer":       peerID,
-	// 	// }).Debug("Received elite edge node vote")
-	// 	m.handleEliteEdgeNodeVote(vote)
-	// case common.ChannelIDAggregatedEliteEdgeNodeVotes:
-	// 	vote := &score.AggregatedEENVotes{}
-	// 	err := rlp.DecodeBytes(data.Payload, vote)
-	// 	if err != nil {
-	// 		m.logger.WithFields(log.Fields{
-	// 			"channelID": data.ChannelID,
-	// 			"payload":   data.Payload,
-	// 			"error":     err,
-	// 			"peerID":    peerID,
-	// 		}).Warn("Failed to decode DataResponse payload")
-	// 		return
-	// 	}
-	// 	m.logger.WithFields(log.Fields{
-	// 		"vote.Block":      vote.Block.Hex(),
-	// 		"vote.Multiplies": vote.Multiplies,
-	// 		"peer":            peerID,
-	// 	}).Debug("Received aggregated elite edge node vote")
-	// 	m.handleAggregatedEliteEdgeNodeVotes(vote)
 	case common.ChannelIDHeader:
 		headers := &Headers{}
 		err := rlp.DecodeBytes(data.Payload, headers)

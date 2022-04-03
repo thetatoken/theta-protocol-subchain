@@ -350,48 +350,6 @@ type StakeWithHolder struct {
 	Stake  score.Stake
 }
 
-// GetEliteEdgeNodeStakeReturns gets the elite edge node stake returns
-func (sv *StoreView) GetEliteEdgeNodeStakeReturns(height uint64) []StakeWithHolder {
-	data := sv.Get(EliteEdgeNodeStakeReturnsKey(height))
-	if data == nil || len(data) == 0 {
-		return []StakeWithHolder{}
-	}
-
-	returnedStakes := []StakeWithHolder{}
-	err := types.FromBytes(data, &returnedStakes)
-	if err != nil {
-		log.Panicf("Error reading elite edge stake returns %v, error: %v",
-			data, err.Error())
-	}
-	return returnedStakes
-}
-
-// GetEliteEdgeNodeStakeReturns saves the elite edge node stake returns for the given height
-func (sv *StoreView) SetEliteEdgeNodeStakeReturns(height uint64, stakeReturns []StakeWithHolder) {
-	returnedStakesBytes, err := types.ToBytes(stakeReturns)
-	if err != nil {
-		log.Panicf("Error writing elite edge stake returns %v, error: %v",
-			stakeReturns, err)
-	}
-	sv.Set(EliteEdgeNodeStakeReturnsKey(height), returnedStakesBytes)
-}
-
-// RemoveEliteEdgeNodeStakeReturns removes the elite edge node stake returns for the given height
-func (sv *StoreView) RemoveEliteEdgeNodeStakeReturns(height uint64) {
-	sv.Delete(EliteEdgeNodeStakeReturnsKey(height))
-}
-
-// GetTotalEENStake retrives the total active EEN stakes
-func (sv *StoreView) GetTotalEENStake() *big.Int {
-	raw := sv.Get(EliteEdgeNodesTotalActiveStakeKey())
-	return new(big.Int).SetBytes(raw)
-}
-
-// SetTotalEENStake sets the total active EEN stakes
-func (sv *StoreView) SetTotalEENStake(amount *big.Int) {
-	sv.Set(EliteEdgeNodesTotalActiveStakeKey(), amount.Bytes())
-}
-
 func (sv *StoreView) GetStore() *streestore.TreeStore {
 	return sv.store
 }
@@ -489,22 +447,9 @@ func (sv *StoreView) GetThetaBalance(addr common.Address) *big.Int {
 	return sv.GetOrCreateAccount(addr).Balance.ThetaWei
 }
 
-// GetThetaStake returns the total amount of ThetaWei the address staked to validators and/or guardians
+// GetThetaStake returns the total amount of ThetaWei the address staked to validators
 func (sv *StoreView) GetThetaStake(addr common.Address) *big.Int {
-	totalStake := big.NewInt(0)
-
-	vcp := sv.GetValidatorCandidatePool()
-	for _, v := range vcp.SortedCandidates {
-		for _, stake := range v.Stakes {
-			if stake.Source == addr {
-				if stake.Withdrawn {
-					continue // withdrawn stake does not count
-				}
-				totalStake = new(big.Int).Add(stake.Amount, totalStake)
-			}
-		}
-	}
-
+	totalStake := big.NewInt(0) // subchain does not support native Theta, hence we always return 0
 	return totalStake
 }
 

@@ -6,6 +6,7 @@ import (
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/result"
+	"github.com/thetatoken/theta/core"
 	"github.com/thetatoken/theta/ledger/types"
 
 	score "github.com/thetatoken/thetasubchain/core"
@@ -157,6 +158,11 @@ func validateInputsBasic(ins []types.TxInput) result.Result {
 		// Check TxInput basic
 		if res := in.ValidateBasic(); res.IsError() {
 			return res
+		}
+
+		// subchain does not support native Thta coins
+		if in.Coins.NoNil().ThetaWei.Cmp(core.Zero) != 0 {
+			return result.Error("Subchain should not transfer native Theta coin: %v", in)
 		}
 	}
 	return result.OK

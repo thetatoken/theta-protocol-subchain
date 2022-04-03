@@ -11,4 +11,4 @@ p2p:
 rpc:
   enabled: true
 log:
-  levels: "*:info,guardian:debug"
+  levels: "*:info"

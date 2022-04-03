@@ -78,7 +78,6 @@ func NewNode(params *Params) *Node {
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
 
-	// TODO: check if this is a guardian node
 	syncMgr := snsync.NewSyncManager(chain, consensus, params.NetworkOld, params.Network, dispatcher, consensus, reporter)
 	mempool := smp.CreateMempool(dispatcher, consensus)
 	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool)

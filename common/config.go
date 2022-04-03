@@ -33,8 +33,6 @@ const (
 	CfgConsensusMessageQueueSize = "consensus.messageQueueSize"
 	// CfgConsensusEdgeNodeVoteQueueSize defines the capacity of edge node vote message queue.
 	CfgConsensusEdgeNodeVoteQueueSize = "consensus.edgeNodeVoteQueueSize"
-	// CfgConsensusPassThroughGuardianVote defines the how guardian vote is handled.
-	CfgConsensusPassThroughGuardianVote = "consensus.passThroughGuardianVote"
 
 	// CfgStorageRollingEnabled indicates whether rolling is enabled
 	CfgStorageRollingEnabled = "storage.stateRollingEnabled"
@@ -129,9 +127,6 @@ const (
 	// there are more than one node running).
 	CfgLogPrintSelfID = "log.printSelfID"
 
-	// CfgGuardianRoundLength defines the length of a guardian voting round.
-	CfgGuardianRoundLength = "guardian.roundLength"
-
 	// Graphite Server to collet metrics
 	CfgMetricsServer = "metrics.server"
 
@@ -154,11 +149,6 @@ const (
 	CfgSubchainID = "subchain.ID"
 )
 
-// Starting block heights of features.
-const (
-	FeatureGuardian uint64 = 0
-)
-
 // InitialConfig is the default configuration produced by init command.
 const InitialConfig = `# Theta configuration
 p2p:
@@ -174,7 +164,6 @@ func init() {
 	viper.SetDefault(CfgConsensusMinBlockInterval, 6)
 	viper.SetDefault(CfgConsensusMessageQueueSize, 512)
 	viper.SetDefault(CfgConsensusEdgeNodeVoteQueueSize, 100000)
-	viper.SetDefault(CfgConsensusPassThroughGuardianVote, false)
 
 	viper.SetDefault(CfgSyncMessageQueueSize, 512)
 	viper.SetDefault(CfgSyncDownloadByHash, false)
@@ -218,10 +207,6 @@ func init() {
 
 	viper.SetDefault(CfgLogLevels, "*:debug")
 	viper.SetDefault(CfgLogPrintSelfID, false)
-
-	viper.SetDefault(CfgGuardianRoundLength, 30)
-
-	viper.SetDefault(CfgMetricsServer, "guardian-metrics.thetatoken.org")
 
 	viper.SetDefault(CfgProfEnabled, false)
 	viper.SetDefault(CfgForceGCEnabled, true)

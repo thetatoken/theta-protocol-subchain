@@ -266,11 +266,8 @@ type GetBlockResultInner struct {
 	Timestamp *common.JSONBig         `json:"timestamp"`
 	Proposer  common.Address          `json:"proposer"`
 	HCC       score.CommitCertificate `json:"hcc"`
-	//GuardianVotes      *score.AggregatedVotes    `json:"guardian_votes"`
-	//EliteEdgeNodeVotes *score.AggregatedEENVotes `json:"elite_edge_node_votes"`
-
-	Children []common.Hash     `json:"children"`
-	Status   score.BlockStatus `json:"status"`
+	Children  []common.Hash           `json:"children"`
+	Status    score.BlockStatus       `json:"status"`
 
 	Hash common.Hash   `json:"hash"`
 	Txs  []interface{} `json:"transactions"` // for backward conpatibility, see function ThetaRPCService.gatherTxs()
@@ -315,8 +312,6 @@ func (t *ThetaRPCService) GetBlock(args *GetBlockArgs, result *GetBlockResult) (
 	result.Children = block.Children
 	result.Status = block.Status
 	result.HCC = block.HCC
-	//result.GuardianVotes = block.GuardianVotes
-
 	result.Hash = block.Hash()
 
 	t.gatherTxs(block, &result.Txs, args.IncludeEthTxHashes)
@@ -380,9 +375,6 @@ func (t *ThetaRPCService) GetBlockByHeight(args *GetBlockByHeightArgs, result *G
 	result.Children = block.Children
 	result.Status = block.Status
 	result.HCC = block.HCC
-	//result.GuardianVotes = block.GuardianVotes
-	//result.EliteEdgeNodeVotes = block.EliteEdgeNodeVotes
-
 	result.Hash = block.Hash()
 
 	t.gatherTxs(block, &result.Txs, args.IncludeEthTxHashes)
@@ -460,9 +452,6 @@ func (t *ThetaRPCService) GetBlocksByRange(args *GetBlocksByRangeArgs, result *G
 		blkInner.Children = block.Children
 		blkInner.Status = block.Status
 		blkInner.HCC = block.HCC
-		//blkInner.GuardianVotes = block.GuardianVotes
-		//blkInner.EliteEdgeNodeVotes = block.EliteEdgeNodeVotes
-
 		blkInner.Hash = block.Hash()
 
 		t.gatherTxs(block, &blkInner.Txs, args.IncludeEthTxHashes)
