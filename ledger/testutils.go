@@ -28,7 +28,7 @@ import (
 
 type mockSnapshot struct {
 	block *score.Block
-	vcp   *score.ValidatorCandidatePool
+	vsp   *score.ValidatorSet
 }
 
 type execSim struct {
@@ -43,7 +43,7 @@ func newExecSim(chainID string, db database.Database, snapshot mockSnapshot, val
 	initHeight := snapshot.block.Height
 
 	sv := slst.NewStoreView(initHeight, common.Hash{}, db)
-	sv.UpdateValidatorCandidatePool(snapshot.vcp)
+	sv.UpdateValidatorSet(snapshot.vsp)
 
 	store := kvstore.NewKVStore(db)
 	chain := sbc.NewChain(chainID, store, snapshot.block)
@@ -100,91 +100,6 @@ func (es *execSim) getTipBlock() *score.ExtendedBlock {
 
 func (es *execSim) findBlocksByHeight(height uint64) []*score.ExtendedBlock {
 	return es.chain.FindBlocksByHeight(height)
-}
-
-func genSimSnapshot(chainID string, db database.Database) (snapshot mockSnapshot, srcPrivAccs []*types.PrivAccount, valPrivAccs []*types.PrivAccount) {
-	initHeight := uint64(0)
-
-	src1Acc := types.MakeAcc("src1")
-	src2Acc := types.MakeAcc("src2")
-	src3Acc := types.MakeAcc("src3")
-	src4Acc := types.MakeAcc("src4")
-	src5Acc := types.MakeAcc("src5")
-	src6Acc := types.MakeAcc("src6")
-	src1Acc.Balance = types.Coins{
-		ThetaWei: new(big.Int).Mul(new(big.Int).SetUint64(20), score.MinValidatorStakeDeposit),
-		TFuelWei: new(big.Int).Mul(new(big.Int).SetUint64(100), score.MinValidatorStakeDeposit),
-	}
-	src2Acc.Balance = types.Coins{
-		ThetaWei: new(big.Int).Mul(new(big.Int).SetUint64(20), score.MinValidatorStakeDeposit),
-		TFuelWei: new(big.Int).Mul(new(big.Int).SetUint64(100), score.MinValidatorStakeDeposit),
-	}
-	src3Acc.Balance = types.Coins{
-		ThetaWei: new(big.Int).Mul(new(big.Int).SetUint64(20), score.MinValidatorStakeDeposit),
-		TFuelWei: new(big.Int).Mul(new(big.Int).SetUint64(100), score.MinValidatorStakeDeposit),
-	}
-	src4Acc.Balance = types.Coins{
-		ThetaWei: new(big.Int).Mul(new(big.Int).SetUint64(20), score.MinValidatorStakeDeposit),
-		TFuelWei: new(big.Int).Mul(new(big.Int).SetUint64(100), score.MinValidatorStakeDeposit),
-	}
-	src5Acc.Balance = types.Coins{
-		ThetaWei: new(big.Int).Mul(new(big.Int).SetUint64(20), score.MinValidatorStakeDeposit),
-		TFuelWei: new(big.Int).Mul(new(big.Int).SetUint64(100), score.MinValidatorStakeDeposit),
-	}
-	src6Acc.Balance = types.Coins{
-		ThetaWei: new(big.Int).Mul(new(big.Int).SetUint64(20), score.MinValidatorStakeDeposit),
-		TFuelWei: new(big.Int).Mul(new(big.Int).SetUint64(100), score.MinValidatorStakeDeposit),
-	}
-
-	val1Acc := types.MakeAcc("va1")
-	val2Acc := types.MakeAcc("va2")
-	val3Acc := types.MakeAcc("va3")
-	val4Acc := types.MakeAcc("va4")
-	val5Acc := types.MakeAcc("va5")
-	val6Acc := types.MakeAcc("va6")
-
-	stakeAmount1 := new(big.Int).Mul(new(big.Int).SetUint64(5), score.MinValidatorStakeDeposit)
-	stakeAmount2 := new(big.Int).Mul(new(big.Int).SetUint64(6), score.MinValidatorStakeDeposit)
-	stakeAmount3 := new(big.Int).Mul(new(big.Int).SetUint64(7), score.MinValidatorStakeDeposit)
-	stakeAmount4 := new(big.Int).Mul(new(big.Int).SetUint64(4), score.MinValidatorStakeDeposit)
-
-	vcp := &score.ValidatorCandidatePool{}
-	vcp.DepositStake(src1Acc.Address, val1Acc.Address, stakeAmount1)
-	vcp.DepositStake(src2Acc.Address, val2Acc.Address, stakeAmount2)
-	vcp.DepositStake(src3Acc.Address, val3Acc.Address, stakeAmount3)
-	vcp.DepositStake(src4Acc.Address, val4Acc.Address, stakeAmount4)
-
-	sv := slst.NewStoreView(initHeight, common.Hash{}, db)
-	sv.UpdateValidatorCandidatePool(vcp)
-
-	sv.SetAccount(src1Acc.Address, &src1Acc.Account)
-	sv.SetAccount(src2Acc.Address, &src2Acc.Account)
-	sv.SetAccount(src3Acc.Address, &src3Acc.Account)
-	sv.SetAccount(src4Acc.Address, &src4Acc.Account)
-	sv.SetAccount(src5Acc.Address, &src5Acc.Account)
-	sv.SetAccount(src6Acc.Address, &src6Acc.Account)
-
-	sv.SetAccount(val1Acc.Address, &val1Acc.Account)
-	sv.SetAccount(val2Acc.Address, &val2Acc.Account)
-	sv.SetAccount(val3Acc.Address, &val3Acc.Account)
-	sv.SetAccount(val4Acc.Address, &val4Acc.Account)
-	sv.SetAccount(val5Acc.Address, &val5Acc.Account)
-	sv.SetAccount(val6Acc.Address, &val6Acc.Account)
-
-	initStateHash := sv.Save()
-
-	initBlock := score.NewBlock()
-	initBlock.ChainID = chainID
-	initBlock.BlockHeader.StateHash = initStateHash
-
-	snapshot = mockSnapshot{
-		block: initBlock,
-		vcp:   vcp,
-	}
-	srcPrivAccs = []*types.PrivAccount{&src1Acc, &src2Acc, &src3Acc, &src4Acc, &src5Acc, &src6Acc}
-	valPrivAccs = []*types.PrivAccount{&val1Acc, &val2Acc, &val3Acc, &val4Acc, &val5Acc, &val6Acc}
-
-	return snapshot, srcPrivAccs, valPrivAccs
 }
 
 func newTestLedger() (chainID string, ledger *Ledger, mempool *smp.Mempool) {

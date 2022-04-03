@@ -97,8 +97,8 @@ func (ledger *Ledger) GetFinalizedSnapshot() (*slst.StoreView, error) {
 	return ledger.state.Finalized().Copy()
 }
 
-// GetFinalizedValidatorCandidatePool returns the validator candidate pool of the latest DIRECTLY finalized block
-func (ledger *Ledger) GetFinalizedValidatorCandidatePool(blockHash common.Hash, isNext bool) (*score.ValidatorCandidatePool, error) {
+// GetFinalizedValidatorSet returns the validator set of the latest DIRECTLY finalized block
+func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext bool) (*score.ValidatorSet, error) {
 	db := ledger.state.DB()
 	store := kvstore.NewKVStore(db)
 
@@ -131,8 +131,8 @@ func (ledger *Ledger) GetFinalizedValidatorCandidatePool(blockHash common.Hash, 
 					"block.Status.IsTrusted()":    block.Status.IsTrusted(),
 				}).Panic("Failed to load state for validator pool")
 			}
-			vcp := storeView.GetValidatorCandidatePool()
-			return vcp, nil
+			vs := storeView.GetValidatorSet()
+			return vs, nil
 		}
 		blockHash = block.HCC.BlockHash
 	}

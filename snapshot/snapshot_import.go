@@ -11,8 +11,6 @@ import (
 	"strconv"
 	"strings"
 
-
-
 	"github.com/pkg/errors"
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -27,8 +25,8 @@ import (
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
-	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	sld "github.com/thetatoken/thetasubchain/ledger"
+	slst "github.com/thetatoken/thetasubchain/ledger/state"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "snapshot"})
@@ -514,7 +512,7 @@ func loadChainSegment(filePath string, start, end uint64, prevBlock *score.Exten
 				if proofTrio.First.Header.Height == score.GenesisBlockHeight {
 					provenValSet, err = checkGenesisBlock(proofTrio.Second.Header, db)
 				} else {
-					provenValSet, err = getValidatorSetFromVCPProof(proofTrio.First.Header.StateHash, &proofTrio.First.Proof)
+					provenValSet, err = getValidatorSetFromVSProof(proofTrio.First.Header.StateHash, &proofTrio.First.Proof)
 				}
 				if err != nil {
 					return nil, fmt.Errorf("Failed to retrieve validator set from VCP proof: %v", err)
@@ -811,7 +809,7 @@ func checkSnapshotV4(sv *slst.StoreView, metadata *score.SnapshotMetadata, db da
 	var err error
 
 	first := tailTrio.First
-	valSet, err = getValidatorSetFromVCPProof(first.Header.StateHash, &first.Proof)
+	valSet, err = getValidatorSetFromVSProof(first.Header.StateHash, &first.Proof)
 	if err != nil {
 		return fmt.Errorf("Failed to retrieve validator set from VCP proof: %v", err)
 	}
@@ -855,7 +853,7 @@ func checkProofTrios(proofTrios []score.SnapshotBlockTrio, db database.Database)
 			if err := validateVotes(provenValSet, second.Header, third.Header.HCC.Votes); err != nil {
 				return nil, fmt.Errorf("Failed to validate voteSet, %v", err)
 			}
-			provenValSet, err = getValidatorSetFromVCPProof(first.Header.StateHash, &first.Proof)
+			provenValSet, err = getValidatorSetFromVSProof(first.Header.StateHash, &first.Proof)
 			if err != nil {
 				return nil, fmt.Errorf("Failed to retrieve validator set from VCP proof: %v", err)
 			}
@@ -917,23 +915,23 @@ func checkGenesisBlock(block *score.BlockHeader, db database.Database) (*score.V
 	return genesisValidatorSet, nil
 }
 
-func getValidatorSetFromVCPProof(stateHash common.Hash, recoverredVp *score.VCPProof) (*score.ValidatorSet, error) {
-	serializedVCP, _, err := trie.VerifyProof(stateHash, slst.ValidatorCandidatePoolKey(), recoverredVp)
+func getValidatorSetFromVSProof(stateHash common.Hash, recoverredVSP *score.ValidatorSetProof) (*score.ValidatorSet, error) {
+	serializedVCP, _, err := trie.VerifyProof(stateHash, slst.ValidatorSetKey(), recoverredVSP)
 	if err != nil {
 		return nil, err
 	}
 
-	vcp := &score.ValidatorCandidatePool{}
-	err = rlp.DecodeBytes(serializedVCP, vcp)
+	vs := &score.ValidatorSet{}
+	err = rlp.DecodeBytes(serializedVCP, vs)
 	if err != nil {
 		return nil, err
 	}
-	return sconsensus.SelectTopStakeHoldersAsValidators(vcp), nil
+	return sconsensus.FilterValidators(vs), nil
 }
 
 func getValidatorSetFromSV(sv *slst.StoreView) *score.ValidatorSet {
-	vcp := sv.GetValidatorCandidatePool()
-	return sconsensus.SelectTopStakeHoldersAsValidators(vcp)
+	vsp := sv.GetValidatorSet()
+	return sconsensus.FilterValidators(vsp)
 }
 
 func validateVotes(validatorSet *score.ValidatorSet, block *score.BlockHeader, voteSet *score.VoteSet) error {

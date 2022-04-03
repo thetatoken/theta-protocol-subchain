@@ -137,10 +137,10 @@ func fmtValue(value common.Bytes) string {
 		return fmt.Sprintf("%v", string(j))
 	}
 
-	vcp := score.ValidatorCandidatePool{}
-	err = rlp.DecodeBytes(value, &vcp)
+	vs := score.ValidatorSet{}
+	err = rlp.DecodeBytes(value, &vs)
 	if err == nil {
-		j, err := json.Marshal(vcp)
+		j, err := json.Marshal(vs)
 		if err != nil {
 			panic(err)
 		}

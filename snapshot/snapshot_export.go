@@ -14,12 +14,12 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/theta/store/kvstore"
+	"github.com/thetatoken/theta/store/trie"
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
-	ststore"github.com/thetatoken/thetasubchain/store/treestore"
-	"github.com/thetatoken/theta/store/trie"
+	ststore "github.com/thetatoken/thetasubchain/store/treestore"
 )
 
 func ExportSnapshotV2(db database.Database, consensus *sconsensus.ConsensusEngine, chain *sbc.Chain, snapshotDir string, height uint64) (string, error) {
@@ -164,13 +164,13 @@ func ExportSnapshotV2(db database.Database, consensus *sconsensus.ConsensusEngin
 						}
 					}
 
-					vcpProof, err := proveVCP(block, db)
+					vsProof, err := proveValidatorSet(block, db)
 					if err != nil {
 						return "", fmt.Errorf("Failed to get VCP Proof")
 					}
 					metadata.ProofTrios = append(metadata.ProofTrios,
 						score.SnapshotBlockTrio{
-							First:  score.SnapshotFirstBlock{Header: block.BlockHeader, Proof: *vcpProof},
+							First:  score.SnapshotFirstBlock{Header: block.BlockHeader, Proof: *vsProof},
 							Second: score.SnapshotSecondBlock{Header: &child},
 							Third:  score.SnapshotThirdBlock{Header: &grandChild},
 						})
@@ -203,12 +203,12 @@ func ExportSnapshotV2(db database.Database, consensus *sconsensus.ConsensusEngin
 
 	childVoteSet := chain.FindVotesByHash(childBlock.Hash())
 
-	vcpProof, err := proveVCP(parentBlock, db)
+	vsProof, err := proveValidatorSet(parentBlock, db)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get VCP Proof")
 	}
 	metadata.TailTrio = score.SnapshotBlockTrio{
-		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vcpProof},
+		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vsProof},
 		Second: score.SnapshotSecondBlock{Header: lastFinalizedBlock.BlockHeader},
 		Third:  score.SnapshotThirdBlock{Header: childBlock.BlockHeader, VoteSet: childVoteSet},
 	}
@@ -380,13 +380,13 @@ func ExportSnapshotV3(db database.Database, consensus *sconsensus.ConsensusEngin
 						}
 					}
 
-					vcpProof, err := proveVCP(block, db)
+					vsProof, err := proveValidatorSet(block, db)
 					if err != nil {
 						return "", fmt.Errorf("Failed to get VCP Proof")
 					}
 					metadata.ProofTrios = append(metadata.ProofTrios,
 						score.SnapshotBlockTrio{
-							First:  score.SnapshotFirstBlock{Header: block.BlockHeader, Proof: *vcpProof},
+							First:  score.SnapshotFirstBlock{Header: block.BlockHeader, Proof: *vsProof},
 							Second: score.SnapshotSecondBlock{Header: &child},
 							Third:  score.SnapshotThirdBlock{Header: &grandChild},
 						})
@@ -419,12 +419,12 @@ func ExportSnapshotV3(db database.Database, consensus *sconsensus.ConsensusEngin
 
 	childVoteSet := chain.FindVotesByHash(childBlock.Hash())
 
-	vcpProof, err := proveVCP(parentBlock, db)
+	vsProof, err := proveValidatorSet(parentBlock, db)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get VCP Proof")
 	}
 	metadata.TailTrio = score.SnapshotBlockTrio{
-		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vcpProof},
+		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vsProof},
 		Second: score.SnapshotSecondBlock{Header: lastFinalizedBlock.BlockHeader},
 		Third:  score.SnapshotThirdBlock{Header: childBlock.BlockHeader, VoteSet: childVoteSet},
 	}
@@ -550,12 +550,12 @@ func ExportSnapshotV4(db database.Database, consensus *sconsensus.ConsensusEngin
 
 	childVoteSet := chain.FindVotesByHash(childBlock.Hash())
 
-	vcpProof, err := proveVCP(parentBlock, db)
+	vsProof, err := proveValidatorSet(parentBlock, db)
 	if err != nil {
 		return "", fmt.Errorf("Failed to get VCP Proof")
 	}
 	metadata.TailTrio = score.SnapshotBlockTrio{
-		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vcpProof},
+		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vsProof},
 		Second: score.SnapshotSecondBlock{Header: lastFinalizedBlock.BlockHeader},
 		Third:  score.SnapshotThirdBlock{Header: childBlock.BlockHeader, VoteSet: childVoteSet},
 	}
@@ -581,12 +581,12 @@ func ExportSnapshotV4(db database.Database, consensus *sconsensus.ConsensusEngin
 	return filename, nil
 }
 
-func proveVCP(block *score.ExtendedBlock, db database.Database) (*score.VCPProof, error) {
+func proveValidatorSet(block *score.ExtendedBlock, db database.Database) (*score.ValidatorSetProof, error) {
 	sv := slst.NewStoreView(block.Height, block.StateHash, db)
-	vcpKey := slst.ValidatorCandidatePoolKey()
-	vp := &score.VCPProof{}
-	err := sv.ProveVCP(vcpKey, vp)
-	return vp, err
+	vspKey := slst.ValidatorSetKey()
+	vsp := &score.ValidatorSetProof{}
+	err := sv.ProveValidatorSet(vspKey, vsp)
+	return vsp, err
 }
 
 func getFinalizedChild(block *score.ExtendedBlock, chain *sbc.Chain) (*score.ExtendedBlock, error) {

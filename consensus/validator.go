@@ -55,13 +55,13 @@ func (m *FixedValidatorManager) getProposerFromValidators(valSet *score.Validato
 
 // GetValidatorSet returns the validator set for given block hash.
 func (m *FixedValidatorManager) GetValidatorSet(blockHash common.Hash) *score.ValidatorSet {
-	valSet := selectTopStakeHoldersAsValidatorsForBlock(m.consensus, blockHash, false)
+	valSet := selectValidatorsForBlock(m.consensus, blockHash, false)
 	return valSet
 }
 
 // GetNextValidatorSet returns the validator set for given block hash's next block.
 func (m *FixedValidatorManager) GetNextValidatorSet(blockHash common.Hash) *score.ValidatorSet {
-	valSet := selectTopStakeHoldersAsValidatorsForBlock(m.consensus, blockHash, true)
+	valSet := selectValidatorsForBlock(m.consensus, blockHash, true)
 	return valSet
 }
 
@@ -126,13 +126,13 @@ func (m *RotatingValidatorManager) getProposerFromValidators(valSet *score.Valid
 
 // GetValidatorSet returns the validator set for given block.
 func (m *RotatingValidatorManager) GetValidatorSet(blockHash common.Hash) *score.ValidatorSet {
-	valSet := selectTopStakeHoldersAsValidatorsForBlock(m.consensus, blockHash, false)
+	valSet := selectValidatorsForBlock(m.consensus, blockHash, false)
 	return valSet
 }
 
 // GetNextValidatorSet returns the validator set for given block's next block.
 func (m *RotatingValidatorManager) GetNextValidatorSet(blockHash common.Hash) *score.ValidatorSet {
-	valSet := selectTopStakeHoldersAsValidatorsForBlock(m.consensus, blockHash, true)
+	valSet := selectValidatorsForBlock(m.consensus, blockHash, true)
 	return valSet
 }
 
@@ -192,14 +192,11 @@ func (srvm *SubchainRotatingValidatorManager) GetNextValidatorSet(blockHash comm
 // -------------------------------- Utilities ----------------------------------
 //
 
-func SelectTopStakeHoldersAsValidators(vcp *score.ValidatorCandidatePool) *score.ValidatorSet {
-	maxNumValidators := MaxValidatorCount
-	topStakeHolders := vcp.GetTopStakeHolders(maxNumValidators)
-
+func FilterValidators(vs *score.ValidatorSet) *score.ValidatorSet {
 	valSet := score.NewValidatorSet()
-	for _, stakeHolder := range topStakeHolders {
-		valAddr := stakeHolder.Holder.Hex()
-		valStake := stakeHolder.TotalStake()
+	for _, validatorCandidate := range vs.Validators() {
+		valAddr := validatorCandidate.Address.Hex()
+		valStake := validatorCandidate.Stake
 		if valStake.Cmp(score.Zero) == 0 {
 			continue
 		}
@@ -210,16 +207,16 @@ func SelectTopStakeHoldersAsValidators(vcp *score.ValidatorCandidatePool) *score
 	return valSet
 }
 
-func selectTopStakeHoldersAsValidatorsForBlock(consensus score.ConsensusEngine, blockHash common.Hash, isNext bool) *score.ValidatorSet {
-	vcp, err := consensus.GetLedger().GetFinalizedValidatorCandidatePool(blockHash, isNext)
+func selectValidatorsForBlock(consensus score.ConsensusEngine, blockHash common.Hash, isNext bool) *score.ValidatorSet {
+	vs, err := consensus.GetLedger().GetFinalizedValidatorSet(blockHash, isNext)
 	if err != nil {
-		log.Panicf("Failed to get the validator candidate pool, blockHash: %v, isNext: %v, err: %v", blockHash.Hex(), isNext, err)
+		log.Panicf("Failed to get the validator set, blockHash: %v, isNext: %v, err: %v", blockHash.Hex(), isNext, err)
 	}
-	if vcp == nil {
-		log.Panic("Failed to retrieve the validator candidate pool")
+	if vs == nil {
+		log.Panic("Failed to retrieve the validator set")
 	}
 
-	return SelectTopStakeHoldersAsValidators(vcp)
+	return FilterValidators(vs)
 }
 
 // Generate a random uint64 in [0, max)

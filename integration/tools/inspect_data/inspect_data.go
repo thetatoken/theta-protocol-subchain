@@ -9,12 +9,12 @@ import (
 	"strings"
 
 	"github.com/thetatoken/theta/common"
-	sbc "github.com/thetatoken/thetasubchain/blockchain"
-	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/rlp"
 	"github.com/thetatoken/theta/store/database/backend"
 	"github.com/thetatoken/theta/store/trie"
+	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	score "github.com/thetatoken/thetasubchain/core"
 )
 
 func handleError(err error) {
@@ -108,10 +108,10 @@ func fmtValue(value []byte) string {
 		return fmt.Sprintf("%v", splitRule)
 	}
 
-	vcp := score.ValidatorCandidatePool{}
-	err = rlp.DecodeBytes(value, &vcp)
+	vs := score.ValidatorSet{}
+	err = rlp.DecodeBytes(value, &vs)
 	if err == nil {
-		return fmt.Sprintf("%v", vcp)
+		return fmt.Sprintf("%v", vs)
 	}
 
 	hl := types.HeightList{}

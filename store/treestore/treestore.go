@@ -6,8 +6,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/store/database"
-	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/theta/store/trie"
+	score "github.com/thetatoken/thetasubchain/core"
 )
 
 // NewTreeStore create a new instance of TreeStore.
@@ -81,8 +81,8 @@ func (store *TreeStore) Get(key common.Bytes) common.Bytes {
 	return store.Trie.Get(key)
 }
 
-func (store *TreeStore) ProveVCP(vcpKey []byte, vp *score.VCPProof) error {
-	return store.Trie.Prove(vcpKey, 0, vp)
+func (store *TreeStore) ProveValidatorSet(vcpKey []byte, vsp *score.ValidatorSetProof) error {
+	return store.Trie.Prove(vcpKey, 0, vsp)
 }
 
 // Set sets value of given key.

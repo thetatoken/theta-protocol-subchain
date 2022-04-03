@@ -27,7 +27,7 @@ type SnapshotTrieRecord struct {
 
 type SnapshotFirstBlock struct {
 	Header *BlockHeader
-	Proof  VCPProof
+	Proof  ValidatorSetProof
 }
 
 type SnapshotSecondBlock struct {
@@ -160,39 +160,39 @@ type proofKV struct {
 	Val []byte
 }
 
-type VCPProof struct {
+type ValidatorSetProof struct {
 	kvs []*proofKV
 }
 
-func (vp VCPProof) GetKvs() []*proofKV {
-	return vp.kvs
+func (vsp ValidatorSetProof) GetKvs() []*proofKV {
+	return vsp.kvs
 }
 
-var _ rlp.Encoder = (*VCPProof)(nil)
+var _ rlp.Encoder = (*ValidatorSetProof)(nil)
 
 // EncodeRLP implements RLP Encoder interface.
-func (vp VCPProof) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, vp.GetKvs())
+func (vsp ValidatorSetProof) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, vsp.GetKvs())
 }
 
-var _ rlp.Decoder = (*VCPProof)(nil)
+var _ rlp.Decoder = (*ValidatorSetProof)(nil)
 
 // DecodeRLP implements RLP Decoder interface.
-func (vp *VCPProof) DecodeRLP(stream *rlp.Stream) error {
+func (vsp *ValidatorSetProof) DecodeRLP(stream *rlp.Stream) error {
 	proof := []*proofKV{}
 	err := stream.Decode(&proof)
 	if err != nil {
 		return err
 	}
-	vp.kvs = []*proofKV{}
+	vsp.kvs = []*proofKV{}
 	for _, kv := range proof {
-		vp.kvs = append(vp.kvs, kv)
+		vsp.kvs = append(vsp.kvs, kv)
 	}
 	return nil
 }
 
-func (vp *VCPProof) Get(key []byte) (value []byte, err error) {
-	for _, kv := range vp.kvs {
+func (vsp *ValidatorSetProof) Get(key []byte) (value []byte, err error) {
+	for _, kv := range vsp.kvs {
 		if bytes.Compare(key, kv.Key) == 0 {
 			return kv.Val, nil
 		}
@@ -200,8 +200,8 @@ func (vp *VCPProof) Get(key []byte) (value []byte, err error) {
 	return nil, fmt.Errorf("key %v does not exist", hex.EncodeToString(key))
 }
 
-func (vp *VCPProof) Has(key []byte) (bool, error) {
-	for _, kv := range vp.kvs {
+func (vsp *ValidatorSetProof) Has(key []byte) (bool, error) {
+	for _, kv := range vsp.kvs {
 		if bytes.Compare(key, kv.Key) == 0 {
 			return true, nil
 		}
@@ -209,13 +209,13 @@ func (vp *VCPProof) Has(key []byte) (bool, error) {
 	return false, fmt.Errorf("key %v does not exist", hex.EncodeToString(key))
 }
 
-func (vp *VCPProof) Put(key []byte, value []byte) error {
-	for _, kv := range vp.kvs {
+func (vsp *ValidatorSetProof) Put(key []byte, value []byte) error {
+	for _, kv := range vsp.kvs {
 		if bytes.Compare(key, kv.Key) == 0 {
 			kv.Val = value
 			return nil
 		}
 	}
-	vp.kvs = append(vp.kvs, &proofKV{key, value})
+	vsp.kvs = append(vsp.kvs, &proofKV{key, value})
 	return nil
 }

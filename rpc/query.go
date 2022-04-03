@@ -592,7 +592,7 @@ type GetValidatorSetResult struct {
 
 type BlockHashVcpPair struct {
 	BlockHash  common.Hash
-	Vcp        *score.ValidatorCandidatePool
+	Vs         *score.ValidatorSet
 	HeightList *types.HeightList
 }
 

@@ -106,8 +106,8 @@ func (sv *StoreView) Traverse(prefix common.Bytes, cb func(k, v common.Bytes) bo
 	return sv.store.Traverse(prefix, cb)
 }
 
-func (sv *StoreView) ProveVCP(vcpKey []byte, vp *score.VCPProof) error {
-	return sv.store.ProveVCP(vcpKey, vp)
+func (sv *StoreView) ProveValidatorSet(vspKey []byte, vsp *score.ValidatorSetProof) error {
+	return sv.store.ProveValidatorSet(vspKey, vsp)
 }
 
 // Delete removes the value corresponding to the key
@@ -294,29 +294,29 @@ func (sv *StoreView) DeleteExpiredSplitRules(currentBlockHeight uint64) bool {
 	return true
 }
 
-// GetValidatorCandidatePool gets the validator candidate pool.
-func (sv *StoreView) GetValidatorCandidatePool() *score.ValidatorCandidatePool {
-	data := sv.Get(ValidatorCandidatePoolKey())
+// GetValidatorSet gets the validator set.
+func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
+	data := sv.Get(ValidatorSetKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	vcp := &score.ValidatorCandidatePool{}
-	err := types.FromBytes(data, vcp)
+	vs := &score.ValidatorSet{}
+	err := types.FromBytes(data, vs)
 	if err != nil {
-		log.Panicf("Error reading validator candidate pool %X, error: %v",
+		log.Panicf("Error reading validator set %X, error: %v",
 			data, err.Error())
 	}
-	return vcp
+	return vs
 }
 
-// UpdateValidatorCandidatePool updates the validator candidate pool.
-func (sv *StoreView) UpdateValidatorCandidatePool(vcp *score.ValidatorCandidatePool) {
+// UpdateValidatorSet updates the validator set.
+func (sv *StoreView) UpdateValidatorSet(vcp *score.ValidatorSet) {
 	vcpBytes, err := types.ToBytes(vcp)
 	if err != nil {
-		log.Panicf("Error writing validator candidate pool %v, error: %v",
+		log.Panicf("Error writing validator set %v, error: %v",
 			vcp, err.Error())
 	}
-	sv.Set(ValidatorCandidatePoolKey(), vcpBytes)
+	sv.Set(ValidatorSetKey(), vcpBytes)
 }
 
 // GetStakeTransactionHeightList gets the heights of blocks that contain stake related transactions
