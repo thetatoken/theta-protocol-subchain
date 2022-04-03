@@ -1,11 +1,3 @@
-/*
- * @Author: your name
- * @Date: 2022-03-09 04:36:05
- * @LastEditTime: 2022-03-20 13:54:03
- * @LastEditors: Please set LastEditors
- * @Description: 打开koroFileHeader查看配置 进行设置: https://github.com/OBKoro1/koro1FileHeader/wiki/%E9%85%8D%E7%BD%AE
- * @FilePath: /theta-protocol-subchain-poc/node/node.go
- */
 package node
 
 import (
@@ -26,6 +18,7 @@ import (
 	"github.com/thetatoken/theta/store/kvstore"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
 	sld "github.com/thetatoken/thetasubchain/ledger"
@@ -60,20 +53,18 @@ type Node struct {
 }
 
 type Params struct {
-	ChainID              string
-	SubchainID           *big.Int
-	GasPriceLimit        *big.Int
-	RegisterContractAddr common.Address
-	ErcContractAddr      common.Address
-	PrivateKey           *crypto.PrivateKey
-	Root                 *score.Block
-	NetworkOld           p2p.Network
-	Network              p2pl.Network
-	DB                   database.Database
-	RollingDB            *srollingdb.RollingDB
-	SnapshotPath         string
-	ChainImportDirPath   string
-	ChainCorrectionPath  string
+	ChainID             string
+	SubchainID          *big.Int
+	GasPriceLimit       *big.Int
+	PrivateKey          *crypto.PrivateKey
+	Root                *score.Block
+	NetworkOld          p2p.Network
+	Network             p2pl.Network
+	DB                  database.Database
+	RollingDB           *srollingdb.RollingDB
+	SnapshotPath        string
+	ChainImportDirPath  string
+	ChainCorrectionPath string
 }
 
 func NewNode(params *Params) *Node {
@@ -81,7 +72,8 @@ func NewNode(params *Params) *Node {
 	chain := sbc.NewChain(params.ChainID, store, params.Root)
 	params.RollingDB.SetChain(chain)
 
-	validatorManager := sconsensus.NewRotatingValidatorManager()
+	//validatorManager := sconsensus.NewRotatingValidatorManager()
+	validatorManager := sconsensus.NewSubchainRotatingValidatorManager()
 	dispatcher := dp.NewDispatcher(params.NetworkOld, params.Network)
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
@@ -90,8 +82,10 @@ func NewNode(params *Params) *Node {
 	syncMgr := snsync.NewSyncManager(chain, consensus, params.NetworkOld, params.Network, dispatcher, consensus, reporter)
 	mempool := smp.CreateMempool(dispatcher, consensus)
 	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool)
+	mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
 
 	validatorManager.SetConsensusEngine(consensus)
+	validatorManager.SetMainchainWitness(mainchainWitness)
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
@@ -121,8 +115,6 @@ func NewNode(params *Params) *Node {
 			state.SetLastProposal(score.Proposal{})
 		}
 	}
-	// mainchainWitness := mainchainWitness.NewMainchainMonitor(params.PrivateKey, params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
-	mainchainWitness := witness.NewMainchainWitness(params.GasPriceLimit, params.SubchainID, params.RegisterContractAddr, params.ErcContractAddr)
 
 	node := &Node{
 		Store:            store,
@@ -154,6 +146,7 @@ func (n *Node) Start(ctx context.Context) {
 	n.Dispatcher.Start(n.ctx)
 	n.Mempool.Start(n.ctx)
 	n.reporter.Start(n.ctx)
+	n.MainchainWitness.Start(n.ctx)
 
 	if viper.GetBool(common.CfgRPCEnabled) {
 		n.RPC.Start(n.ctx)

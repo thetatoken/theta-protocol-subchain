@@ -7,6 +7,7 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/thetatoken/theta/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/witness"
 )
 
 const MaxValidatorCount int = 31
@@ -133,6 +134,58 @@ func (m *RotatingValidatorManager) GetValidatorSet(blockHash common.Hash) *score
 func (m *RotatingValidatorManager) GetNextValidatorSet(blockHash common.Hash) *score.ValidatorSet {
 	valSet := selectTopStakeHoldersAsValidatorsForBlock(m.consensus, blockHash, true)
 	return valSet
+}
+
+//
+// -------------------------------- SubchainRotatingValidatorManager ----------------------------------
+//
+var _ score.ValidatorManager = &SubchainRotatingValidatorManager{}
+
+// SubchainRotatingValidatorManager is an implementation of ValidatorManager interface that selects a random validator as
+// the proposer using validator's stake as weight.
+type SubchainRotatingValidatorManager struct {
+	consensus        score.ConsensusEngine
+	mainchainWitness *witness.MainchainWitness
+}
+
+// NewSubchainRotatingValidatorManager creates an instance of SubchainRotatingValidatorManager.
+func NewSubchainRotatingValidatorManager() *SubchainRotatingValidatorManager {
+	srvm := &SubchainRotatingValidatorManager{}
+	return srvm
+}
+
+// SetConsensusEngine implements ValidatorManager interface.
+func (srvm *SubchainRotatingValidatorManager) SetConsensusEngine(consensus score.ConsensusEngine) {
+	srvm.consensus = consensus
+}
+
+// SetMainchainWitness set the mainchain monitor for the validator manager
+func (srvm *SubchainRotatingValidatorManager) SetMainchainWitness(mainchainWitness *witness.MainchainWitness) {
+	srvm.mainchainWitness = mainchainWitness
+}
+
+// GetProposer implements ValidatorManager interface.
+func (srvm *SubchainRotatingValidatorManager) GetProposer(blockHash common.Hash, epoch uint64) score.Validator {
+	return score.Validator{} // TODO: implement
+}
+
+// GetNextProposer implements ValidatorManager interface.
+func (srvm *SubchainRotatingValidatorManager) GetNextProposer(blockHash common.Hash, epoch uint64) score.Validator {
+	return score.Validator{} // TODO: implement
+}
+
+func (srvm *SubchainRotatingValidatorManager) getProposerFromValidators(valSet *score.ValidatorSet, epoch uint64) score.Validator {
+	return score.Validator{} // TODO: implement
+}
+
+// GetValidatorSet returns the validator set for given block.
+func (srvm *SubchainRotatingValidatorManager) GetValidatorSet(blockHash common.Hash) *score.ValidatorSet {
+	return nil // TODO: implement
+}
+
+// GetNextValidatorSet returns the validator set for given block's next block.
+func (srvm *SubchainRotatingValidatorManager) GetNextValidatorSet(blockHash common.Hash) *score.ValidatorSet {
+	return nil // TODO: implement
 }
 
 //

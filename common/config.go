@@ -145,11 +145,13 @@ const (
 	CfgDebugLogSelectedEENPs = "debug.logSelectedEENPs"
 
 	// CfgRegisterContractAddress defines the register contract address
-	CfgRegisterContractAddress = "contract.register"
+	CfgRegisterContractAddress = "subchain.register"
 	// CfgERC20ContractAddress defines the erc20 contract address
-	CfgERC20ContractAddress = "contract.erc20"
+	CfgERC20ContractAddress = "subchain.erc20"
 	// CfgMainchainAdaptorURL defines the URL of the mainchain adaptor
-	CfgMainchainAdaptorURL = "contract.clientURL"
+	CfgMainchainAdaptorURL = "subchain.clientURL"
+	// CfgSubchainID defines the subchainID
+	CfgSubchainID = "subchain.ID"
 )
 
 // Starting block heights of features.
@@ -229,4 +231,3 @@ func init() {
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
-
