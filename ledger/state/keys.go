@@ -41,27 +41,6 @@ func ValidatorCandidatePoolKey() common.Bytes {
 	return common.Bytes("ls/vcp")
 }
 
-// GuardianCandidatePoolKey returns the state key for the guadian stake holder set
-func GuardianCandidatePoolKey() common.Bytes {
-	return common.Bytes("ls/gcp")
-}
-
-// // EliteEdgeNodePoolKey returns the state key for the elite edge node TFuel stake holder set
-// func EliteEdgeNodePoolKey() common.Bytes {
-// 	return common.Bytes("ls/eenp")
-// }
-
-// EliteEdgeNodeKeyPrefix returns the prefix of the elite edge node key
-func EliteEdgeNodeKeyPrefix() common.Bytes {
-	return common.Bytes("ls/een/")
-}
-
-// EliteEdgeNodeKey returns the elite edge node key of a given address
-func EliteEdgeNodeKey(addr common.Address) common.Bytes {
-	prefix := EliteEdgeNodeKeyPrefix()
-	return append(prefix, addr[:]...)
-}
-
 // StakeTransactionHeightListKey returns the state key the heights of blocks
 // that contain stake related transactions (i.e. StakeDeposit, StakeWithdraw, etc)
 func StakeTransactionHeightListKey() common.Bytes {

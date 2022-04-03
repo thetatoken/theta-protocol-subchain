@@ -4,21 +4,18 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"log"
 	"math/big"
 	"math/rand"
 	"time"
 
 	"github.com/spf13/viper"
 
-
-
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
-	score"github.com/thetatoken/thetasubchain/core"
+	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	sversion "github.com/thetatoken/thetasubchain/version"
@@ -146,12 +143,12 @@ type GetTransactionArgs struct {
 }
 
 type GetTransactionResult struct {
-	BlockHash   common.Hash                `json:"block_hash"`
-	BlockHeight common.JSONUint64          `json:"block_height"`
-	Status      TxStatus                   `json:"status"`
-	TxHash      common.Hash                `json:"hash"`
-	Type        byte                       `json:"type"`
-	Tx          types.Tx                   `json:"transaction"`
+	BlockHash   common.Hash         `json:"block_hash"`
+	BlockHeight common.JSONUint64   `json:"block_height"`
+	Status      TxStatus            `json:"status"`
+	TxHash      common.Hash         `json:"hash"`
+	Type        byte                `json:"type"`
+	Tx          types.Tx            `json:"transaction"`
 	Receipt     *sbc.TxReceiptEntry `json:"receipt"`
 }
 
@@ -240,16 +237,16 @@ type GetBlockArgs struct {
 
 type Tx struct {
 	types.Tx `json:"raw"`
-	Type     byte                       `json:"type"`
-	Hash     common.Hash                `json:"hash"`
+	Type     byte                `json:"type"`
+	Hash     common.Hash         `json:"hash"`
 	Receipt  *sbc.TxReceiptEntry `json:"receipt"`
 }
 
 type TxWithEthHash struct {
 	types.Tx  `json:"raw"`
-	Type      byte                       `json:"type"`
-	Hash      common.Hash                `json:"hash"`
-	EthTxHash common.Hash                `json:"eth_tx_hash"`
+	Type      byte                `json:"type"`
+	Hash      common.Hash         `json:"hash"`
+	EthTxHash common.Hash         `json:"eth_tx_hash"`
 	Receipt   *sbc.TxReceiptEntry `json:"receipt"`
 }
 
@@ -260,19 +257,19 @@ type GetBlockResult struct {
 type GetBlocksResult []*GetBlockResultInner
 
 type GetBlockResultInner struct {
-	ChainID   string                 `json:"chain_id"`
-	Epoch     common.JSONUint64      `json:"epoch"`
-	Height    common.JSONUint64      `json:"height"`
-	Parent    common.Hash            `json:"parent"`
-	TxHash    common.Hash            `json:"transactions_hash"`
-	StateHash common.Hash            `json:"state_hash"`
-	Timestamp *common.JSONBig        `json:"timestamp"`
-	Proposer  common.Address         `json:"proposer"`
+	ChainID   string                  `json:"chain_id"`
+	Epoch     common.JSONUint64       `json:"epoch"`
+	Height    common.JSONUint64       `json:"height"`
+	Parent    common.Hash             `json:"parent"`
+	TxHash    common.Hash             `json:"transactions_hash"`
+	StateHash common.Hash             `json:"state_hash"`
+	Timestamp *common.JSONBig         `json:"timestamp"`
+	Proposer  common.Address          `json:"proposer"`
 	HCC       score.CommitCertificate `json:"hcc"`
 	//GuardianVotes      *score.AggregatedVotes    `json:"guardian_votes"`
 	//EliteEdgeNodeVotes *score.AggregatedEENVotes `json:"elite_edge_node_votes"`
 
-	Children []common.Hash    `json:"children"`
+	Children []common.Hash     `json:"children"`
 	Status   score.BlockStatus `json:"status"`
 
 	Hash common.Hash   `json:"hash"`
@@ -594,13 +591,13 @@ func (t *ThetaRPCService) GetPeers(args *GetPeersArgs, result *GetPeersResult) (
 	return
 }
 
-// ------------------------------ GetVcp -----------------------------------
+// ------------------------------ GetValidatorSet -----------------------------------
 
-type GetVcpByHeightArgs struct {
+type GetValidatorSetByHeightArgs struct {
 	Height common.JSONUint64 `json:"height"`
 }
 
-type GetVcpResult struct {
+type GetValidatorSetResult struct {
 	BlockHashVcpPairs []BlockHashVcpPair
 }
 
@@ -610,284 +607,8 @@ type BlockHashVcpPair struct {
 	HeightList *types.HeightList
 }
 
-func (t *ThetaRPCService) GetVcpByHeight(args *GetVcpByHeightArgs, result *GetVcpResult) (err error) {
-	deliveredView, err := t.ledger.GetDeliveredSnapshot()
-	if err != nil {
-		return err
-	}
-
-	db := deliveredView.GetDB()
-	height := uint64(args.Height)
-
-	blockHashVcpPairs := []BlockHashVcpPair{}
-	blocks := t.chain.FindBlocksByHeight(height)
-	for _, b := range blocks {
-		blockHash := b.Hash()
-		stateRoot := b.StateHash
-		blockStoreView := slst.NewStoreView(height, stateRoot, db)
-		if blockStoreView == nil { // might have been pruned
-			return fmt.Errorf("the VCP for height %v does not exists, it might have been pruned", height)
-		}
-		vcp := blockStoreView.GetValidatorCandidatePool()
-		hl := blockStoreView.GetStakeTransactionHeightList()
-		blockHashVcpPairs = append(blockHashVcpPairs, BlockHashVcpPair{
-			BlockHash:  blockHash,
-			Vcp:        vcp,
-			HeightList: hl,
-		})
-	}
-
-	result.BlockHashVcpPairs = blockHashVcpPairs
-
-	return nil
-}
-
-// ------------------------------ GetGcp -----------------------------------
-
-//type GetGcpByHeightArgs struct {
-//	Height common.JSONUint64 `json:"height"`
-//}
-//
-//type GetGcpResult struct {
-//	BlockHashGcpPairs []BlockHashGcpPair
-//}
-//
-//type BlockHashGcpPair struct {
-//	BlockHash common.Hash
-//	Gcp       *score.GuardianCandidatePool
-//}
-
-//func (t *ThetaRPCService) GetGcpByHeight(args *GetGcpByHeightArgs, result *GetGcpResult) (err error) {
-//	deliveredView, err := t.ledger.GetDeliveredSnapshot()
-//	if err != nil {
-//		return err
-//	}
-//
-//	db := deliveredView.GetDB()
-//	height := uint64(args.Height)
-//
-//	blockHashGcpPairs := []BlockHashGcpPair{}
-//	blocks := t.chain.FindBlocksByHeight(height)
-//	for _, b := range blocks {
-//		blockHash := b.Hash()
-//		stateRoot := b.StateHash
-//		blockStoreView := slst.NewStoreView(height, stateRoot, db)
-//		if blockStoreView == nil { // might have been pruned
-//			return fmt.Errorf("the GCP for height %v does not exists, it might have been pruned", height)
-//		}
-//		gcp := blockStoreView.GetGuardianCandidatePool()
-//		blockHashGcpPairs = append(blockHashGcpPairs, BlockHashGcpPair{
-//			BlockHash: blockHash,
-//			Gcp:       gcp,
-//		})
-//	}
-//
-//	result.BlockHashGcpPairs = blockHashGcpPairs
-//
-//	return nil
-//}
-
-// ------------------------------ GetGuardianKey -----------------------------------
-
-//type GetGuardianInfoArgs struct{}
-//
-//type GetGuardianInfoResult struct {
-//	BLSPubkey string
-//	BLSPop    string
-//	Address   string
-//	Signature string
-//}
-//
-//func (t *ThetaRPCService) GetGuardianInfo(args *GetGuardianInfoArgs, result *GetGuardianInfoResult) (err error) {
-//	privKey := t.consensus.PrivateKey()
-//	blsKey, err := bls.GenKey(strings.NewReader(common.Bytes2Hex(privKey.PublicKey().ToBytes())))
-//	if err != nil {
-//		return fmt.Errorf("Failed to get BLS key: %v", err.Error())
-//	}
-//
-//	result.Address = privKey.PublicKey().Address().Hex()
-//	result.BLSPubkey = hex.EncodeToString(blsKey.PublicKey().ToBytes())
-//	popBytes := blsKey.PopProve().ToBytes()
-//	result.BLSPop = hex.EncodeToString(popBytes)
-//
-//	sig, err := privKey.Sign(popBytes)
-//	if err != nil {
-//		return fmt.Errorf("Failed to generate signature: %v", err.Error())
-//	}
-//	result.Signature = hex.EncodeToString(sig.ToBytes())
-//
-//	return nil
-//}
-
-// ------------------------------ GetEenp -----------------------------------
-
-//type GetEenpByHeightArgs struct {
-//	Height common.JSONUint64 `json:"height"`
-//}
-//
-//type GetEenpResult struct {
-//	BlockHashEenpPairs []BlockHashEenpPair
-//}
-//
-//type BlockHashEenpPair struct {
-//	BlockHash common.Hash
-//	EENs      []*score.EliteEdgeNode
-//}
-//
-//func (t *ThetaRPCService) GetEenpByHeight(args *GetEenpByHeightArgs, result *GetEenpResult) (err error) {
-//	deliveredView, err := t.ledger.GetDeliveredSnapshot()
-//	if err != nil {
-//		return err
-//	}
-//
-//	db := deliveredView.GetDB()
-//	height := uint64(args.Height)
-//
-//	blockHashEenpPairs := []BlockHashEenpPair{}
-//	blocks := t.chain.FindBlocksByHeight(height)
-//	for _, b := range blocks {
-//		blockHash := b.Hash()
-//		stateRoot := b.StateHash
-//		blockStoreView := slst.NewStoreView(height, stateRoot, db)
-//		if blockStoreView == nil { // might have been pruned
-//			return fmt.Errorf("the EENP for height %v does not exists, it might have been pruned", height)
-//		}
-//		eenp := slst.NewEliteEdgeNodePool(blockStoreView, true)
-//		eens := eenp.GetAll(false)
-//		blockHashEenpPairs = append(blockHashEenpPairs, BlockHashEenpPair{
-//			BlockHash: blockHash,
-//			EENs:      eens,
-//		})
-//	}
-//
-//	result.BlockHashEenpPairs = blockHashEenpPairs
-//
-//	return nil
-//}
-
-// ------------------------------ GetStakeRewardDistributionRuleSetByHeight -----------------------------------
-
-type GetStakeRewardDistributionRuleSetByHeightArgs struct {
-	Height  common.JSONUint64 `json:"height"`
-	Address string            `json:"address"` // the address of the stake holder, i.e. the guardian or elite edge node
-}
-
-type GetStakeRewardDistributionRuleSetResult struct {
-	BlockHashStakeRewardDistributionRuleSetPairs []BlockHashStakeRewardDistributionRuleSetPair
-}
-
-type BlockHashStakeRewardDistributionRuleSetPair struct {
-	BlockHash                      common.Hash
-	StakeRewardDistributionRuleSet []*score.RewardDistribution
-}
-
-func (t *ThetaRPCService) GetStakeRewardDistributionByHeight(
-	args *GetStakeRewardDistributionRuleSetByHeightArgs, result *GetStakeRewardDistributionRuleSetResult) (err error) {
-	deliveredView, err := t.ledger.GetDeliveredSnapshot()
-	if err != nil {
-		return err
-	}
-
-	db := deliveredView.GetDB()
-	height := uint64(args.Height)
-	addressStr := args.Address
-
-	blockHashSrdrsPairs := []BlockHashStakeRewardDistributionRuleSetPair{}
-	blocks := t.chain.FindBlocksByHeight(height)
-	for _, b := range blocks {
-		blockHash := b.Hash()
-		stateRoot := b.StateHash
-		blockStoreView := slst.NewStoreView(height, stateRoot, db)
-		if blockStoreView == nil { // might have been pruned
-			return fmt.Errorf("the EENP for height %v does not exists, it might have been pruned", height)
-		}
-		srdrs := slst.NewStakeRewardDistributionRuleSet(blockStoreView)
-
-		var stakeDistrList []*score.RewardDistribution
-		if addressStr != "" {
-			address := common.HexToAddress(addressStr)
-			rewardDistr := srdrs.Get(address)
-			stakeDistrList = []*score.RewardDistribution{rewardDistr}
-		} else {
-			stakeDistrList = srdrs.GetAll()
-		}
-
-		blockHashSrdrsPairs = append(blockHashSrdrsPairs, BlockHashStakeRewardDistributionRuleSetPair{
-			BlockHash:                      blockHash,
-			StakeRewardDistributionRuleSet: stakeDistrList,
-		})
-	}
-
-	result.BlockHashStakeRewardDistributionRuleSetPairs = blockHashSrdrsPairs
-
-	return nil
-}
-
-// ------------------------------ GetEliteEdgeNodeStakeReturnsByHeight -----------------------------------
-
-type GetEliteEdgeNodeStakeReturnsByHeightArgs struct {
-	Height common.JSONUint64 `json:"height"`
-}
-
-type GetEliteEdgeNodeStakeReturnsByHeightResult struct {
-	EENStakeReturns []slst.StakeWithHolder
-}
-
-func (t *ThetaRPCService) GetEliteEdgeNodeStakeReturnsByHeight(
-	args *GetEliteEdgeNodeStakeReturnsByHeightArgs, result *GetEliteEdgeNodeStakeReturnsByHeightResult) (err error) {
-	deliveredView, err := t.ledger.GetDeliveredSnapshot()
-	if err != nil {
-		return err
-	}
-
-	height := uint64(args.Height)
-	result.EENStakeReturns = deliveredView.GetEliteEdgeNodeStakeReturns(height)
-
-	return nil
-}
-
-// ------------------------------ GetAllPendingEliteEdgeNodeStakeReturns -----------------------------------
-
-type HeightStakeReturnsPair struct {
-	HeightKey       string
-	EENStakeReturns []slst.StakeWithHolder
-}
-
-type GetAllPendingEliteEdgeNodeStakeReturnsArgs struct {
-}
-
-type GetAllPendingEliteEdgeNodeStakeReturnsResult struct {
-	EENHeightStakeReturnsPairs []HeightStakeReturnsPair
-}
-
-func (t *ThetaRPCService) GetAllPendingEliteEdgeNodeStakeReturns(
-	args *GetAllPendingEliteEdgeNodeStakeReturnsArgs, result *GetAllPendingEliteEdgeNodeStakeReturnsResult) (err error) {
-	deliveredView, err := t.ledger.GetDeliveredSnapshot()
-	if err != nil {
-		return err
-	}
-
-	eenHeightStakeReturnsPairs := []HeightStakeReturnsPair{}
-	cb := func(k, v common.Bytes) bool {
-		srList := []slst.StakeWithHolder{}
-		err := types.FromBytes(v, &srList)
-		if err != nil {
-			log.Panicf("GetAllPendingEliteEdgeNodeStakeReturns: Error reading StakeWithHolder %X, error: %v",
-				v, err.Error())
-		}
-
-		eenHeightStakeReturnsPairs = append(eenHeightStakeReturnsPairs, HeightStakeReturnsPair{
-			HeightKey:       string(k),
-			EENStakeReturns: srList,
-		})
-		return true
-	}
-
-	prefix := slst.EliteEdgeNodeStakeReturnsKeyPrefix()
-	deliveredView.Traverse(prefix, cb)
-
-	result.EENHeightStakeReturnsPairs = eenHeightStakeReturnsPairs
-
+func (t *ThetaRPCService) GetValidatorSetByHeight(args *GetValidatorSetByHeightArgs, result *GetValidatorSetResult) (err error) {
+	// TODO: implement
 	return nil
 }
 

@@ -26,15 +26,9 @@ var QueryCmd = &cobra.Command{
 func init() {
 	QueryCmd.AddCommand(statusCmd)
 	QueryCmd.AddCommand(accountCmd)
-	//QueryCmd.AddCommand(guardianCmd)
 	QueryCmd.AddCommand(blockCmd)
 	QueryCmd.AddCommand(txCmd)
-	QueryCmd.AddCommand(splitRuleCmd)
-	QueryCmd.AddCommand(vcpCmd)
-	//QueryCmd.AddCommand(gcpCmd)
-	//QueryCmd.AddCommand(eenpCmd)
-	QueryCmd.AddCommand(srdrsCmd)
-	QueryCmd.AddCommand(stakeReturnsCmd)
+	QueryCmd.AddCommand(vsCmd)
 	QueryCmd.AddCommand(peersCmd)
 	QueryCmd.AddCommand(versionCmd)
 }

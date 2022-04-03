@@ -13,21 +13,21 @@ import (
 	rpcc "github.com/ybbus/jsonrpc"
 )
 
-// vcpCmd represents the vcp command.
+// vsCmd represents the validator set command.
 // Example:
-//		thetacli query vcp --height=10
-var vcpCmd = &cobra.Command{
+//		thetacli query validators --height=10
+var vsCmd = &cobra.Command{
 	Use:     "vcp",
-	Short:   "Get validator candidate pool",
-	Example: `thetacli query vcp --height=10`,
-	Run:     doVcpCmd,
+	Short:   "Get validator set at a given height",
+	Example: `thetacli query vs --height=10`,
+	Run:     doVsCmd,
 }
 
-func doVcpCmd(cmd *cobra.Command, args []string) {
+func doVsCmd(cmd *cobra.Command, args []string) {
 	client := rpcc.NewRPCClient(viper.GetString(utils.CfgRemoteRPCEndpoint))
 
 	height := heightFlag
-	res, err := client.Call("theta.GetVcpByHeight", rpc.GetVcpByHeightArgs{Height: common.JSONUint64(height)})
+	res, err := client.Call("theta.GetVcpByHeight", rpc.GetValidatorSetByHeightArgs{Height: common.JSONUint64(height)})
 	if err != nil {
 		utils.Error("Failed to get validator candidate pool: %v\n", err)
 	}
@@ -42,6 +42,6 @@ func doVcpCmd(cmd *cobra.Command, args []string) {
 }
 
 func init() {
-	vcpCmd.Flags().Uint64Var(&heightFlag, "height", uint64(0), "height of the block")
-	vcpCmd.MarkFlagRequired("height")
+	vsCmd.Flags().Uint64Var(&heightFlag, "height", uint64(0), "height of the block")
+	vsCmd.MarkFlagRequired("height")
 }

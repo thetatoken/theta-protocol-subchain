@@ -10,7 +10,6 @@ import (
 
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
-
 )
 
 var _ TxExecutor = (*SendTxExecutor)(nil)

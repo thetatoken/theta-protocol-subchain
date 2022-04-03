@@ -505,18 +505,6 @@ func (sv *StoreView) GetThetaStake(addr common.Address) *big.Int {
 		}
 	}
 
-	//gcp := sv.GetGuardianCandidatePool()
-	//for _, g := range gcp.SortedGuardians {
-	//	for _, stake := range g.Stakes {
-	//		if stake.Source == addr {
-	//			if stake.Withdrawn {
-	//				continue // withdrawn stake does not count
-	//			}
-	//			totalStake = new(big.Int).Add(stake.Amount, totalStake)
-	//		}
-	//	}
-	//}
-
 	return totalStake
 }
 
