@@ -3,6 +3,7 @@ package ledger
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
 	"strconv"
 	"sync"
 	"time"
@@ -20,10 +21,13 @@ import (
 	"github.com/thetatoken/theta/store/database"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	sexec "github.com/thetatoken/thetasubchain/ledger/execution"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	smp "github.com/thetatoken/thetasubchain/mempool"
+	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "ledger"})
@@ -44,21 +48,25 @@ type Ledger struct {
 	mu       *sync.RWMutex // Lock for accessing ledger state.
 	state    *slst.LedgerState
 	executor *sexec.Executor
+
+	mainchainWitness *witness.MainchainWitness
 }
 
 // NewLedger creates an instance of Ledger
-func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine, valMgr score.ValidatorManager, mempool *smp.Mempool) *Ledger {
+func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
+	valMgr score.ValidatorManager, mempool *smp.Mempool, mainchainWitness *witness.MainchainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
 	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr)
 	ledger := &Ledger{
-		db:        db,
-		chain:     chain,
-		consensus: consensus,
-		valMgr:    valMgr,
-		mempool:   mempool,
-		mu:        &sync.RWMutex{},
-		state:     state,
-		executor:  executor,
+		db:               db,
+		chain:            chain,
+		consensus:        consensus,
+		valMgr:           valMgr,
+		mempool:          mempool,
+		mu:               &sync.RWMutex{},
+		state:            state,
+		executor:         executor,
+		mainchainWitness: mainchainWitness,
 	}
 	return ledger
 }
@@ -192,7 +200,7 @@ func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res re
 
 // ProposeBlockTxs collects and executes a list of transactions, which will be used to assemble the next blockl
 // It also clears these transactions from the mempool.
-func (ledger *Ledger) ProposeBlockTxs(block *score.Block, shouldIncludeValidatorUpdateTxs bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
+func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
 	// Must always acquire locks in following order to avoid deadlock: mempool, ledger.
 	// Otherwise, could cause deadlock since mempool.InsertTransaction() also first acquires the mempool, and then the ledger lock
 	logger.Debugf("ProposeBlockTxs: Propose block transactions, block.height = %v", block.Height)
@@ -215,7 +223,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, shouldIncludeValidator
 
 	// Add special transactions
 	rawTxCandidates := []common.Bytes{}
-	ledger.addSpecialTransactions(block, view, &rawTxCandidates)
+	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs)
 
 	// Add regular transactions submitted by the clients
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
@@ -232,16 +240,6 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, shouldIncludeValidator
 		tx, err := types.TxFromBytes(rawTxCandidate)
 		if err != nil {
 			continue
-		}
-
-		if !shouldIncludeValidatorUpdateTxs {
-			// Skip validator updating txs
-			if _, ok := tx.(*types.DepositStakeTx); ok {
-				continue
-			}
-			if _, ok := tx.(*types.WithdrawStakeTx); ok {
-				continue
-			}
 		}
 
 		_, res := ledger.executor.CheckTx(tx)
@@ -311,7 +309,7 @@ func (ledger *Ledger) ApplyBlockTxs(block *score.Block) result.Result {
 			hasValidatorUpdate = true
 		}
 		_, res := ledger.executor.ExecuteTx(tx)
-		if res.IsError() {
+		if res.IsError() || res.IsUndecided() {
 			//ledger.resetState(currHeight, currStateRoot)
 			ledger.resetState(parentBlock)
 			return res
@@ -391,7 +389,7 @@ func (ledger *Ledger) ApplyBlockTxsForChainCorrection(block *score.Block) (commo
 			hasValidatorUpdate = true
 		}
 		_, res := ledger.executor.ExecuteTx(tx)
-		if res.IsError() {
+		if res.IsError() || res.IsUndecided() {
 			//ledger.resetState(currHeight, currStateRoot)
 			ledger.resetState(parentBlock)
 			return common.Hash{}, res
@@ -463,7 +461,7 @@ func (ledger *Ledger) pruneStateForRange(startHeight, endHeight uint64) error {
 
 	stateHashMap := make(map[string]bool)
 	kvStore := kvstore.NewKVStore(db)
-	hl := sv.GetStakeTransactionHeightList().Heights
+	hl := sv.GetValidatorSetUpdateTxHeightList().Heights
 	for _, height := range hl {
 		// check kvstore first
 		blockTrio := &score.SnapshotBlockTrio{}
@@ -580,7 +578,7 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block
-func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes) {
+func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool) {
 	if block == nil {
 		logger.Warnf("addSpecialTransactions: block is nil")
 		return
@@ -591,10 +589,41 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	// Note 3: Similarly, should call GetNextValidatorSet() on the hash of the parent block
 	parentBlkHash := block.Parent
 	proposer := ledger.valMgr.GetNextProposer(parentBlkHash, block.Epoch)
-	validatorSet := ledger.valMgr.GetNextValidatorSet(parentBlkHash)
+	currentValidatorSet := ledger.valMgr.GetNextValidatorSet(parentBlkHash)
 
-	ledger.addCoinbaseTx(view, &proposer, validatorSet, rawTxs)
-	//ledger.addSlashTxs(view, &proposer, &validators, rawTxs)
+	ledger.addCoinbaseTx(view, &proposer, currentValidatorSet, rawTxs)
+
+	hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet)
+	if canIncludeValidatorUpdateTxs && hasValidatorSetUpdate {
+		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
+	}
+}
+
+func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet) (bool, *big.Int, *score.ValidatorSet) {
+	currentDynasty := currentValidatorSet.Dynasty()
+	mainchainBlockHeight, err := ledger.mainchainWitness.GetMainchainBlockNumber()
+	if err != nil {
+		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
+		return false, nil, nil
+	}
+
+	witnessedDynasty := scom.CalculateDynasty(mainchainBlockHeight)
+	if witnessedDynasty.Cmp(currentDynasty) <= 0 {
+		return false, nil, nil
+	}
+	// at this point: witnessedDynasty >= currentDynasty + 1
+
+	witnessedValidatorSet, err := ledger.mainchainWitness.GetValidatorSetByDynasty(witnessedDynasty)
+	if err != nil {
+		logger.Warnf("Failed to get validator set by dynasty %v when checking validator set updates, err: %v", witnessedDynasty, err)
+		return false, nil, nil
+	}
+
+	if currentValidatorSet.Equals(witnessedValidatorSet) {
+		return false, nil, nil
+	}
+
+	return true, witnessedDynasty, witnessedValidatorSet
 }
 
 // addCoinbaseTx adds a Coinbase transaction
@@ -628,38 +657,34 @@ func (ledger *Ledger) addCoinbaseTx(view *slst.StoreView, proposer *score.Valida
 	logger.Debugf("Adding coinbase transction: tx: %v, bytes: %v", coinbaseTx, hex.EncodeToString(coinbaseTxBytes))
 }
 
-// addsSlashTx adds Slash transactions
-func (ledger *Ledger) addSlashTxs(view *slst.StoreView, proposer *score.Validator, validatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
+// addSubchainValidatorSetUpdateTx adds a validator update transaction
+func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, proposer *score.Validator,
+	newDynasty *big.Int, newValidatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
 	proposerAddress := proposer.Address
 	proposerTxIn := types.TxInput{
 		Address: proposerAddress,
 	}
 
-	slashIntents := view.GetSlashIntents()
-	for _, slashIntent := range slashIntents {
-		slashTx := &types.SlashTx{
-			Proposer:        proposerTxIn,
-			SlashedAddress:  slashIntent.Address,
-			ReserveSequence: slashIntent.ReserveSequence,
-			SlashProof:      slashIntent.Proof,
-		}
-
-		signature, err := ledger.signTransaction(slashTx)
-		if err != nil {
-			logger.Errorf("Failed to add slash transaction: %v", err)
-			continue
-		}
-		slashTx.SetSignature(proposerAddress, signature)
-		slashTxBytes, err := types.TxToBytes(slashTx)
-		if err != nil {
-			logger.Errorf("Failed to add slash transaction: %v", err)
-			continue
-		}
-
-		*rawTxs = append(*rawTxs, slashTxBytes)
-		logger.Debugf("Adding slash transction: tx: %v, bytes: %v", slashTx, hex.EncodeToString(slashTxBytes))
+	subchainValidatorSetUpdateTx := &stypes.SubchainValidatorSetUpdateTx{
+		Proposer:   proposerTxIn,
+		Dynasty:    newDynasty,
+		Validators: newValidatorSet.Validators(),
 	}
-	view.ClearSlashIntents()
+
+	signature, err := ledger.signTransaction(subchainValidatorSetUpdateTx)
+	if err != nil {
+		logger.Errorf("Failed to add subchain validator set update transaction: %v", err)
+		return
+	}
+	subchainValidatorSetUpdateTx.SetSignature(proposerAddress, signature)
+	subchainValidatorSetUpdateTxBytes, err := types.TxToBytes(subchainValidatorSetUpdateTx)
+	if err != nil {
+		logger.Errorf("Failed to add subchain validator set update transaction: %v", err)
+		return
+	}
+
+	*rawTxs = append(*rawTxs, subchainValidatorSetUpdateTxBytes)
+	logger.Debugf("Adding subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
 }
 
 // signTransaction signs the given transaction

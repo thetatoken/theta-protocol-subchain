@@ -72,19 +72,17 @@ func NewNode(params *Params) *Node {
 	chain := sbc.NewChain(params.ChainID, store, params.Root)
 	params.RollingDB.SetChain(chain)
 
-	//validatorManager := sconsensus.NewRotatingValidatorManager()
-	validatorManager := sconsensus.NewSubchainRotatingValidatorManager()
+	validatorManager := sconsensus.NewRotatingValidatorManager()
 	dispatcher := dp.NewDispatcher(params.NetworkOld, params.Network)
-	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager)
+	mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, mainchainWitness)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
 
 	syncMgr := snsync.NewSyncManager(chain, consensus, params.NetworkOld, params.Network, dispatcher, consensus, reporter)
 	mempool := smp.CreateMempool(dispatcher, consensus)
-	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool)
-	mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool, mainchainWitness)
 
 	validatorManager.SetConsensusEngine(consensus)
-	validatorManager.SetMainchainWitness(mainchainWitness)
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)

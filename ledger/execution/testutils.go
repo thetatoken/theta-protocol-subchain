@@ -14,13 +14,11 @@ import (
 	"github.com/thetatoken/theta/common/result"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
-    "github.com/thetatoken/theta/store/database/backend"
+	"github.com/thetatoken/theta/store/database/backend"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
-
-
 )
 
 // --------------- Test Utilities with Mocked Consensus Engine --------------- //
@@ -29,11 +27,11 @@ type TestConsensusEngine struct {
 	privKey *crypto.PrivateKey
 }
 
-func (tce *TestConsensusEngine) ID() string                        { return tce.privKey.PublicKey().Address().Hex() }
-func (tce *TestConsensusEngine) PrivateKey() *crypto.PrivateKey    { return tce.privKey }
+func (tce *TestConsensusEngine) ID() string                         { return tce.privKey.PublicKey().Address().Hex() }
+func (tce *TestConsensusEngine) PrivateKey() *crypto.PrivateKey     { return tce.privKey }
 func (tce *TestConsensusEngine) GetTip(bool) *score.ExtendedBlock   { return nil }
-func (tce *TestConsensusEngine) GetEpoch() uint64                  { return 100 }
-func (tce *TestConsensusEngine) AddMessage(msg interface{})        {}
+func (tce *TestConsensusEngine) GetEpoch() uint64                   { return 100 }
+func (tce *TestConsensusEngine) AddMessage(msg interface{})         {}
 func (tce *TestConsensusEngine) FinalizedBlocks() chan *score.Block { return nil }
 func (tce *TestConsensusEngine) GetLedger() score.Ledger            { return nil }
 func (tce *TestConsensusEngine) GetLastFinalizedBlock() *score.ExtendedBlock {
@@ -119,7 +117,7 @@ func (et *execTest) reset() {
 
 	propser := score.NewValidator(et.accProposer.PrivKey.PublicKey().Address().String(), new(big.Int).SetUint64(999))
 	val2 := score.NewValidator(et.accVal2.PrivKey.PublicKey().Address().String(), new(big.Int).SetUint64(100))
-	valSet := score.NewValidatorSet()
+	valSet := score.NewValidatorSet(big.NewInt(0))
 	valSet.AddValidator(propser)
 	valSet.AddValidator(val2)
 	valMgr := NewTestValidatorManager(propser, valSet)

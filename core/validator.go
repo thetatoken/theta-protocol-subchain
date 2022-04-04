@@ -54,14 +54,21 @@ func (v Validator) String() string {
 
 // ValidatorSet represents a set of validators.
 type ValidatorSet struct {
+	dynasty    *big.Int
 	validators []Validator
 }
 
 // NewValidatorSet returns a new instance of ValidatorSet.
-func NewValidatorSet() *ValidatorSet {
+func NewValidatorSet(dynasty *big.Int) *ValidatorSet {
 	return &ValidatorSet{
+		dynasty:    dynasty,
 		validators: []Validator{},
 	}
+}
+
+// Dynasty returns the dynasty of the validator set.
+func (s *ValidatorSet) Dynasty() *big.Int {
+	return s.dynasty
 }
 
 // SetValidators sets validators
@@ -71,7 +78,7 @@ func (s *ValidatorSet) SetValidators(validators []Validator) {
 
 // Copy creates a copy of this validator set.
 func (s *ValidatorSet) Copy() *ValidatorSet {
-	ret := NewValidatorSet()
+	ret := NewValidatorSet(s.dynasty)
 	for _, v := range s.Validators() {
 		ret.AddValidator(v)
 	}
@@ -85,6 +92,10 @@ func (s *ValidatorSet) Size() int {
 
 // Equals checks whether the validator set is the same as another validator set
 func (s *ValidatorSet) Equals(t *ValidatorSet) bool {
+	if s.dynasty != t.dynasty {
+		return false
+	}
+
 	numVals := len(s.validators)
 	if numVals != len(t.validators) {
 		return false
@@ -99,7 +110,7 @@ func (s *ValidatorSet) Equals(t *ValidatorSet) bool {
 
 // String represents the string representation of the validator set
 func (s *ValidatorSet) String() string {
-	return fmt.Sprintf("{Validators: %v}", s.validators)
+	return fmt.Sprintf("{Dynasty: %v, Validators: %v}", s.dynasty, s.validators)
 }
 
 // ByID implements sort.Interface for ValidatorSet based on ID.

@@ -54,7 +54,7 @@ func newExecSim(chainID string, db database.Database, snapshot mockSnapshot, val
 	dispatcher := dp.NewDispatcher(messenger, nil)
 
 	valMgr := sconsensus.NewFixedValidatorManager()
-	consensus := sconsensus.NewConsensusEngine(valPrivAcc.PrivKey, store, chain, dispatcher, valMgr)
+	consensus := sconsensus.NewConsensusEngine(valPrivAcc.PrivKey, store, chain, dispatcher, valMgr, nil)
 	valMgr.SetConsensusEngine(consensus)
 
 	mempool := smp.CreateMempool(dispatcher, consensus)
@@ -114,7 +114,7 @@ func newTestLedger() (chainID string, ledger *Ledger, mempool *smp.Mempool) {
 	p2psimnet := p2psim.NewSimnetWithHandler(nil)
 	messenger := p2psimnet.AddEndpoint(peerID)
 	mempool = newTestMempool(peerID, messenger, nil)
-	ledger = NewLedger(chainID, db, nil, chain, consensus, valMgr, mempool)
+	ledger = NewLedger(chainID, db, nil, chain, consensus, valMgr, mempool, nil)
 	mempool.SetLedger(ledger)
 
 	ctx := context.Background()
@@ -147,7 +147,7 @@ func newTesetValidatorManager(consensus score.ConsensusEngine) score.ValidatorMa
 	}
 	val2 := score.NewValidator(val2PubKey.Address().String(), new(big.Int).SetUint64(100))
 
-	valSet := score.NewValidatorSet()
+	valSet := score.NewValidatorSet(big.NewInt(0))
 	valSet.AddValidator(propser)
 	valSet.AddValidator(val2)
 	valMgr := sexec.NewTestValidatorManager(propser, valSet)

@@ -113,29 +113,6 @@ func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountRes
 	return nil
 }
 
-// ------------------------------- GetSplitRule -----------------------------------
-
-type GetSplitRuleArgs struct {
-	ResourceID string `json:"resource_id"`
-}
-
-type GetSplitRuleResult struct {
-	*types.SplitRule
-}
-
-func (t *ThetaRPCService) GetSplitRule(args *GetSplitRuleArgs, result *GetSplitRuleResult) (err error) {
-	if args.ResourceID == "" {
-		return errors.New("ResourceID must be specified")
-	}
-	resourceID := args.ResourceID
-	ledgerState, err := t.ledger.GetDeliveredSnapshot()
-	if err != nil {
-		return err
-	}
-	result.SplitRule = ledgerState.GetSplitRule(resourceID)
-	return nil
-}
-
 // ------------------------------ GetTransaction -----------------------------------
 
 type GetTransactionArgs struct {

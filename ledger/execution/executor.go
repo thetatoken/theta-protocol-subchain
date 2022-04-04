@@ -106,6 +106,9 @@ func (exec *Executor) processTx(tx types.Tx, viewSel score.ViewSelector) (common
 	if sanityCheckResult.IsError() {
 		return common.Hash{}, sanityCheckResult
 	}
+	if sanityCheckResult.IsUndecided() {
+		return common.Hash{}, sanityCheckResult
+	}
 
 	txHash, processResult := exec.process(chainID, view, tx)
 	return txHash, processResult

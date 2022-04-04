@@ -99,7 +99,7 @@ func ExportSnapshotV2(db database.Database, consensus *sconsensus.ConsensusEngin
 	metadata := &score.SnapshotMetadata{}
 	var genesisBlockHeader *score.BlockHeader
 	kvStore := kvstore.NewKVStore(db)
-	hl := sv.GetStakeTransactionHeightList().Heights
+	hl := sv.GetValidatorSetUpdateTxHeightList().Heights
 	for _, height := range hl {
 		// check kvstore first
 		blockTrio := &score.SnapshotBlockTrio{}
@@ -315,7 +315,7 @@ func ExportSnapshotV3(db database.Database, consensus *sconsensus.ConsensusEngin
 	metadata := &score.SnapshotMetadata{}
 	var genesisBlockHeader *score.BlockHeader
 	kvStore := kvstore.NewKVStore(db)
-	hl := sv.GetStakeTransactionHeightList().Heights
+	hl := sv.GetValidatorSetUpdateTxHeightList().Heights
 	for _, height := range hl {
 		// check kvstore first
 		blockTrio := &score.SnapshotBlockTrio{}

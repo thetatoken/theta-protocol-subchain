@@ -21,8 +21,11 @@ import (
 	"github.com/thetatoken/theta/dispatcher"
 	"github.com/thetatoken/theta/rlp"
 	"github.com/thetatoken/theta/store"
+
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var logger = log.WithFields(log.Fields{"prefix": "consensus"})
@@ -39,6 +42,7 @@ type ConsensusEngine struct {
 	dispatcher       *dispatcher.Dispatcher
 	validatorManager score.ValidatorManager
 	ledger           score.Ledger
+	mainchainWitness *witness.MainchainWitness
 
 	incoming        chan interface{}
 	finalizedBlocks chan *score.Block
@@ -61,7 +65,8 @@ type ConsensusEngine struct {
 }
 
 // NewConsensusEngine creates a instance of ConsensusEngine.
-func NewConsensusEngine(privateKey *crypto.PrivateKey, db store.Store, chain *sbc.Chain, dispatcher *dispatcher.Dispatcher, validatorManager score.ValidatorManager) *ConsensusEngine {
+func NewConsensusEngine(privateKey *crypto.PrivateKey, db store.Store, chain *sbc.Chain, dispatcher *dispatcher.Dispatcher,
+	validatorManager score.ValidatorManager, mainchainWitness *witness.MainchainWitness) *ConsensusEngine {
 	e := &ConsensusEngine{
 		chain:      chain,
 		dispatcher: dispatcher,
@@ -80,6 +85,8 @@ func NewConsensusEngine(privateKey *crypto.PrivateKey, db store.Store, chain *sb
 
 		voteTimerReady: false,
 		blockProcessed: false,
+
+		mainchainWitness: mainchainWitness,
 	}
 
 	logger = util.GetLoggerForModule("consensus")
@@ -518,7 +525,7 @@ func (e *ConsensusEngine) handleHardcodeBlock(hash common.Hash) {
 		return
 	}
 	result = e.ledger.ApplyBlockTxs(block)
-	if result.IsError() {
+	if result.IsError() || result.IsUndecided() { // a hardcoded block cannot be either invalid or undecided
 		e.logger.WithFields(log.Fields{
 			"error":           result.String(),
 			"parent":          block.Parent.Hex(),
@@ -599,6 +606,18 @@ func (e *ConsensusEngine) handleNormalBlock(eb *score.ExtendedBlock) {
 		}).Error("Failed to apply block Txs")
 		e.chain.MarkBlockInvalid(block.Hash())
 		return
+	} else if result.IsUndecided() {
+		e.logger.WithFields(log.Fields{
+			"warning":         result.String(),
+			"parent":          block.Parent.Hex(),
+			"block":           block.Hash().Hex(),
+			"block.StateHash": block.StateHash.Hex(),
+		}).Warn("Failed to apply block Txs")
+		return // If the main chain node falls out-of-sync, the subchain node might not have evidence to
+		// either confirm or reject the ValidatorSetUpdateTx. In such a case, the the processing result of
+		// a normal block could be undecided. Hence, we should NOT mark the block as invalid. Instead, we
+		// should keep the block in the "Pending" state, Later after the main chain node is in-sync, this
+		// block could be re-processed.
 	}
 	applyBlockTime := time.Since(start1)
 
@@ -719,11 +738,17 @@ func (e *ConsensusEngine) broadcastVote(vote score.Vote) {
 }
 
 func (e *ConsensusEngine) createVote(block *score.Block) score.Vote {
+	mainchainHeight, err := e.mainchainWitness.GetMainchainBlockNumberUint()
+	if err != nil {
+		mainchainHeight = 0
+	}
+
 	vote := score.Vote{
-		Block:  block.Hash(),
-		Height: block.Height,
-		ID:     e.privateKey.PublicKey().Address(),
-		Epoch:  e.GetEpoch(),
+		Block:           block.Hash(),
+		Height:          block.Height,
+		MainchainHeight: mainchainHeight,
+		ID:              e.privateKey.PublicKey().Address(),
+		Epoch:           e.GetEpoch(),
 	}
 	vote.Sign(e.privateKey)
 	return vote
@@ -972,7 +997,7 @@ func (e *ConsensusEngine) shouldPropose(tip *score.ExtendedBlock, epoch uint64) 
 	return true
 }
 
-func (e *ConsensusEngine) shouldIncludeValidatorUpdateTxs(tip *score.ExtendedBlock) bool {
+func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock) bool {
 	// Check if majority has greater block height.
 	epochVotes, err := e.state.GetEpochVotes()
 	if err != nil {
@@ -992,7 +1017,29 @@ func (e *ConsensusEngine) shouldIncludeValidatorUpdateTxs(tip *score.ExtendedBlo
 			"tip":        tip.Hash().Hex(),
 			"tip.Height": tip.Height,
 			"votes":      votes.String(),
-		}).Debug("shouldIncludeValidatorUpdateTxs=false: tip height smaller than majority")
+		}).Debug("canIncludeValidatorUpdateTxs=false: tip height smaller than majority")
+		return false
+	}
+
+	// For better liveness, check if the majority votes have dynasties at least as large as the local dynasties.
+	mainchainHeight, err := e.mainchainWitness.GetMainchainBlockNumber()
+	if err != nil {
+		return false
+	}
+
+	witnesssedDynasty := scom.CalculateDynasty(mainchainHeight)
+	dynastyVotes := score.NewVoteSet()
+	for _, v := range epochVotes.Votes() {
+		voteDyansty := scom.CalculateDynasty(big.NewInt(int64(v.MainchainHeight)))
+		if voteDyansty.Cmp(witnesssedDynasty) >= 0 {
+			dynastyVotes.AddVote(v)
+		}
+	}
+
+	if !validators.HasMajority(dynastyVotes) {
+		// The majority of the validators are still lagging behind this node. Hence, higly likely that if the
+		// proposed block includes the validator update tx, it will be ignored by the majority of the validators.
+		// So it is better not to include the tx so the block can be finalized. Otherwise, this proposer slot will be wasted.
 		return false
 	}
 
@@ -1016,7 +1063,7 @@ func (e *ConsensusEngine) shouldProposeByID(previousBlock common.Hash, epoch uin
 	return true
 }
 
-func (e *ConsensusEngine) createProposal(shouldIncludeValidatorUpdateTxs bool) (score.Proposal, error) {
+func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool) (score.Proposal, error) {
 	tip := e.GetTipToExtend()
 	//result := e.ledger.ResetState(tip.Height, tip.StateHash)
 	result := e.ledger.ResetState(tip.Block)
@@ -1041,8 +1088,8 @@ func (e *ConsensusEngine) createProposal(shouldIncludeValidatorUpdateTxs bool) (
 	block.HCC.Votes = e.chain.FindVotesByHash(block.HCC.BlockHash).UniqueVoter().FilterByValidators(hccValidators)
 
 	// Add Txs.
-	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, shouldIncludeValidatorUpdateTxs)
-	if result.IsError() {
+	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, canIncludeValidatorUpdateTxs)
+	if result.IsError() || result.IsUndecided() { // the proposer should NOT propose a block that is either invalid or undecided
 		err := fmt.Errorf("Failed to collect Txs for block proposal: %v", result.String())
 		return score.Proposal{}, err
 	}
@@ -1083,7 +1130,7 @@ func (e *ConsensusEngine) propose() {
 		return
 	}
 
-	shouldIncludeValidatorUpdateTxs := e.shouldIncludeValidatorUpdateTxs(tip)
+	canIncludeValidatorUpdateTxs := e.canIncludeValidatorUpdateTxs(tip)
 
 	var proposal score.Proposal
 	var err error
@@ -1092,7 +1139,7 @@ func (e *ConsensusEngine) propose() {
 		proposal = lastProposal
 		e.logger.WithFields(log.Fields{"proposal": proposal}).Info("Repeating proposal")
 	} else {
-		proposal, err = e.createProposal(shouldIncludeValidatorUpdateTxs)
+		proposal, err = e.createProposal(canIncludeValidatorUpdateTxs)
 		if err != nil {
 			e.logger.WithFields(log.Fields{"error": err}).Error("Failed to create proposal")
 			return

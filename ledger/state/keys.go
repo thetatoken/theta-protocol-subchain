@@ -39,24 +39,13 @@ func ValidatorSetKey() common.Bytes {
 	return common.Bytes("ls/vs")
 }
 
-// StakeTransactionHeightListKey returns the state key the heights of blocks
+// ValidatorSetUpdateTxHeightListKey returns the state key the heights of blocks
 // that contain stake related transactions (i.e. StakeDeposit, StakeWithdraw, etc)
-func StakeTransactionHeightListKey() common.Bytes {
+func ValidatorSetUpdateTxHeightListKey() common.Bytes {
 	return common.Bytes("ls/sthl")
 }
 
 // StatePruningProgressKey returns the key for the state pruning progress
 func StatePruningProgressKey() common.Bytes {
 	return common.Bytes("ls/spp")
-}
-
-// StakeRewardDistributionRuleSetKeyPrefix returns the prefix of the stake reward distribution rule
-func StakeRewardDistributionRuleSetKeyPrefix() common.Bytes {
-	return common.Bytes("ls/srdrs/")
-}
-
-// StakeRewardDistributionRuleSetKey returns the prefix of the stake reward distribution rule
-func StakeRewardDistributionRuleSetKey(addr common.Address) common.Bytes {
-	prefix := StakeRewardDistributionRuleSetKeyPrefix()
-	return append(prefix, addr[:]...)
 }

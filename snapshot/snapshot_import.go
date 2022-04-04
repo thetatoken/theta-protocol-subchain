@@ -958,7 +958,7 @@ func saveTailBlocks(metadata *score.SnapshotMetadata, sv *slst.StoreView, kvstor
 	tailBlockTrio := &metadata.TailTrio
 	firstBlock := score.Block{BlockHeader: tailBlockTrio.First.Header}
 	secondBlock := score.Block{BlockHeader: tailBlockTrio.Second.Header}
-	hl := sv.GetStakeTransactionHeightList()
+	hl := sv.GetValidatorSetUpdateTxHeightList()
 
 	if secondBlock.Height != score.GenesisBlockHeight {
 		firstExt := &score.ExtendedBlock{

@@ -25,10 +25,11 @@ type StoreView struct {
 	height uint64 // block height
 	store  *streestore.TreeStore
 
-	coinbaseTransactinProcessed bool
-	slashIntents                []types.SlashIntent
-	refund                      uint64       // Gas refund during smart contract execution
-	logs                        []*types.Log // Temporary store of events during smart contract execution
+	coinbaseTransactinProcessed             bool
+	subchainValidatorSetTransactinProcessed bool
+	slashIntents                            []types.SlashIntent
+	refund                                  uint64       // Gas refund during smart contract execution
+	logs                                    []*types.Log // Temporary store of events during smart contract execution
 }
 
 // NewStoreView creates an instance of the StoreView
@@ -145,6 +146,16 @@ func (sv *StoreView) SetCoinbaseTransactionProcessed(processed bool) {
 	sv.coinbaseTransactinProcessed = processed
 }
 
+// SubchainValidatorSetTransactionProcessed returns whether the validatro set update transaction for the current block has been processed
+func (sv *StoreView) SubchainValidatorSetTransactionProcessed() bool {
+	return sv.subchainValidatorSetTransactinProcessed
+}
+
+// SetSubchainValidatorSetTransactionProcessed sets whether the validatro set update transaction for the current block has been processed
+func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool) {
+	sv.subchainValidatorSetTransactinProcessed = processed
+}
+
 // GetAccount returns an account.
 func (sv *StoreView) GetAccount(addr common.Address) *types.Account {
 	data := sv.Get(AccountKey(addr))
@@ -207,91 +218,20 @@ func (sv *StoreView) DeleteAccount(addr common.Address) {
 	sv.Delete(AccountKey(addr))
 }
 
-// SplitRuleExists checks if a split rule associated with the given resourceID already exists
-func (sv *StoreView) SplitRuleExists(resourceID string) bool {
-	return sv.GetSplitRule(resourceID) != nil
-}
-
-// AddSplitRule adds a split rule
-func (sv *StoreView) AddSplitRule(splitRule *types.SplitRule) bool {
-	if sv.SplitRuleExists(splitRule.ResourceID) {
-		return false // Each resourceID can have at most one corresponding split rule
-	}
-
-	sv.SetSplitRule(splitRule.ResourceID, splitRule)
-	return true
-}
-
-// UpdateSplitRule updates a split rule
-func (sv *StoreView) UpdateSplitRule(splitRule *types.SplitRule) bool {
-	if !sv.SplitRuleExists(splitRule.ResourceID) {
-		return false
-	}
-
-	sv.SetSplitRule(splitRule.ResourceID, splitRule)
-	return true
-}
-
-// GetSplitRule gets split rule.
-func (sv *StoreView) GetSplitRule(resourceID string) *types.SplitRule {
-	data := sv.Get(SplitRuleKey(resourceID))
+// GetDynasty gets the dynasty associated with the view
+func (sv *StoreView) GetDynasty() *big.Int {
+	data := sv.Get(ValidatorSetKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	splitRule := &types.SplitRule{}
-	err := types.FromBytes(data, splitRule)
+	vs := &score.ValidatorSet{}
+	err := types.FromBytes(data, vs)
 	if err != nil {
-		log.Panicf("Error reading splitRule %X error: %v",
+		log.Panicf("Error reading validator set %X, error: %v",
 			data, err.Error())
 	}
-	return splitRule
-}
-
-// SetSplitRule sets split rule.
-func (sv *StoreView) SetSplitRule(resourceID string, splitRule *types.SplitRule) {
-	splitRuleBytes, err := types.ToBytes(splitRule)
-	if err != nil {
-		log.Panicf("Error writing splitRule %v error: %v",
-			splitRule, err.Error())
-	}
-	sv.Set(SplitRuleKey(resourceID), splitRuleBytes)
-}
-
-// DeleteSplitRule deletes a split rule.
-func (sv *StoreView) DeleteSplitRule(resourceID string) bool {
-	key := SplitRuleKey(resourceID)
-	deleted := sv.store.Delete(key)
-	return deleted
-}
-
-// DeleteExpiredSplitRules deletes a split rule.
-func (sv *StoreView) DeleteExpiredSplitRules(currentBlockHeight uint64) bool {
-	prefix := SplitRuleKeyPrefix()
-
-	expiredKeys := []common.Bytes{}
-	sv.store.Traverse(prefix, func(key, value common.Bytes) bool {
-		var splitRule types.SplitRule
-		err := types.FromBytes(value, &splitRule)
-		if err != nil {
-			log.Panicf("Error reading splitRule %X error: %v", value, err.Error())
-		}
-
-		expired := (splitRule.EndBlockHeight < currentBlockHeight)
-		if expired {
-			expiredKeys = append(expiredKeys, key)
-		}
-		return true
-	})
-
-	for _, key := range expiredKeys {
-		deleted := sv.store.Delete(key)
-		if !deleted {
-			logger.Errorf("Failed to delete expired split rules")
-			return false
-		}
-	}
-
-	return true
+	dynasty := vs.Dynasty() // retrieve the dynasty from the validator set
+	return dynasty
 }
 
 // GetValidatorSet gets the validator set.
@@ -319,9 +259,9 @@ func (sv *StoreView) UpdateValidatorSet(vcp *score.ValidatorSet) {
 	sv.Set(ValidatorSetKey(), vcpBytes)
 }
 
-// GetStakeTransactionHeightList gets the heights of blocks that contain stake related transactions
-func (sv *StoreView) GetStakeTransactionHeightList() *types.HeightList {
-	data := sv.Get(StakeTransactionHeightListKey())
+// GetValidatorSetUpdateTxHeightList gets the heights of blocks that contain stake related transactions
+func (sv *StoreView) GetValidatorSetUpdateTxHeightList() *types.HeightList {
+	data := sv.Get(ValidatorSetUpdateTxHeightListKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -335,14 +275,14 @@ func (sv *StoreView) GetStakeTransactionHeightList() *types.HeightList {
 	return hl
 }
 
-// UpdateStakeTransactionHeightList updates the heights of blocks that contain stake related transactions
-func (sv *StoreView) UpdateStakeTransactionHeightList(hl *types.HeightList) {
+// UpdateValidatorSetUpdateTxHeightList updates the heights of blocks that contain stake related transactions
+func (sv *StoreView) UpdateValidatorSetUpdateTxHeightList(hl *types.HeightList) {
 	hlBytes, err := types.ToBytes(hl)
 	if err != nil {
 		log.Panicf("Error writing height list %v, error: %v",
 			hl, err.Error())
 	}
-	sv.Set(StakeTransactionHeightListKey(), hlBytes)
+	sv.Set(ValidatorSetUpdateTxHeightListKey(), hlBytes)
 }
 
 type StakeWithHolder struct {

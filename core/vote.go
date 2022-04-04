@@ -71,15 +71,16 @@ func (cc CommitCertificate) IsValid(validators *ValidatorSet) bool {
 
 // Vote represents a vote on a block by a validaor.
 type Vote struct {
-	Block     common.Hash    // Hash of the tip as seen by the voter.
-	Height    uint64         // Height of the tip
-	Epoch     uint64         // Voter's current epoch. It doesn't need to equal the epoch in the block above.
-	ID        common.Address // Voter's address.
-	Signature *crypto.Signature
+	Block           common.Hash    // Hash of the tip as seen by the voter.
+	Height          uint64         // Height of the tip
+	MainchainHeight uint64         // Height of the mainchain when creating this vote
+	Epoch           uint64         // Voter's current epoch. It doesn't need to equal the epoch in the block above.
+	ID              common.Address // Voter's address.
+	Signature       *crypto.Signature
 }
 
 func (v Vote) String() string {
-	return fmt.Sprintf("Vote{ID: %s, block: %s,  Epoch: %v}", v.ID, v.Block.Hex(), v.Epoch)
+	return fmt.Sprintf("Vote{ID: %s, block: %s,  Epoch: %v, MainchainHeight: %v}", v.ID, v.Block.Hex(), v.Epoch, v.MainchainHeight)
 }
 
 // SignBytes returns raw bytes to be signed.

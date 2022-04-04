@@ -41,7 +41,7 @@ func AssertFinalizedBlocksNotConflicting(assert *assert.Assertions, c1 []string,
 }
 
 func NewTestValidatorSet(addressStrs []string) *score.ValidatorSet {
-	s := score.NewValidatorSet()
+	s := score.NewValidatorSet(big.NewInt(0))
 	for _, addressStr := range addressStrs {
 		stake := new(big.Int).SetUint64(1)
 		v := score.NewValidator(addressStr, stake)

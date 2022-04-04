@@ -122,14 +122,14 @@ func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint6
 	}
 
 	json.Unmarshal(initValidatorSetByteValue, &validators)
-	vs := score.NewValidatorSet()
+	vs := score.NewValidatorSet(big.NewInt(0))
 	vs.SetValidators(validators)
 
 	sv.UpdateValidatorSet(vs)
 
 	hl := &types.HeightList{}
 	hl.Append(genesisHeight)
-	sv.UpdateStakeTransactionHeightList(hl)
+	sv.UpdateValidatorSetUpdateTxHeightList(hl)
 
 	return vs
 }
@@ -192,7 +192,7 @@ func sanityChecks(sv *slst.StoreView) error {
 				logger.Infof("--------------------------------------------------------")
 			}
 			vsAnalyzed = true
-		} else if bytes.Equal(key, slst.StakeTransactionHeightListKey()) {
+		} else if bytes.Equal(key, slst.ValidatorSetUpdateTxHeightListKey()) {
 			var hl types.HeightList
 			err := rlp.DecodeBytes(val, &hl)
 			if err != nil {

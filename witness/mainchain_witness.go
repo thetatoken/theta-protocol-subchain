@@ -9,46 +9,35 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	// "github.com/thetatoken/theta/crypto"
-	// scom "github.com/thetatoken/thetasubchain/common"
+	scom "github.com/thetatoken/thetasubchain/common"
 	sct "github.com/thetatoken/thetasubchain/contracts"
+	score "github.com/thetatoken/thetasubchain/core"
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/theta/common"
-	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
+var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
+
 type MainchainWitness struct {
-	mu                   sync.RWMutex
-	MainchainBlockNumber *big.Int
-	SubchainID           *big.Int
-	gasPriceLimit        *big.Int
-	StableDynasty        *big.Int
-	Dynasty              *big.Int
-	IsDynastyChanged     bool
+	mu sync.RWMutex
 
-	chainID *big.Int
-	// privateKey           *crypto.PrivateKey
-	RegisterContractAddr common.Address
-	ErcContractAddr      common.Address
+	mainChainID       *big.Int
+	subchainID        *big.Int
+	witnessedDynasty  *big.Int
+	validatorSetCache map[*big.Int]*score.ValidatorSet
+	client            *ec.Client
+	updateTimer       *time.Timer
 
-	updateTimer *time.Timer
-
-	ValidatorAndStakeCache map[*big.Int]ValidatorAndStakeCheckpoint
-	Client                 *ec.Client
-
-	RegisterContract *sct.SubchainRegister
-	ErcContract      *sct.SubchainERC
-}
-
-type ValidatorAndStakeCheckpoint struct {
-	ValidatorSet    []common.Address
-	ValidatorStakes []*big.Int
+	registerContractAddr common.Address
+	ercContractAddr      common.Address
+	registerContract     *sct.SubchainRegister
+	ercContract          *sct.SubchainERC
 }
 
 // NewMainchainWitness creates a new MainchainWitness
 func NewMainchainWitness(
-	// privateKey *crypto.PrivateKey,
 	ethClientAddress string,
 	subchainID *big.Int,
 	registerContractAddr common.Address,
@@ -56,89 +45,73 @@ func NewMainchainWitness(
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
-		log.Fatalf("the eth client failed to connect %v\n", err)
+		logger.Fatalf("the eth client failed to connect %v\n", err)
 	}
-	// log.Fatalf("client connected !!! %v\n subchain ID is %v, register addr is %v, erc addr is %v", client, subchainID, registerContractAddr, ercContractAddr)
 	subchainRegisterContract, err := sct.NewSubchainRegister(registerContractAddr, client)
 	if err != nil {
-		log.Fatalf("failed to create subchain register contract %v\n", err)
+		logger.Fatalf("failed to create subchain register contract %v\n", err)
 	}
 	subchainERCContract, err := sct.NewSubchainERC(ercContractAddr, client)
 	if err != nil {
-		log.Fatalf("failed to create erc contract %v\n", err)
+		logger.Fatalf("failed to create erc contract %v\n", err)
 	}
-	chainID, err := client.ChainID(context.Background())
+	mainChainID, err := client.ChainID(context.Background())
 	if err != nil {
-		log.Fatalf("failed to get chainID %v\n", err)
+		logger.Fatalf("failed to get the chainID of the main chain %v\n", err)
 	}
-	log.Printf("Create transfer validator for chain %d\n", chainID)
-	tipBlockHeader, err := client.HeaderByNumber(context.Background(), nil)
-	if err != nil {
-		log.Fatalf("failed to get the highest block number %v\n", err)
-	}
-	dynasty := new(big.Int).Div(tipBlockHeader.Number, big.NewInt(100))
+	logger.Printf("Create transfer validator for chain %d\n", mainChainID)
+
 	mw := &MainchainWitness{
-		MainchainBlockNumber: tipBlockHeader.Number,
-		SubchainID:           subchainID,
-		Dynasty:              dynasty,
+		mainChainID:      mainChainID,
+		subchainID:       subchainID,
+		witnessedDynasty: big.NewInt(0), // will be updated in the first update() call
+		client:           client,
 
-		Client:  client,
-		chainID: chainID,
-
-		RegisterContractAddr: registerContractAddr,
-		ErcContractAddr:      ercContractAddr,
-		RegisterContract:     subchainRegisterContract,
-		ErcContract:          subchainERCContract,
+		registerContractAddr: registerContractAddr,
+		ercContractAddr:      ercContractAddr,
+		registerContract:     subchainRegisterContract,
+		ercContract:          subchainERCContract,
 	}
-	mw.updateTimer = time.NewTimer(time.Duration(1000) * time.Millisecond)
-	mw.ValidatorAndStakeCache = make(map[*big.Int]ValidatorAndStakeCheckpoint)
+	mw.updateTimer = time.NewTimer(time.Duration(100) * time.Millisecond) // TODO: make this configurable
+	mw.validatorSetCache = make(map[*big.Int]*score.ValidatorSet)
 	return mw
 }
-
-// func (_MainchainWitness *MainchainWitness) GetValidatorSetWithDynasty(opts *bind.CallOpts, subchainID *big.Int) ([]ethcommon.Address, error) {
-// 	// TODO: later test block height
-// 	return _MainchainWitness.registerContract.GetLegalValidators(opts, subchainID)
-// }
 
 func (mw *MainchainWitness) Start(ctx context.Context) {
 	go mw.mainloop(ctx)
 }
 
-func (mw *MainchainWitness) GetMainchainBlockNumber() *big.Int {
-	tipBlockNumber, err := mw.Client.BlockNumber(context.Background())
+// TODO: make sure the block number returned by the client.BlockNumber() call is the lastest *finalized* block number
+func (mw *MainchainWitness) GetMainchainBlockNumber() (*big.Int, error) {
+	blockNumber, err := mw.client.BlockNumber(context.Background())
 	if err != nil {
-		log.Fatalf("failed to get the highest block number %v\n", err)
+		return nil, err
 	}
-	return big.NewInt(int64(tipBlockNumber))
+	return big.NewInt(int64(blockNumber)), nil
 }
 
-func (mw *MainchainWitness) GetMainchainBlockNumberUint() uint64 {
-	tipBlockNumber, err := mw.Client.BlockNumber(context.Background())
+// TODO: make sure the block number returned by the client.BlockNumber() call is the lastest *finalized* block number
+func (mw *MainchainWitness) GetMainchainBlockNumberUint() (uint64, error) {
+	blockNumber, err := mw.client.BlockNumber(context.Background())
 	if err != nil {
-		log.Fatalf("failed to get the highest block number %v\n", err)
+		return 0, err
 	}
-	return tipBlockNumber
+	return blockNumber, nil
 }
 
-func (mw *MainchainWitness) GetValidatorSetWithDynasty(opts *bind.CallOpts, subchainID *big.Int, dynasty *big.Int) ([]common.Address, error) {
-	// TODO: later test block height
-	// dynasty := new(big.Int).Div(big.NewInt(tipBlockNumber), big.NewInt(100))
-	vsc, ok := mw.ValidatorAndStakeCache[dynasty]
-	if ok {
-		return vsc.ValidatorSet, nil
-	} else {
-		resValidatorSet, err := mw.RegisterContract.GetLegalValidators(opts, mw.SubchainID)
-		if err != nil {
-			log.Fatalf("failed to get the validator set from mainchain %v\n", err)
-		}
-		new_vsc := ValidatorAndStakeCheckpoint{
-			ValidatorSet:    resValidatorSet,
-			ValidatorStakes: nil,
-		}
-		mw.ValidatorAndStakeCache[dynasty] = new_vsc
-		return new_vsc.ValidatorSet, nil
+func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
+	validatorSet, ok := mw.validatorSetCache[dynasty]
+	if ok && validatorSet != nil && validatorSet.Dynasty() == dynasty {
+		return validatorSet, nil
 	}
-	// return mw.RegisterContract.GetLegalValidators(opts, mw.SubchainID)
+
+	var err error
+	validatorSet, err = mw.updateValidatorSetCache(dynasty) // cache lazy update
+	if err != nil {
+		return nil, err
+	}
+
+	return validatorSet, nil
 }
 
 func (mw *MainchainWitness) mainloop(ctx context.Context) {
@@ -153,26 +126,35 @@ func (mw *MainchainWitness) mainloop(ctx context.Context) {
 }
 
 func (mw *MainchainWitness) update() {
-	// 更新区块高度、Dynasty
-	// 如果 Dynasty变更，更新Validator set、 stake的情况
-	mw.MainchainBlockNumber = mw.GetMainchainBlockNumber()
-	newDynasty := new(big.Int).Div(mw.MainchainBlockNumber, big.NewInt(100))
-	if mw.StableDynasty == nil {
-		mw.StableDynasty = newDynasty
+	mainchainBlockNumber, err := mw.GetMainchainBlockNumber()
+	if err != nil {
+		logger.Warnf("failed to get the mainchain block number %v\n", err)
+		return
 	}
-	// validatorSet, _ := mw.GetValidatorSetWithDynasty(nil, mw.SubchainID)
-	// log.Infof("validators %v", validatorSet)
-	// log.Fatalf("hihihi")
-	if newDynasty != mw.Dynasty {
-		log.Infof("Dynasty changed! ", newDynasty)
-		validatorSet, _ := mw.GetValidatorSetWithDynasty(nil, mw.SubchainID, mw.Dynasty)
-		log.Infof("validators %v", validatorSet)
-		// mw.IsDynastyChanged = true
-		// validatorSet, validatorStake := mw.RegisterContract.GetLegalValidatorsAndStakes(mw.SubchainID)
-		// newDynastyCheckpoint := &ValidatorAndStakeCheckpoint{
-		// 	ValidatorSet:    validatorSet,
-		// 	ValidatorStakes: validatorStake,
-		// }
-		// mw.ValidatorAndStakeCache[newDynasty] = newDynastyCheckpoint
+
+	dynasty := scom.CalculateDynasty(mainchainBlockNumber)
+	if dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
+		mw.updateValidatorSetCache(dynasty)
+		mw.witnessedDynasty = dynasty
 	}
+}
+
+// TODO:
+//    1) query the validators corresponding to the dynasty from the main chain
+//    2) query the stakes of the validators for the given dynasty
+func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
+	validatorAddrs, err := mw.registerContract.GetLegalValidators(nil, mw.subchainID)
+	if err != nil {
+		return nil, err
+	}
+
+	validatorSet := score.NewValidatorSet(dynasty)
+	for _, validatorAddr := range validatorAddrs {
+		validator := score.NewValidator(validatorAddr.Hex(), big.NewInt(1)) // TODO: set the actual stake
+		validatorSet.AddValidator(validator)
+	}
+
+	mw.validatorSetCache[dynasty] = validatorSet
+
+	return validatorSet, nil
 }
