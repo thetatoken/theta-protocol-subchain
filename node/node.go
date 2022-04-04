@@ -163,6 +163,8 @@ func (n *Node) Stop() {
 func (n *Node) Wait() {
 	n.Consensus.Wait()
 	n.SyncManager.Wait()
+	n.MainchainWitness.Wait()
+
 	if n.RPC != nil {
 		n.RPC.Wait()
 	}

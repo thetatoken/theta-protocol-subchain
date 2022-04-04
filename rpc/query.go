@@ -564,10 +564,10 @@ type GetValidatorSetByHeightArgs struct {
 }
 
 type GetValidatorSetResult struct {
-	BlockHashVcpPairs []BlockHashVcpPair
+	BlockHashVSPairs []BlockHashVSPair
 }
 
-type BlockHashVcpPair struct {
+type BlockHashVSPair struct {
 	BlockHash  common.Hash
 	Vs         *score.ValidatorSet
 	HeightList *types.HeightList

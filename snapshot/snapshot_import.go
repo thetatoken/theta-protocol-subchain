@@ -294,6 +294,14 @@ func loadSnapshot(snapshotFilePath string, db database.Database, logStr string) 
 		}
 	}
 
+	// Testing
+	valSet := sv.GetValidatorSet()
+	numValidators := valSet.Size()
+	logger.Infof("Number of validators loaded: %v", numValidators)
+	for _, v := range valSet.Validators() {
+		logger.Infof("Validator: %v, stake: %v", v.Address.Hex(), v.Stake)
+	}
+
 	return secondBlockHeader, &metadata, nil
 }
 
@@ -515,7 +523,7 @@ func loadChainSegment(filePath string, start, end uint64, prevBlock *score.Exten
 					provenValSet, err = getValidatorSetFromVSProof(proofTrio.First.Header.StateHash, &proofTrio.First.Proof)
 				}
 				if err != nil {
-					return nil, fmt.Errorf("Failed to retrieve validator set from VCP proof: %v", err)
+					return nil, fmt.Errorf("Failed to retrieve validator set from VS proof: %v", err)
 				}
 			}
 		}
@@ -811,7 +819,7 @@ func checkSnapshotV4(sv *slst.StoreView, metadata *score.SnapshotMetadata, db da
 	first := tailTrio.First
 	valSet, err = getValidatorSetFromVSProof(first.Header.StateHash, &first.Proof)
 	if err != nil {
-		return fmt.Errorf("Failed to retrieve validator set from VCP proof: %v", err)
+		return fmt.Errorf("Failed to retrieve validator set from VS proof: %v", err)
 	}
 
 	logger.Infof("Validators of snapshost: %v", valSet)
@@ -855,7 +863,7 @@ func checkProofTrios(proofTrios []score.SnapshotBlockTrio, db database.Database)
 			}
 			provenValSet, err = getValidatorSetFromVSProof(first.Header.StateHash, &first.Proof)
 			if err != nil {
-				return nil, fmt.Errorf("Failed to retrieve validator set from VCP proof: %v", err)
+				return nil, fmt.Errorf("Failed to retrieve validator set from VS proof: %v", err)
 			}
 		}
 
@@ -916,13 +924,13 @@ func checkGenesisBlock(block *score.BlockHeader, db database.Database) (*score.V
 }
 
 func getValidatorSetFromVSProof(stateHash common.Hash, recoverredVSP *score.ValidatorSetProof) (*score.ValidatorSet, error) {
-	serializedVCP, _, err := trie.VerifyProof(stateHash, slst.ValidatorSetKey(), recoverredVSP)
+	serializedVS, _, err := trie.VerifyProof(stateHash, slst.ValidatorSetKey(), recoverredVSP)
 	if err != nil {
 		return nil, err
 	}
 
 	vs := &score.ValidatorSet{}
-	err = rlp.DecodeBytes(serializedVCP, vs)
+	err = rlp.DecodeBytes(serializedVS, vs)
 	if err != nil {
 		return nil, err
 	}
@@ -930,8 +938,8 @@ func getValidatorSetFromVSProof(stateHash common.Hash, recoverredVSP *score.Vali
 }
 
 func getValidatorSetFromSV(sv *slst.StoreView) *score.ValidatorSet {
-	vsp := sv.GetValidatorSet()
-	return sconsensus.FilterValidators(vsp)
+	vs := sv.GetValidatorSet()
+	return sconsensus.FilterValidators(vs)
 }
 
 func validateVotes(validatorSet *score.ValidatorSet, block *score.BlockHeader, voteSet *score.VoteSet) error {

@@ -119,7 +119,7 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 	for ; ; i-- {
 		block, err := findBlock(store, blockHash)
 		if err != nil {
-			logger.Errorf("Failed to find block for VCP: %v, err: %v", blockHash.Hex(), err)
+			logger.Errorf("Failed to find block for VS: %v, err: %v", blockHash.Hex(), err)
 			return nil, err
 		}
 		if block == nil {

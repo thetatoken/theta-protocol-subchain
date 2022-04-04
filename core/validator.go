@@ -4,12 +4,14 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math/big"
 	"sort"
 
 	log "github.com/sirupsen/logrus"
 
 	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/theta/rlp"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "core"})
@@ -172,4 +174,41 @@ func (s *ValidatorSet) HasMajority(votes *VoteSet) bool {
 // Validators returns a slice of validators.
 func (s *ValidatorSet) Validators() []Validator {
 	return s.validators
+}
+
+var _ rlp.Encoder = (*ValidatorSet)(nil)
+
+// EncodeRLP implements RLP Encoder interface.
+func (vs *ValidatorSet) EncodeRLP(w io.Writer) error {
+	if vs == nil {
+		return rlp.Encode(w, &ValidatorSet{})
+	}
+	return rlp.Encode(w, []interface{}{
+		vs.dynasty,
+		vs.validators,
+	})
+}
+
+// DecodeRLP implements RLP Decoder interface.
+func (vs *ValidatorSet) DecodeRLP(stream *rlp.Stream) error {
+	_, err := stream.List()
+	if err != nil {
+		return err
+	}
+
+	dynasty := big.NewInt(0)
+	err = stream.Decode(dynasty)
+	if err != nil {
+		return err
+	}
+	vs.dynasty = dynasty
+
+	validators := []Validator{}
+	err = stream.Decode(&validators)
+	if err != nil {
+		return err
+	}
+	vs.validators = validators
+
+	return stream.ListEnd()
 }

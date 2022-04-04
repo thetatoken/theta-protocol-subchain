@@ -21,19 +21,22 @@ import (
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
 type MainchainWitness struct {
-	mu sync.RWMutex
-
 	mainChainID       *big.Int
 	subchainID        *big.Int
 	witnessedDynasty  *big.Int
 	validatorSetCache map[*big.Int]*score.ValidatorSet
 	client            *ec.Client
-	updateTimer       *time.Timer
+	updateTicker      *time.Ticker
 
 	registerContractAddr common.Address
 	ercContractAddr      common.Address
 	registerContract     *sct.SubchainRegister
 	ercContract          *sct.SubchainERC
+
+	// Life cycle
+	wg     *sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewMainchainWitness creates a new MainchainWitness
@@ -64,21 +67,38 @@ func NewMainchainWitness(
 	mw := &MainchainWitness{
 		mainChainID:       mainChainID,
 		subchainID:        subchainID,
-		witnessedDynasty:  big.NewInt(0), // will be updated in the first update() call
+		witnessedDynasty:  nil, // will be updated in the first update() call
 		validatorSetCache: make(map[*big.Int]*score.ValidatorSet),
 		client:            client,
-		updateTimer:       time.NewTimer(time.Duration(100) * time.Millisecond), // TODO: make this configurable
 
 		registerContractAddr: registerContractAddr,
 		ercContractAddr:      ercContractAddr,
 		registerContract:     subchainRegisterContract,
 		ercContract:          subchainERCContract,
+
+		wg: &sync.WaitGroup{},
 	}
 	return mw
 }
 
 func (mw *MainchainWitness) Start(ctx context.Context) {
+	c, cancel := context.WithCancel(ctx)
+	mw.ctx = c
+	mw.cancel = cancel
+
+	mw.wg.Add(1)
 	go mw.mainloop(ctx)
+}
+
+func (mw *MainchainWitness) Stop() {
+	if mw.updateTicker != nil {
+		mw.updateTicker.Stop()
+	}
+	mw.cancel()
+}
+
+func (mw *MainchainWitness) Wait() {
+	mw.wg.Wait()
 }
 
 // TODO: make sure the block number returned by the client.BlockNumber() call is the lastest *finalized* block number
@@ -115,11 +135,12 @@ func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 }
 
 func (mw *MainchainWitness) mainloop(ctx context.Context) {
+	mw.updateTicker = time.NewTicker(time.Duration(100) * time.Millisecond) // TODO: make the ticker interval configurable
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-mw.updateTimer.C:
+		case <-mw.updateTicker.C:
 			mw.update()
 		}
 	}
@@ -133,7 +154,7 @@ func (mw *MainchainWitness) update() {
 	}
 
 	dynasty := scom.CalculateDynasty(mainchainBlockNumber)
-	if dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
+	if mw.witnessedDynasty == nil || dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
 		mw.updateValidatorSetCache(dynasty)
 		mw.witnessedDynasty = dynasty
 	}

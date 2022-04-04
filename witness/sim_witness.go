@@ -12,17 +12,20 @@ import (
 	"github.com/thetatoken/theta/common"
 )
 
-const mainchainBlockIntervalMilliseconds int64 = 1000 // seconds
+const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
 
 // SimulatedMainchainWitness is a simulated mainchain witness for end-to-end testing
 type SimulatedMainchainWitness struct {
-	mu sync.RWMutex
-
 	subchainID        *big.Int
 	witnessedDynasty  *big.Int
 	validatorSetCache map[*big.Int]*score.ValidatorSet
-	updateTimer       *time.Timer
+	updateTicker      *time.Ticker
 	startingTime      time.Time
+
+	// Life cycle
+	wg     *sync.WaitGroup
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewSimulatedMainchainWitness creates a new SimulatedMainchainWitness
@@ -34,17 +37,33 @@ func NewSimulatedMainchainWitness(
 ) *SimulatedMainchainWitness {
 	mw := &SimulatedMainchainWitness{
 		subchainID:        subchainID,
-		witnessedDynasty:  big.NewInt(0), // will be updated in the first update() call
+		witnessedDynasty:  nil, // will be updated in the first update() call
 		validatorSetCache: make(map[*big.Int]*score.ValidatorSet),
-		updateTimer:       time.NewTimer(time.Duration(100) * time.Millisecond),
 		startingTime:      time.Now(),
+		wg:                &sync.WaitGroup{},
 	}
 
 	return mw
 }
 
 func (mw *SimulatedMainchainWitness) Start(ctx context.Context) {
+	c, cancel := context.WithCancel(ctx)
+	mw.ctx = c
+	mw.cancel = cancel
+
+	mw.wg.Add(1)
 	go mw.mainloop(ctx)
+}
+
+func (mw *SimulatedMainchainWitness) Stop() {
+	if mw.updateTicker != nil {
+		mw.updateTicker.Stop()
+	}
+	mw.cancel()
+}
+
+func (mw *SimulatedMainchainWitness) Wait() {
+	mw.wg.Wait()
 }
 
 func (mw *SimulatedMainchainWitness) GetMainchainBlockNumber() (*big.Int, error) {
@@ -73,11 +92,12 @@ func (mw *SimulatedMainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) 
 }
 
 func (mw *SimulatedMainchainWitness) mainloop(ctx context.Context) {
+	mw.updateTicker = time.NewTicker(time.Duration(1000) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-mw.updateTimer.C:
+		case <-mw.updateTicker.C:
 			mw.update()
 		}
 	}
@@ -85,16 +105,18 @@ func (mw *SimulatedMainchainWitness) mainloop(ctx context.Context) {
 
 func (mw *SimulatedMainchainWitness) update() {
 	mainchainBlockNumber, err := mw.GetMainchainBlockNumber()
+	logger.Debugf("witnessed main chain block height: %v", mainchainBlockNumber)
+
 	if err != nil {
-		logger.Warnf("failed to get the mainchain block number %v\n", err)
+		logger.Warnf("failed to get the mainchain block number %v", err)
 		return
 	}
 
 	dynasty := scom.CalculateDynasty(mainchainBlockNumber)
-	if dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
+	if mw.witnessedDynasty == nil || dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
 		mw.updateValidatorSetCache(dynasty)
 		mw.witnessedDynasty = dynasty
-		logger.Infof("updated the witnessed dynasty to %v\n", dynasty)
+		logger.Infof("updated the witnessed dynasty to %v", dynasty)
 	}
 }
 
@@ -109,7 +131,7 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 
 	validatorSet := score.NewValidatorSet(dynasty)
 	if dynasty.Cmp(big.NewInt(0)) == 0 { // start with a single validator
-		stake := big.NewInt(100000000000)
+		stake := big.NewInt(100000000)
 		v2 := score.NewValidator(validatorAddrList[1], stake)
 		validatorSet.AddValidator(v2)
 	} else if dynasty.Cmp(big.NewInt(1)) == 0 { // add more validators

@@ -166,7 +166,7 @@ func ExportSnapshotV2(db database.Database, consensus *sconsensus.ConsensusEngin
 
 					vsProof, err := proveValidatorSet(block, db)
 					if err != nil {
-						return "", fmt.Errorf("Failed to get VCP Proof")
+						return "", fmt.Errorf("failed to get VS Proof")
 					}
 					metadata.ProofTrios = append(metadata.ProofTrios,
 						score.SnapshotBlockTrio{
@@ -205,7 +205,7 @@ func ExportSnapshotV2(db database.Database, consensus *sconsensus.ConsensusEngin
 
 	vsProof, err := proveValidatorSet(parentBlock, db)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get VCP Proof")
+		return "", fmt.Errorf("failed to get VS Proof")
 	}
 	metadata.TailTrio = score.SnapshotBlockTrio{
 		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vsProof},
@@ -382,7 +382,7 @@ func ExportSnapshotV3(db database.Database, consensus *sconsensus.ConsensusEngin
 
 					vsProof, err := proveValidatorSet(block, db)
 					if err != nil {
-						return "", fmt.Errorf("Failed to get VCP Proof")
+						return "", fmt.Errorf("failed to get VS Proof")
 					}
 					metadata.ProofTrios = append(metadata.ProofTrios,
 						score.SnapshotBlockTrio{
@@ -421,7 +421,7 @@ func ExportSnapshotV3(db database.Database, consensus *sconsensus.ConsensusEngin
 
 	vsProof, err := proveValidatorSet(parentBlock, db)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get VCP Proof")
+		return "", fmt.Errorf("failed to get VS Proof")
 	}
 	metadata.TailTrio = score.SnapshotBlockTrio{
 		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vsProof},
@@ -552,7 +552,7 @@ func ExportSnapshotV4(db database.Database, consensus *sconsensus.ConsensusEngin
 
 	vsProof, err := proveValidatorSet(parentBlock, db)
 	if err != nil {
-		return "", fmt.Errorf("Failed to get VCP Proof")
+		return "", fmt.Errorf("Failed to get VS Proof")
 	}
 	metadata.TailTrio = score.SnapshotBlockTrio{
 		First:  score.SnapshotFirstBlock{Header: parentBlock.BlockHeader, Proof: *vsProof},

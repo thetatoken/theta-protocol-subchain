@@ -250,13 +250,13 @@ func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
 }
 
 // UpdateValidatorSet updates the validator set.
-func (sv *StoreView) UpdateValidatorSet(vcp *score.ValidatorSet) {
-	vcpBytes, err := types.ToBytes(vcp)
+func (sv *StoreView) UpdateValidatorSet(vs *score.ValidatorSet) {
+	vsBytes, err := types.ToBytes(vs)
 	if err != nil {
 		log.Panicf("Error writing validator set %v, error: %v",
-			vcp, err.Error())
+			vs, err.Error())
 	}
-	sv.Set(ValidatorSetKey(), vcpBytes)
+	sv.Set(ValidatorSetKey(), vsBytes)
 }
 
 // GetValidatorSetUpdateTxHeightList gets the heights of blocks that contain stake related transactions

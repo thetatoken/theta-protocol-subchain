@@ -16,7 +16,7 @@ import (
 	score "github.com/thetatoken/thetasubchain/core"
 )
 
-const maxTxSize = 1024 * 1024
+const maxTxSize = 8 * 1024 * 1024
 
 const (
 	TxSubchainValidatorSetUpdate types.TxType = 1001

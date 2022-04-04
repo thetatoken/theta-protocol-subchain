@@ -81,8 +81,8 @@ func (store *TreeStore) Get(key common.Bytes) common.Bytes {
 	return store.Trie.Get(key)
 }
 
-func (store *TreeStore) ProveValidatorSet(vcpKey []byte, vsp *score.ValidatorSetProof) error {
-	return store.Trie.Prove(vcpKey, 0, vsp)
+func (store *TreeStore) ProveValidatorSet(vsKey []byte, vsp *score.ValidatorSetProof) error {
+	return store.Trie.Prove(vsKey, 0, vsp)
 }
 
 // Set sets value of given key.
