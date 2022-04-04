@@ -49,12 +49,12 @@ type Ledger struct {
 	state    *slst.LedgerState
 	executor *sexec.Executor
 
-	mainchainWitness *witness.MainchainWitness
+	mainchainWitness witness.ChainWitness
 }
 
 // NewLedger creates an instance of Ledger
 func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mempool *smp.Mempool, mainchainWitness *witness.MainchainWitness) *Ledger {
+	valMgr score.ValidatorManager, mempool *smp.Mempool, mainchainWitness witness.ChainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
 	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr)
 	ledger := &Ledger{

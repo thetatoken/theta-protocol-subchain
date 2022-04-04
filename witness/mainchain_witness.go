@@ -62,18 +62,18 @@ func NewMainchainWitness(
 	logger.Printf("Create transfer validator for chain %d\n", mainChainID)
 
 	mw := &MainchainWitness{
-		mainChainID:      mainChainID,
-		subchainID:       subchainID,
-		witnessedDynasty: big.NewInt(0), // will be updated in the first update() call
-		client:           client,
+		mainChainID:       mainChainID,
+		subchainID:        subchainID,
+		witnessedDynasty:  big.NewInt(0), // will be updated in the first update() call
+		validatorSetCache: make(map[*big.Int]*score.ValidatorSet),
+		client:            client,
+		updateTimer:       time.NewTimer(time.Duration(100) * time.Millisecond), // TODO: make this configurable
 
 		registerContractAddr: registerContractAddr,
 		ercContractAddr:      ercContractAddr,
 		registerContract:     subchainRegisterContract,
 		ercContract:          subchainERCContract,
 	}
-	mw.updateTimer = time.NewTimer(time.Duration(100) * time.Millisecond) // TODO: make this configurable
-	mw.validatorSetCache = make(map[*big.Int]*score.ValidatorSet)
 	return mw
 }
 

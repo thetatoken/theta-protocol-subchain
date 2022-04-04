@@ -42,7 +42,7 @@ type Node struct {
 	Mempool          *smp.Mempool
 	RPC              *srpc.ThetaRPCServer
 	reporter         *srp.Reporter
-	MainchainWitness *witness.MainchainWitness
+	MainchainWitness witness.ChainWitness
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -74,7 +74,11 @@ func NewNode(params *Params) *Node {
 
 	validatorManager := sconsensus.NewRotatingValidatorManager()
 	dispatcher := dp.NewDispatcher(params.NetworkOld, params.Network)
-	mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+
+	// For testing...
+	mainchainWitness := witness.NewSimulatedMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+	//mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, mainchainWitness)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
 

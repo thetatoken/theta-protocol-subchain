@@ -42,7 +42,7 @@ type ConsensusEngine struct {
 	dispatcher       *dispatcher.Dispatcher
 	validatorManager score.ValidatorManager
 	ledger           score.Ledger
-	mainchainWitness *witness.MainchainWitness
+	mainchainWitness witness.ChainWitness
 
 	incoming        chan interface{}
 	finalizedBlocks chan *score.Block
@@ -66,7 +66,7 @@ type ConsensusEngine struct {
 
 // NewConsensusEngine creates a instance of ConsensusEngine.
 func NewConsensusEngine(privateKey *crypto.PrivateKey, db store.Store, chain *sbc.Chain, dispatcher *dispatcher.Dispatcher,
-	validatorManager score.ValidatorManager, mainchainWitness *witness.MainchainWitness) *ConsensusEngine {
+	validatorManager score.ValidatorManager, mainchainWitness witness.ChainWitness) *ConsensusEngine {
 	e := &ConsensusEngine{
 		chain:      chain,
 		dispatcher: dispatcher,

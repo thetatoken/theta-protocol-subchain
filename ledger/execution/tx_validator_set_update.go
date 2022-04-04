@@ -27,12 +27,12 @@ type SubchainValidatorSetUpdateTxExecutor struct {
 	state            *slst.LedgerState
 	consensus        score.ConsensusEngine
 	valMgr           score.ValidatorManager
-	mainchainWitness *witness.MainchainWitness
+	mainchainWitness witness.ChainWitness
 }
 
 // NewSubchainValidatorSetUpdateTxExecutor creates a new instance of SubchainValidatorSetUpdateTxExecutor
 func NewSubchainValidatorSetUpdateTxExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mainchainWitness *witness.MainchainWitness) *SubchainValidatorSetUpdateTxExecutor {
+	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *SubchainValidatorSetUpdateTxExecutor {
 	return &SubchainValidatorSetUpdateTxExecutor{
 		db:               db,
 		chain:            chain,
