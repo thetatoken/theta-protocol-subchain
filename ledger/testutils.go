@@ -23,6 +23,7 @@ import (
 	score "github.com/thetatoken/thetasubchain/core"
 	sexec "github.com/thetatoken/thetasubchain/ledger/execution"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 )
 
@@ -63,7 +64,7 @@ func newExecSim(chainID string, db database.Database, snapshot mockSnapshot, val
 	//ledgerState.ResetState(initHeight, snapshot.block.StateHash)
 	ledgerState.ResetState(snapshot.block)
 
-	executor := sexec.NewExecutor(db, chain, ledgerState, consensus, valMgr)
+	executor := sexec.NewExecutor(db, chain, ledgerState, consensus, valMgr, nil)
 
 	ledger := &Ledger{
 		consensus: consensus,
@@ -218,7 +219,7 @@ func newRawCoinbaseTx(chainID string, ledger *Ledger, sequence int) common.Bytes
 		panic("Failed to set signature for the coinbase transaction")
 	}
 
-	coinbaseTxBytes, err := types.TxToBytes(coinbaseTx)
+	coinbaseTxBytes, err := stypes.TxToBytes(coinbaseTx)
 	if err != nil {
 		panic(err)
 	}
@@ -269,7 +270,7 @@ func newRawSendTx(chainID string, sequence int, addPubKey bool, accOut, accIn ty
 		sendTx.SetSignature(in.Address, sig)
 	}
 
-	sendTxBytes, err := types.TxToBytes(sendTx)
+	sendTxBytes, err := stypes.TxToBytes(sendTx)
 	if err != nil {
 		panic(err)
 	}

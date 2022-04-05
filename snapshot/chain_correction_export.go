@@ -13,12 +13,13 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
-    score "github.com/thetatoken/thetasubchain/core"
+	score "github.com/thetatoken/thetasubchain/core"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 )
 
 func ExcludeTxs(txs []common.Bytes, exclusionTxMap map[string]bool, chain *sbc.Chain) (results []common.Bytes) {
 	for _, tx := range txs {
-		t, err := types.TxFromBytes(tx)
+		t, err := stypes.TxFromBytes(tx)
 		if err != nil {
 			continue
 		}

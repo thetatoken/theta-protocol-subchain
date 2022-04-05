@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
 	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 
 	rpcc "github.com/ybbus/jsonrpc"
 )
@@ -87,7 +88,7 @@ func doSmartContractCmd(cmd *cobra.Command, args []string) {
 	}
 	smartContractTx.SetSignature(fromAddress, sig)
 
-	raw, err := types.TxToBytes(smartContractTx)
+	raw, err := stypes.TxToBytes(smartContractTx)
 	if err != nil {
 		utils.Error("Failed to encode transaction: %v\n", err)
 	}

@@ -13,6 +13,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	"github.com/thetatoken/thetasubchain/rpc"
 )
 
@@ -72,7 +73,7 @@ func doSmartContractCmd(cmd *cobra.Command, args []string) {
 		Data:     data,
 	}
 
-	sctxBytes, err := types.TxToBytes(sctx)
+	sctxBytes, err := stypes.TxToBytes(sctx)
 	if err != nil {
 		utils.Error("Failed to encode smart contract transaction: %v\n", sctx)
 	}

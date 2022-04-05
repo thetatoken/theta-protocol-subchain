@@ -94,7 +94,7 @@ func (s *ValidatorSet) Size() int {
 
 // Equals checks whether the validator set is the same as another validator set
 func (s *ValidatorSet) Equals(t *ValidatorSet) bool {
-	if s.dynasty != t.dynasty {
+	if s.dynasty.Cmp(t.dynasty) != 0 {
 		return false
 	}
 

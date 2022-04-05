@@ -7,9 +7,10 @@ import (
 	"os"
 	"strings"
 
-	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/rlp"
+	score "github.com/thetatoken/thetasubchain/core"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 )
 
 func handleError(err error) {
@@ -25,7 +26,7 @@ func printUsage() {
 }
 
 func txFromBytes(raw []byte) error {
-	tx, err := types.TxFromBytes(raw)
+	tx, err := stypes.TxFromBytes(raw)
 	if err == nil {
 		fmt.Printf("\nTx: %v\n\n", tx)
 		if jsonStr, err := json.MarshalIndent(tx, "", "    "); err == nil {

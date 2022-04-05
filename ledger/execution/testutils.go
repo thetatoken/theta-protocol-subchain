@@ -123,7 +123,7 @@ func (et *execTest) reset() {
 	valMgr := NewTestValidatorManager(propser, valSet)
 
 	chain := sbc.CreateTestChain()
-	executor := NewExecutor(db, chain, ledgerState, consensus, valMgr)
+	executor := NewExecutor(db, chain, ledgerState, consensus, valMgr, nil)
 
 	et.chainID = chainID
 	et.executor = executor

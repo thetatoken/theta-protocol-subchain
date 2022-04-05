@@ -15,6 +15,7 @@ import (
 	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
 
 	score "github.com/thetatoken/thetasubchain/core"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 )
 
@@ -275,7 +276,7 @@ func translateEthTx(ethTxStr string) (string, error) {
 	logger.Debugf("Recovered from address: %v, signature: %v",
 		thetaSmartContractTx.From.Address.Hex(), thetaSmartContractTx.From.Signature.ToBytes().String())
 
-	raw, err := types.TxToBytes(thetaSmartContractTx)
+	raw, err := stypes.TxToBytes(thetaSmartContractTx)
 	if err != nil {
 		utils.Error("Failed to encode transaction: %v\n", err)
 	}

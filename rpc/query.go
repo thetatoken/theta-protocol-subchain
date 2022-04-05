@@ -18,6 +18,7 @@ import (
 	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/thetasubchain/ledger/state"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	sversion "github.com/thetatoken/thetasubchain/version"
 )
@@ -168,7 +169,7 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 		result.Status = TxStatusPending
 	}
 
-	tx, err := types.TxFromBytes(raw)
+	tx, err := stypes.TxFromBytes(raw)
 	if err != nil {
 		return err
 	}
@@ -736,7 +737,7 @@ func (t *ThetaRPCService) gatherTxs(block *score.ExtendedBlock, txs *[]interface
 	// Parse and fulfill Txs.
 	//var tx types.Tx
 	for _, txBytes := range block.Txs {
-		tx, err := types.TxFromBytes(txBytes)
+		tx, err := stypes.TxFromBytes(txBytes)
 		if err != nil {
 			return err
 		}

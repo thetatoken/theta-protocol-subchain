@@ -89,7 +89,11 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	// new validator set and dynasty from the transaction
 	newDynasty := tx.Dynasty
 	newValidatorSet := score.NewValidatorSet(newDynasty)
-	newValidatorSet.SetValidators(tx.Validators)
+
+	for _, v := range tx.Validators {
+		// AddValidator() sorts the validator set, which ensures the order of the validators is determinstic
+		newValidatorSet.AddValidator(v)
+	}
 
 	currentDynasty := view.GetDynasty()
 	if newDynasty.Cmp(currentDynasty) <= 0 {

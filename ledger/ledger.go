@@ -56,7 +56,7 @@ type Ledger struct {
 func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
 	valMgr score.ValidatorManager, mempool *smp.Mempool, mainchainWitness witness.ChainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
-	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr)
+	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, mainchainWitness)
 	ledger := &Ledger{
 		db:               db,
 		chain:            chain,
@@ -160,7 +160,7 @@ func findBlock(store store.Store, blockHash common.Hash) (*score.ExtendedBlock, 
 // ScreenTxUnsafe screens the given transaction without locking.
 func (ledger *Ledger) ScreenTxUnsafe(rawTx common.Bytes) (res result.Result) {
 	var tx types.Tx
-	tx, err := types.TxFromBytes(rawTx)
+	tx, err := stypes.TxFromBytes(rawTx)
 	if err != nil {
 		return result.Error("Error decoding tx: %v", err)
 	}
@@ -172,7 +172,7 @@ func (ledger *Ledger) ScreenTxUnsafe(rawTx common.Bytes) (res result.Result) {
 // ScreenTx screens the given transaction
 func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res result.Result) {
 	var tx types.Tx
-	tx, err := types.TxFromBytes(rawTx)
+	tx, err := stypes.TxFromBytes(rawTx)
 	if err != nil {
 		return nil, result.Error("Error decoding tx: %v", err)
 	}
@@ -237,7 +237,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 
 	blockRawTxs = []common.Bytes{}
 	for _, rawTxCandidate := range rawTxCandidates {
-		tx, err := types.TxFromBytes(rawTxCandidate)
+		tx, err := stypes.TxFromBytes(rawTxCandidate)
 		if err != nil {
 			continue
 		}
@@ -297,7 +297,7 @@ func (ledger *Ledger) ApplyBlockTxs(block *score.Block) result.Result {
 	txProcessTime := []time.Duration{}
 	for _, rawTx := range blockRawTxs {
 		start := time.Now()
-		tx, err := types.TxFromBytes(rawTx)
+		tx, err := stypes.TxFromBytes(rawTx)
 		if err != nil {
 			//ledger.resetState(currHeight, currStateRoot)
 			ledger.resetState(parentBlock)
@@ -377,7 +377,7 @@ func (ledger *Ledger) ApplyBlockTxsForChainCorrection(block *score.Block) (commo
 
 	hasValidatorUpdate := false
 	for _, rawTx := range blockRawTxs {
-		tx, err := types.TxFromBytes(rawTx)
+		tx, err := stypes.TxFromBytes(rawTx)
 		if err != nil {
 			//ledger.resetState(currHeight, currStateRoot)
 			ledger.resetState(parentBlock)
@@ -591,15 +591,19 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	proposer := ledger.valMgr.GetNextProposer(parentBlkHash, block.Epoch)
 	currentValidatorSet := ledger.valMgr.GetNextValidatorSet(parentBlkHash)
 
+	// ------- Add coinbase transaction ------- //
 	ledger.addCoinbaseTx(view, &proposer, currentValidatorSet, rawTxs)
 
-	hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet)
+	// ------- Add subchain validator set update transaction ------- //
+	hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet, view)
+	logger.Debugf("Add special transactions: canIncludeValidatorUpdateTxs: %v, hasValidatorSetUpdate: %v, newDynasty: %v, newValidatorSet: %v",
+		canIncludeValidatorUpdateTxs, hasValidatorSetUpdate, newDynasty, newValidatorSet)
 	if canIncludeValidatorUpdateTxs && hasValidatorSetUpdate {
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
 	}
 }
 
-func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet) (bool, *big.Int, *score.ValidatorSet) {
+func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) {
 	currentDynasty := currentValidatorSet.Dynasty()
 	mainchainBlockHeight, err := ledger.mainchainWitness.GetMainchainBlockNumber()
 	if err != nil {
@@ -622,6 +626,20 @@ func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.V
 	if currentValidatorSet.Equals(witnessedValidatorSet) {
 		return false, nil, nil
 	}
+
+	// Need to compare the validator set in the view against the witnessed validator set. This is
+	// because `currentValidatorSet` refers to the validator set of the last finalized block, after
+	// which there might have been a block containing the subchainValidatorSetUpdateTx. In this case,
+	// we do not need to add the subchainValidatorSetUpdateTx again to the block.
+	validatorSetInView := view.GetValidatorSet()
+	if validatorSetInView.Equals(witnessedValidatorSet) {
+		return false, nil, nil
+	}
+
+	logger.Debugf("block height: %v", view.GetBlockHeight())
+	logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet)
+	logger.Debugf("currentValidatorSet  : %v", currentValidatorSet)
+	logger.Debugf("validatorSetInView   : %v", validatorSetInView)
 
 	return true, witnessedDynasty, witnessedValidatorSet
 }
@@ -647,14 +665,14 @@ func (ledger *Ledger) addCoinbaseTx(view *slst.StoreView, proposer *score.Valida
 		return
 	}
 	coinbaseTx.SetSignature(proposerAddress, signature)
-	coinbaseTxBytes, err := types.TxToBytes(coinbaseTx)
+	coinbaseTxBytes, err := stypes.TxToBytes(coinbaseTx)
 	if err != nil {
 		logger.Errorf("Failed to add coinbase transaction: %v", err)
 		return
 	}
 
 	*rawTxs = append(*rawTxs, coinbaseTxBytes)
-	logger.Debugf("Adding coinbase transction: tx: %v, bytes: %v", coinbaseTx, hex.EncodeToString(coinbaseTxBytes))
+	logger.Debugf("Added coinbase transction: tx: %v, bytes: %v", coinbaseTx, hex.EncodeToString(coinbaseTxBytes))
 }
 
 // addSubchainValidatorSetUpdateTx adds a validator update transaction
@@ -684,7 +702,7 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 	}
 
 	*rawTxs = append(*rawTxs, subchainValidatorSetUpdateTxBytes)
-	logger.Debugf("Adding subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
+	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
 }
 
 // signTransaction signs the given transaction

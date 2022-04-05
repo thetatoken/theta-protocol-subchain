@@ -9,6 +9,7 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/store"
 	score "github.com/thetatoken/thetasubchain/core"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 )
 
 // txIndexKey constructs the DB key for the given transaction hash.
@@ -107,7 +108,7 @@ type TxReceiptEntry struct {
 // AddTxReceipt adds transaction receipt.
 func (ch *Chain) AddTxReceipt(tx types.Tx, logs []*types.Log, evmRet common.Bytes,
 	contractAddr common.Address, gasUsed uint64, evmErr error) {
-	raw, err := types.TxToBytes(tx)
+	raw, err := stypes.TxToBytes(tx)
 	if err != nil {
 		// Should never happen
 		logger.Panic(err)
@@ -153,7 +154,7 @@ func (ch *Chain) FindTxReceiptByHash(hash common.Hash) (*TxReceiptEntry, bool) {
 // ---------------- Utils ---------------
 
 func CalcEthTxHash(block *score.ExtendedBlock, rawTxBytes []byte) (common.Hash, error) {
-	tx, err := types.TxFromBytes(rawTxBytes)
+	tx, err := stypes.TxFromBytes(rawTxBytes)
 	if err != nil {
 		return common.Hash{}, err
 	}

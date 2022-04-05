@@ -128,27 +128,16 @@ func addPrefixForSignBytes(signBytes common.Bytes) common.Bytes {
 	return signBytes
 }
 
-func TxFromBytes(raw []byte) (types.Tx, error) {
-	var txType types.TxType
-	buff := bytes.NewBuffer(raw)
-	s := rlp.NewStream(buff, maxTxSize)
-	err := s.Decode(&txType)
-	if err != nil {
-		return nil, err
-	}
-	if txType == TxSubchainValidatorSetUpdate {
-		data := &SubchainValidatorSetUpdateTx{}
-		err = s.Decode(data)
-		return data, err
-	} else {
-		return nil, fmt.Errorf("unknown TX type: %v", txType)
-	}
-}
-
 func TxToBytes(t types.Tx) ([]byte, error) {
 	var buf bytes.Buffer
 	var txType types.TxType
 	switch t.(type) {
+	case *types.CoinbaseTx:
+		txType = types.TxCoinbase
+	case *types.SendTx:
+		txType = types.TxSend
+	case *types.SmartContractTx:
+		txType = types.TxSmartContract
 	case *SubchainValidatorSetUpdateTx:
 		txType = TxSubchainValidatorSetUpdate
 	default:
@@ -163,4 +152,33 @@ func TxToBytes(t types.Tx) ([]byte, error) {
 		return nil, err
 	}
 	return buf.Bytes(), nil
+}
+
+func TxFromBytes(raw []byte) (types.Tx, error) {
+	var txType types.TxType
+	buff := bytes.NewBuffer(raw)
+	s := rlp.NewStream(buff, maxTxSize)
+	err := s.Decode(&txType)
+	if err != nil {
+		return nil, err
+	}
+	if txType == types.TxCoinbase {
+		data := &types.CoinbaseTx{}
+		err = s.Decode(data)
+		return data, err
+	} else if txType == types.TxSend {
+		data := &types.SendTx{}
+		err = s.Decode(data)
+		return data, err
+	} else if txType == types.TxSmartContract {
+		data := &types.SmartContractTx{}
+		err = s.Decode(data)
+		return data, err
+	} else if txType == TxSubchainValidatorSetUpdate {
+		data := &SubchainValidatorSetUpdateTx{}
+		err = s.Decode(data)
+		return data, err
+	} else {
+		return nil, fmt.Errorf("Unknown TX type: %v", txType)
+	}
 }

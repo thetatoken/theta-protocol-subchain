@@ -9,6 +9,7 @@ import (
 	"github.com/thetatoken/theta/ledger/vm"
 
 	sldst "github.com/thetatoken/thetasubchain/ledger/state"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 )
 
 // ------------------------------- CallSmartContract -----------------------------------
@@ -44,7 +45,7 @@ func (t *ThetaRPCService) CallSmartContract(args *CallSmartContractArgs, result 
 		return err
 	}
 
-	tx, err := types.TxFromBytes(sctxBytes)
+	tx, err := stypes.TxFromBytes(sctxBytes)
 	if err != nil {
 		return fmt.Errorf("Failed to parse SmartContractTx, error: %v", err)
 	}

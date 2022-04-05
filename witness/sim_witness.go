@@ -130,37 +130,50 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 	}
 
 	validatorSet := score.NewValidatorSet(dynasty)
-	if dynasty.Cmp(big.NewInt(0)) == 0 { // start with a single validator
+	if dynasty.Cmp(big.NewInt(0)) == 0 {
+		// Dynasty 0: Start with a single validator
+
 		stake := big.NewInt(100000000)
 		v2 := score.NewValidator(validatorAddrList[1], stake)
 		validatorSet.AddValidator(v2)
-	} else if dynasty.Cmp(big.NewInt(1)) == 0 { // add more validators
-		stake := big.NewInt(300000000000)
-		v1 := score.NewValidator(validatorAddrList[0], stake)
-		v2 := score.NewValidator(validatorAddrList[1], stake)
-		v3 := score.NewValidator(validatorAddrList[2], stake)
+	} else if dynasty.Cmp(big.NewInt(1)) == 0 {
+		// Dynasty 1: Add more validators
+
+		stake1 := big.NewInt(6000000000)
+		stake2 := big.NewInt(300000000000)
+		stake3 := big.NewInt(6000000000)
+		v1 := score.NewValidator(validatorAddrList[0], stake1)
+		v2 := score.NewValidator(validatorAddrList[1], stake2)
+		v3 := score.NewValidator(validatorAddrList[2], stake3)
 		validatorSet.AddValidator(v1)
 		validatorSet.AddValidator(v2)
 		validatorSet.AddValidator(v3)
-	} else if dynasty.Cmp(big.NewInt(2)) == 0 { // remove validators
-		stake1 := big.NewInt(300000000000)
-		stake2 := big.NewInt(6000000000)
+	} else if dynasty.Cmp(big.NewInt(2)) == 0 {
+		// Dynasty 2: Remove validators
+
+		stake1 := big.NewInt(6000000000)
+		stake2 := big.NewInt(300000000000)
 		v1 := score.NewValidator(validatorAddrList[0], stake1)
 		v2 := score.NewValidator(validatorAddrList[1], stake2)
 		validatorSet.AddValidator(v1)
 		validatorSet.AddValidator(v2)
-	} else { // swap out the entire validator set
+	} else {
+		// Dynasty 3: Remove some validators, and add additional validators
+
+		stake2 := big.NewInt(300000000000)
 		stake3 := big.NewInt(7000000000)
 		stake4 := big.NewInt(22000000000)
+		v2 := score.NewValidator(validatorAddrList[1], stake2)
 		v3 := score.NewValidator(validatorAddrList[2], stake3)
 		v4 := score.NewValidator(validatorAddrList[3], stake4)
+		validatorSet.AddValidator(v2)
 		validatorSet.AddValidator(v3)
 		validatorSet.AddValidator(v4)
 	}
 
 	mw.validatorSetCache[dynasty] = validatorSet
 
-	logger.Infof("Witnessed validator set for dynasty %v\n", dynasty)
+	logger.Infof("Witnessed validator set for dynasty %v", dynasty)
 	for _, v := range validatorSet.Validators() {
 		logger.Infof("Validator: %v", v)
 	}

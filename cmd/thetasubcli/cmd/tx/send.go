@@ -12,6 +12,7 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 	wtypes "github.com/thetatoken/theta/wallet/types"
 	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	"github.com/thetatoken/thetasubchain/rpc"
 
 	"github.com/ybbus/jsonrpc"
@@ -94,7 +95,7 @@ func doSendCmd(cmd *cobra.Command, args []string) {
 	}
 	sendTx.SetSignature(fromAddress, sig)
 
-	raw, err := types.TxToBytes(sendTx)
+	raw, err := stypes.TxToBytes(sendTx)
 	if err != nil {
 		utils.Error("Failed to encode transaction: %v\n", err)
 	}

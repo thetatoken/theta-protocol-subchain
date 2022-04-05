@@ -10,6 +10,8 @@ import (
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
+	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "ledger"})
@@ -33,25 +35,28 @@ type Executor struct {
 	consensus score.ConsensusEngine
 	valMgr    score.ValidatorManager
 
-	coinbaseTxExec      *CoinbaseTxExecutor
-	sendTxExec          *SendTxExecutor
-	smartContractTxExec *SmartContractTxExecutor
+	coinbaseTxExec                   *CoinbaseTxExecutor
+	subchainValidatorSetUpdateTxExec *SubchainValidatorSetUpdateTxExecutor
+	sendTxExec                       *SendTxExecutor
+	smartContractTxExec              *SmartContractTxExecutor
 
 	skipSanityCheck bool
 }
 
 // NewExecutor creates a new instance of Executor
-func NewExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine, valMgr score.ValidatorManager) *Executor {
+func NewExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
+	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *Executor {
 	executor := &Executor{
-		db:                  db,
-		chain:               chain,
-		state:               state,
-		consensus:           consensus,
-		valMgr:              valMgr,
-		coinbaseTxExec:      NewCoinbaseTxExecutor(db, chain, state, consensus, valMgr),
-		sendTxExec:          NewSendTxExecutor(state),
-		smartContractTxExec: NewSmartContractTxExecutor(chain, state),
-		skipSanityCheck:     false,
+		db:                               db,
+		chain:                            chain,
+		state:                            state,
+		consensus:                        consensus,
+		valMgr:                           valMgr,
+		coinbaseTxExec:                   NewCoinbaseTxExecutor(db, chain, state, consensus, valMgr),
+		subchainValidatorSetUpdateTxExec: NewSubchainValidatorSetUpdateTxExecutor(db, chain, state, consensus, valMgr, mainchainWitness),
+		sendTxExec:                       NewSendTxExecutor(state),
+		smartContractTxExec:              NewSmartContractTxExecutor(chain, state),
+		skipSanityCheck:                  false,
 	}
 
 	return executor
@@ -179,6 +184,8 @@ func (exec *Executor) getTxExecutor(tx types.Tx) TxExecutor {
 	switch tx.(type) {
 	case *types.CoinbaseTx:
 		txExecutor = exec.coinbaseTxExec
+	case *stypes.SubchainValidatorSetUpdateTx:
+		txExecutor = exec.subchainValidatorSetUpdateTxExec
 	case *types.SendTx:
 		txExecutor = exec.sendTxExec
 	case *types.SmartContractTx:

@@ -13,6 +13,7 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/thetasubchain/cmd/thetasubcli/cmd/utils"
 	"github.com/thetatoken/thetasubchain/core"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	trpc "github.com/thetatoken/thetasubchain/rpc"
 )
 
@@ -96,7 +97,7 @@ func (t *ThetaCliRPCService) Send(args *SendArgs, result *SendResult) (err error
 	}
 	sendTx.SetSignature(from, sig)
 
-	raw, err := types.TxToBytes(sendTx)
+	raw, err := stypes.TxToBytes(sendTx)
 	if err != nil {
 		utils.Error("Failed to encode transaction: %v\n", err)
 	}

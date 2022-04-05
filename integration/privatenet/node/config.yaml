@@ -6,6 +6,9 @@ p2p:
   port: 12100
 rpc:
   enabled: true
+log:
+  #levels: "*:info"
+  levels: "*:debug"
 subchain:
   register: "0x0FFb8d91d0Aee9172Fe88e6cD2C35fa3a5d9C67d"
   erc20: "0x0905EEF5aD614503637baBDd62605aB77727a807"
