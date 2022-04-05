@@ -673,13 +673,13 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 
 	signature, err := ledger.signTransaction(subchainValidatorSetUpdateTx)
 	if err != nil {
-		logger.Errorf("Failed to add subchain validator set update transaction: %v", err)
+		logger.Fatalf("Failed to add subchain validator set update transaction: %v", err) // do not expect this to happen
 		return
 	}
 	subchainValidatorSetUpdateTx.SetSignature(proposerAddress, signature)
-	subchainValidatorSetUpdateTxBytes, err := types.TxToBytes(subchainValidatorSetUpdateTx)
+	subchainValidatorSetUpdateTxBytes, err := stypes.TxToBytes(subchainValidatorSetUpdateTx)
 	if err != nil {
-		logger.Errorf("Failed to add subchain validator set update transaction: %v", err)
+		logger.Fatalf("Failed to serialize subchain validator set update transaction: %v", err) // do not expect this to happen
 		return
 	}
 

@@ -16,6 +16,7 @@ import (
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/ledger/state"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	sversion "github.com/thetatoken/thetasubchain/version"
@@ -564,17 +565,51 @@ type GetValidatorSetByHeightArgs struct {
 }
 
 type GetValidatorSetResult struct {
-	BlockHashVSPairs []BlockHashVSPair
+	BlockHashVSPairs []BlockHashVSPair `json:"block_hash_vs_pairs"`
+}
+
+type ValidatorSet struct {
+	Dynasty    *big.Int          `json:"dynasty"`
+	Validators []score.Validator `json:"validators"`
 }
 
 type BlockHashVSPair struct {
 	BlockHash  common.Hash
-	Vs         *score.ValidatorSet
+	Vs         ValidatorSet
 	HeightList *types.HeightList
 }
 
 func (t *ThetaRPCService) GetValidatorSetByHeight(args *GetValidatorSetByHeightArgs, result *GetValidatorSetResult) (err error) {
-	// TODO: implement
+	deliveredView, err := t.ledger.GetDeliveredSnapshot()
+	if err != nil {
+		return err
+	}
+
+	db := deliveredView.GetDB()
+	height := uint64(args.Height)
+
+	blockHashVSPairs := []BlockHashVSPair{}
+	blocks := t.chain.FindBlocksByHeight(height)
+	for _, b := range blocks {
+		blockHash := b.Hash()
+		stateRoot := b.StateHash
+		blockStoreView := state.NewStoreView(height, stateRoot, db)
+		if blockStoreView == nil { // might have been pruned
+			return fmt.Errorf("the validator set for height %v does not exists, it might have been pruned", height)
+		}
+		vs := blockStoreView.GetValidatorSet()
+		valSet := ValidatorSet{Dynasty: vs.Dynasty()}
+		valSet.Validators = append(valSet.Validators, vs.Validators()...)
+		hl := blockStoreView.GetValidatorSetUpdateTxHeightList()
+		blockHashVSPairs = append(blockHashVSPairs, BlockHashVSPair{
+			BlockHash:  blockHash,
+			Vs:         valSet,
+			HeightList: hl,
+		})
+	}
+
+	result.BlockHashVSPairs = blockHashVSPairs
+
 	return nil
 }
 
