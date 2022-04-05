@@ -565,18 +565,18 @@ type GetValidatorSetByHeightArgs struct {
 }
 
 type GetValidatorSetResult struct {
-	BlockHashVSPairs []BlockHashVSPair `json:"block_hash_vs_pairs"`
+	BlockHashValidatorSetPairs []BlockHashVSPair
 }
 
 type ValidatorSet struct {
-	Dynasty    *big.Int          `json:"dynasty"`
-	Validators []score.Validator `json:"validators"`
+	Dynasty    *big.Int
+	Validators []score.Validator
 }
 
 type BlockHashVSPair struct {
-	BlockHash  common.Hash
-	Vs         ValidatorSet
-	HeightList *types.HeightList
+	BlockHash    common.Hash
+	ValidatorSet ValidatorSet
+	HeightList   *types.HeightList
 }
 
 func (t *ThetaRPCService) GetValidatorSetByHeight(args *GetValidatorSetByHeightArgs, result *GetValidatorSetResult) (err error) {
@@ -602,13 +602,13 @@ func (t *ThetaRPCService) GetValidatorSetByHeight(args *GetValidatorSetByHeightA
 		valSet.Validators = append(valSet.Validators, vs.Validators()...)
 		hl := blockStoreView.GetValidatorSetUpdateTxHeightList()
 		blockHashVSPairs = append(blockHashVSPairs, BlockHashVSPair{
-			BlockHash:  blockHash,
-			Vs:         valSet,
-			HeightList: hl,
+			BlockHash:    blockHash,
+			ValidatorSet: valSet,
+			HeightList:   hl,
 		})
 	}
 
-	result.BlockHashVSPairs = blockHashVSPairs
+	result.BlockHashValidatorSetPairs = blockHashVSPairs
 
 	return nil
 }
