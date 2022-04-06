@@ -73,10 +73,10 @@ func (s *ValidatorSet) Dynasty() *big.Int {
 	return s.dynasty
 }
 
-// SetValidators sets validators
-func (s *ValidatorSet) SetValidators(validators []Validator) {
-	s.validators = validators
-}
+// // SetValidators sets validators
+// func (s *ValidatorSet) SetValidators(validators []Validator) {
+// 	s.validators = validators
+// }
 
 // Copy creates a copy of this validator set.
 func (s *ValidatorSet) Copy() *ValidatorSet {
