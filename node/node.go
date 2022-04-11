@@ -76,8 +76,8 @@ func NewNode(params *Params) *Node {
 	dispatcher := dp.NewDispatcher(params.NetworkOld, params.Network)
 
 	// For testing...
-	mainchainWitness := witness.NewSimulatedMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
-	//mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+	// mainchainWitness := witness.NewSimulatedMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+	mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)), viper.GetInt(scom.CfgSubchainUpdateInterval))
 
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, mainchainWitness)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
@@ -169,3 +169,4 @@ func (n *Node) Wait() {
 		n.RPC.Wait()
 	}
 }
+

@@ -14,3 +14,4 @@ subchain:
   erc20: "0x0905EEF5aD614503637baBDd62605aB77727a807"
   clientURL: "http://localhost:18888/rpc"
   ID: 3610001
+  updateInterval: 1000
