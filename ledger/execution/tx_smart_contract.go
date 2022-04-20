@@ -18,6 +18,8 @@ import (
 
 var _ TxExecutor = (*SmartContractTxExecutor)(nil)
 
+const contractAddrInfoKey string = "contract_address"
+
 // ------------------------------- SmartContractTx Transaction -----------------------------------
 
 // SmartContractTxExecutor implements the TxExecutor interface
@@ -186,7 +188,10 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	}
 	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
 
-	return txHash, result.OK
+	contractInfo := result.Info{}
+	contractInfo[contractAddrInfoKey] = contractAddr
+
+	return txHash, result.OKWith{contractInfo}
 }
 
 func (exec *SmartContractTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {
