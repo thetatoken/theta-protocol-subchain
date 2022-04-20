@@ -48,13 +48,13 @@ func (exec *CrossChainTransferExecutor) process(chainID string, view *slst.Store
 
 	mainchainTokenContractAddress := tx.GetSourceTokenContractAddrOnMainChain()
 	isContractDeployment := (smartContracTx.To.Address == commmon.Address{})
-	wrappedTokenContractAddress := view.GetWrappedTokenContract(mainchainTokenContractAddress)
-	if isContractDeployment && (wrappedTokenContractAddress != commmon.Address{}) {
-		// the wrapped contract should not have been deployed, otherwise the tx is malicious
-		return result.Error("wrapped token contract for %v has already been deployed at %v, the tx is invalid", mainchainTokenContractAddress.Hex(), wrappedTokenContractAddress.Hex())
+	tokenVoucherContractAddress := view.GetTokenVoucherContract(mainchainTokenContractAddress)
+	if isContractDeployment && (tokenVoucherContractAddress != commmon.Address{}) {
+		// the token voucher contract should not have been deployed, otherwise the tx is malicious
+		return result.Error("token voucher contract for %v has already been deployed at %v, the tx is invalid", mainchainTokenContractAddress.Hex(), tokenVoucherContractAddress.Hex())
 	}
-	if !isContractDeployment && (wrappedTokenContractAddress != smartContracTx.To) {
-		return result.Error("wrapped token contract mismatch, %v vs %v", wrappedTokenContractAddress.Hex(), smartContracTx.To.Hex())
+	if !isContractDeployment && (tokenVoucherContractAddress != smartContracTx.To) {
+		return result.Error("token voucher contract mismatch, %v vs %v", tokenVoucherContractAddress.Hex(), smartContracTx.To.Hex())
 	}
 
 	_, result := exec.smartContractExecutor.process(chainID, view, smartContractTx)
@@ -63,8 +63,8 @@ func (exec *CrossChainTransferExecutor) process(chainID string, view *slst.Store
 	}
 
 	if isContractDeployment {
-		wrappedTokenContractAddress = (result.Info[contractAddrInfoKey]).(commmon.Address)
-		view.SetWrappedTokenContract(mainchainTokenContractAddress, wrappedTokenContractAddress)
+		tokenVoucherContractAddress = (result.Info[contractAddrInfoKey]).(commmon.Address)
+		view.SetTokenVoucherContract(mainchainTokenContractAddress, tokenVoucherContractAddress)
 	}
 
 	sourceTokenContractAddrOnMainChain := xferDetails.SourceTokenContractAddrOnMainChain
@@ -92,16 +92,16 @@ func GenerateCrossChainTransferTx(proposerAddress common.Address, view *slst.Sto
 	}
 
 	sourceTokenContractAddrOnMainChain := xferDetails.SourceTokenContractAddrOnMainChain
-	wrappedTokenContract := view.GetWrappedTokenContract(sourceTokenContractAddrOnMainChain)
+	tokenVoucherContract := view.GetTokenVoucherContract(sourceTokenContractAddrOnMainChain)
 	var to types.TxOutput
 	var data []byte
-	if wrappedTokenContract == nil { // wrapped token contract not yet exists, should deploy and mint
+	if tokenVoucherContract == nil { // token voucher contract not yet exists, should deploy and mint
 		// generate a tx with "deploy and mint" data field
 		to.Address = commmon.Address{}
 		data = xxxx // need to handle both TFuel and TNT tokens, will add a precomiled contract for minting TFuel
-	} else { // wrapped token contract already exists, should mint the wrapped token
+	} else { // token voucher contract already exists, should mint the token voucher
 		// generate a tx with "mint" data field
-		to.Address = wrappedTokenContract.Address
+		to.Address = tokenVoucherContract.Address
 		data = xxxx // need to handle both TFuel and TNT tokens
 	}
 
