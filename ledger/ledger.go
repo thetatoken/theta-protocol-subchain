@@ -148,6 +148,40 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
 }
 
+// GetFinalizedValidatorSet returns the validator set of the latest DIRECTLY finalized block
+func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
+	db := ledger.state.DB()
+	store := kvstore.NewKVStore(db)
+
+	block, err := findBlock(store, blockHash)
+	if err != nil {
+		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
+		return nil, err
+	}
+	if block == nil {
+		return nil, fmt.Errorf("Block is nil for hash %v", blockHash.Hex())
+	}
+
+	// Grandparent or root block.
+	if i == 0 || block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
+		stateRoot := block.BlockHeader.StateHash
+		storeView := slst.NewStoreView(block.Height, stateRoot, db)
+		if storeView == nil {
+			logger.WithFields(log.Fields{
+				"block.Hash":                  blockHash.Hex(),
+				"block.Height":                block.Height,
+				"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
+				"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
+				"block.Status.IsTrusted()":    block.Status.IsTrusted(),
+			}).Panic("Failed to load state for last processed event nonce")
+		}
+		lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
+		return lastProcessedEventNonce, nil
+	}
+
+	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
+}
+
 func findBlock(store store.Store, blockHash common.Hash) (*score.ExtendedBlock, error) {
 	var block score.ExtendedBlock
 	err := store.Get(blockHash[:], &block)
@@ -703,6 +737,36 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 
 	*rawTxs = append(*rawTxs, subchainValidatorSetUpdateTxBytes)
 	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
+}
+
+//  // addCrossChainTransferTx adds a cross-chain transaction
+func (ledger *Ledger) addCrossChainTransferTx(view *slst.StoreView, proposer *score.Validator,
+	newDynasty *big.Int, newValidatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
+	proposerAddress := proposer.Address
+	proposerTxIn := types.TxInput{
+		Address: proposerAddress,
+	}
+
+	crossChainTransferTx := &stypes.CrossChainTransferTx{
+		Proposer:   proposerTxIn,
+		Dynasty:    newDynasty,
+		Validators: newValidatorSet.Validators(),
+	}
+
+	signature, err := ledger.signTransaction(crossChainTransferTx)
+	if err != nil {
+		logger.Fatalf("Failed to add subchain validator set update transaction: %v", err) // do not expect this to happen
+		return
+	}
+	crossChainTransferTx.SetSignature(proposerAddress, signature)
+	crossChainTransferTxBytes, err := stypes.TxToBytes(crossChainTransferTx)
+	if err != nil {
+		logger.Fatalf("Failed to serialize subchain validator set update transaction: %v", err) // do not expect this to happen
+		return
+	}
+
+	*rawTxs = append(*rawTxs, crossChainTransferTxBytes)
+	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", crossChainTransferTx, hex.EncodeToString(crossChainTransferTxBytes))
 }
 
 // signTransaction signs the given transaction

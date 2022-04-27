@@ -39,6 +39,11 @@ func ValidatorSetKey() common.Bytes {
 	return common.Bytes("ls/vs")
 }
 
+// EventNonceKey returns the state key for the last processed event nonce
+func EventNonceKey() common.Bytes {
+	return common.Bytes("ls/evn")
+}
+
 // ValidatorSetUpdateTxHeightListKey returns the state key the heights of blocks
 // that contain stake related transactions (i.e. StakeDeposit, StakeWithdraw, etc)
 func ValidatorSetUpdateTxHeightListKey() common.Bytes {

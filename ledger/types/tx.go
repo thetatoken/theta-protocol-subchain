@@ -20,9 +20,90 @@ const maxTxSize = 8 * 1024 * 1024
 
 const (
 	TxSubchainValidatorSetUpdate types.TxType = 1001
+	TxCrossChainTransfer         types.TxType = 1002
 )
 
-//-----------------------------------------------------------------------------
+//---------------------------------CrossChainTransferTx--------------------------------------------
+
+type CrossChainTransferTx struct {
+	Proposer    types.TxInput
+	BlockNumber *big.Int
+	Denom       string
+	Nonce       *big.Int
+	Amount      *big.Int
+	Receiver    types.TxOutput
+}
+
+type CrossChainTransferTxJSON struct {
+	Proposer    types.TxInput `json:"proposer"`
+	BlockNumber *big.Int      `json:"block_number"`
+	Denom       string        `json:"denom"`
+	Nonce       *big.Int      `json:"nonce"`
+	Amount      *big.Int      `json:"amount"`
+	// is it TxOutput?
+	Receiver types.TxOutput `json:"receiver"`
+}
+
+func NewCrossChainTransferTxJSON(a CrossChainTransferTx) CrossChainTransferTxJSON {
+	return NewCrossChainTransferTxJSON{
+		Proposer:    a.Proposer,
+		BlockNumber: a.BlockNumber,
+		Denom:       a.Denom,
+		Amount:      a.Amount,
+		Receiver:    a.Receiver,
+	}
+}
+
+func (a CrossChainTransferTxJSON) CrossChainTransTx() CrossChainTransferTx {
+	return CrossChainTransferTx{
+		Proposer:    a.Proposer,
+		BlockNumber: a.BlockNumber,
+		Denom:       a.Denom,
+		Amount:      a.Amount,
+		Receiver:    a.Receiver,
+	}
+}
+
+func (a CrossChainTransferTxJSON) MarshalJSON() ([]byte, error) {
+	return json.Marshal(CrossChainTransferTxJSON(a))
+}
+
+func (a *CrossChainTransferTx) UnmarshalJSON(data []byte) error {
+	var b CrossChainTransferTxJSON
+	if err := json.Unmarshal(data, &b); err != nil {
+		return err
+	}
+	*a = b.CrossChainTransTx()
+	return nil
+}
+
+func (_ *CrossChainTransferTx) AssertIsTx() {}
+
+func (tx *CrossChainTransferTx) SignBytes(chainID string) []byte {
+	signBytes := encodeToBytes(chainID)
+	sig := tx.Proposer.Signature
+	tx.Proposer.Signature = nil
+	txBytes, _ := TxToBytes(tx)
+	signBytes = append(signBytes, txBytes...)
+	signBytes = addPrefixForSignBytes(signBytes)
+
+	tx.Proposer.Signature = sig
+	return signBytes
+}
+
+func (tx *CrossChainTransferTx) SetSignature(addr common.Address, sig *crypto.Signature) bool {
+	if tx.Proposer.Address == addr {
+		tx.Proposer.Signature = sig
+		return true
+	}
+	return false
+}
+
+func (tx *CrossChainTransferTx) String() string {
+	return fmt.Sprintf("CrossChainTransferTx with Nonce {%v}", tx.Nonce)
+}
+
+//---------------------------------SubchainValidatorSetUpdateTx--------------------------------------------
 
 type SubchainValidatorSetUpdateTx struct {
 	Proposer   types.TxInput
@@ -140,6 +221,8 @@ func TxToBytes(t types.Tx) ([]byte, error) {
 		txType = types.TxSmartContract
 	case *SubchainValidatorSetUpdateTx:
 		txType = TxSubchainValidatorSetUpdate
+	case *CrossChainTransferTx:
+		txType = TxCrossChainTransfer
 	default:
 		return nil, errors.New("unsupported message type")
 	}
@@ -176,6 +259,10 @@ func TxFromBytes(raw []byte) (types.Tx, error) {
 		return data, err
 	} else if txType == TxSubchainValidatorSetUpdate {
 		data := &SubchainValidatorSetUpdateTx{}
+		err = s.Decode(data)
+		return data, err
+	} else if txType == TxCrossChainTransfer {
+		data := &CrossChainTransferTx{}
 		err = s.Decode(data)
 		return data, err
 	} else {

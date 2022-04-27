@@ -146,12 +146,12 @@ func (sv *StoreView) SetCoinbaseTransactionProcessed(processed bool) {
 	sv.coinbaseTransactinProcessed = processed
 }
 
-// SubchainValidatorSetTransactionProcessed returns whether the validatro set update transaction for the current block has been processed
+// SubchainValidatorSetTransactionProcessed returns whether the validator set update transaction for the current block has been processed
 func (sv *StoreView) SubchainValidatorSetTransactionProcessed() bool {
 	return sv.subchainValidatorSetTransactinProcessed
 }
 
-// SetSubchainValidatorSetTransactionProcessed sets whether the validatro set update transaction for the current block has been processed
+// SetSubchainValidatorSetTransactionProcessed sets whether the validator set update transaction for the current block has been processed
 func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool) {
 	sv.subchainValidatorSetTransactinProcessed = processed
 }
@@ -257,6 +257,31 @@ func (sv *StoreView) UpdateValidatorSet(vs *score.ValidatorSet) {
 			vs, err.Error())
 	}
 	sv.Set(ValidatorSetKey(), vsBytes)
+}
+
+// GetLastProcessedEventNonce gets the last processed event nonce.
+func (sv *StoreView) GetLastProcessedEventNonce() *big.Int {
+	data := sv.Get(EventNonceKey())
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	lastProcessedEventNonce := &big.Int{}
+	err := types.FromBytes(data, lastProcessedEventNonce)
+	if err != nil {
+		log.Panicf("Error reading validator set %X, error: %v",
+			data, err.Error())
+	}
+	return lastProcessedEventNonce
+}
+
+// UpdateLastProcessedEventNonce updates the last processed event nonce.
+func (sv *StoreView) UpdateLastProcessedEventNonce(lastProcessedEventNonce *big.Int) {
+	lpenBytes, err := types.ToBytes(lastProcessedEventNonce)
+	if err != nil {
+		log.Panicf("Error writing last processed event nonce %v, error: %v",
+			lastProcessedEventNonce, err.Error())
+	}
+	sv.Set(EventNonceKey(), lpenBytes)
 }
 
 // GetValidatorSetUpdateTxHeightList gets the heights of blocks that contain stake related transactions

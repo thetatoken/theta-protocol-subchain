@@ -1046,6 +1046,79 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 	return true
 }
 
+func (e *ConsensusEngine) canIncludeTransferTxs(tip *score.ExtendedBlock) bool {
+
+	if e.mainchainWitness.IsCrossChainEventCacheEmpty() {
+		return false
+	}
+
+	// Check if majority has greater block height.
+	epochVotes, err := e.state.GetEpochVotes()
+	if err != nil {
+		e.logger.WithFields(log.Fields{"error": err}).Warn("Failed to load epoch votes")
+		return true
+	}
+	validators := e.validatorManager.GetNextValidatorSet(tip.Hash())
+	votes := score.NewVoteSet()
+	for _, v := range epochVotes.Votes() {
+		if v.Height >= tip.Height+1 {
+			votes.AddVote(v)
+		}
+	}
+
+	if validators.HasMajority(votes) {
+		e.logger.WithFields(log.Fields{
+			"tip":        tip.Hash().Hex(),
+			"tip.Height": tip.Height,
+			"votes":      votes.String(),
+		}).Debug("canIncludeValidatorUpdateTxs=false: tip height smaller than majority")
+		return false
+	}
+
+	for nonce, event := range e.mainchainWitness
+
+	// For better liveness, check if the majority votes have dynasties at least as large as the local dynasties.
+	mainchainHeight, err := e.mainchainWitness.GetMainchainBlockNumber()
+	if err != nil {
+		return false
+	}
+	crossChainEventCache := e.mainchainWitness.GetCrossChainEventCache()
+	lastEventNonce := e.ledger.GetLastProcessedEventNonce(tip.HCC.BlockHash)
+	var nextEventToProcess witness.CrossChainTransferEvent
+
+	// 写完这块的逻辑，就是如果是0，或者没有，那就是从没处理过，尝试获得1，从1开始。
+	for nonce, _ := range crossChainEventCache {
+		if lastEventNonce == nil || lastEventNonce.Cmp(big.NewInt(0)) == 0 {
+			nextEventToProcess, ok = crossChainEventCache[big.NewInt(1)]
+		} else {
+			nextEventToProcess, ok = crossChainEventCache[new(big.Int).Add(lastEventNonce, big.NewInt(1))]
+		}
+		if !ok {
+			e.logger.WithFields(log.Fields{
+				"tip":        tip.Hash().Hex(),
+				"tip.Height": tip.Height,
+			}).Debug("cannot find the next event to process")
+			return false
+		}	
+	}
+
+	mainchainHeightVotes := score.NewVoteSet()
+	for _, v := range epochVotes.Votes() {
+		if (big.NewInt(int64(v.MainchainHeight)).Cmp(nextEventToProcess.BlockNumber) > 0){
+			mainchainHeightVotes.AddVote(v)
+		}
+	}
+
+	if !validators.HasMajority(mainchainHeightVotes) {
+		// The majority of the validators are still lagging behind this node. Hence, higly likely that if the
+		// proposed block includes the cross chain transfer tx, it will be ignored by the majority of the validators.
+		// So it is better not to include the tx so the block can be finalized. Otherwise, this proposer slot will be wasted.
+		return false
+	}
+
+	return true
+}
+
 func (e *ConsensusEngine) shouldProposeByID(previousBlock common.Hash, epoch uint64, id string) bool {
 	if epoch == 0 { // special handling for genesis epoch
 		return false

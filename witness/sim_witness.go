@@ -180,3 +180,10 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 
 	return validatorSet, nil
 }
+func (mw *SimulatedMainchainWitness) IsCrossChainEventCacheEmpty() bool {
+	return len(mw.CrossChainEventCache) == 0
+}
+
+func (mw *SimulatedMainchainWitness) GetCrossChainEventCache() *map[*big.Int]*CrossChainTransferEvent {
+	return mw.CrossChainEventCache
+}

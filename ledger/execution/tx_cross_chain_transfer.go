@@ -1,9 +1,66 @@
+package execution
 
-func (exec *CrossChainTransferExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
-	tx := transaction.(*stypes.CrossChainTransferTx)
+import (
+	"fmt"
+	"math/big"
 
+	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/theta/common/result"
+	"github.com/thetatoken/theta/ledger/types"
+	"github.com/thetatoken/theta/store/database"
+
+	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	score "github.com/thetatoken/thetasubchain/core"
+	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	stypes "github.com/thetatoken/thetasubchain/ledger/types"
+	"github.com/thetatoken/thetasubchain/witness"
+)
+
+var _ TxExecutor = (*CrossChainTransferTxExecutor)(nil)
+
+// ------------------------------- CrossChainTransfer Transaction -----------------------------------
+
+// CrossChainTransferTxExecutor implements the TxExecutor interface
+type CrossChainTransferTxExecutor struct {
+	db               database.Database
+	chain            *sbc.Chain
+	state            *slst.LedgerState
+	consensus        score.ConsensusEngine
+	valMgr           score.ValidatorManager
+	mainchainWitness witness.ChainWitness
+}
+
+// NewCrossChainTransferTxExecutor creates a new instance of CrossChainTransferTxExecutor
+func NewCrossChainTransferTxExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
+	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *CrossChainTransferTxExecutor {
+	return &CrossChainTransferTxExecutor{
+		db:               db,
+		chain:            chain,
+		state:            state,
+		consensus:        consensus,
+		valMgr:           valMgr,
+		mainchainWitness: mainchainWitness,
+	}
+}
+
+func (exec *CrossChainTransferTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result 
+{
 	// basic checks, and verify the tx proposer is a validator
-	xxxx // see tx_validator_set_upadate.go
+	tx := transaction.(*stypes.CrossChainTransferTx)
+	validatorSet := getValidatorSet(exec.consensus.GetLedger(), exec.valMgr)
+	validatorAddresses := getValidatorAddresses(validatorSet)
+
+	// Validate proposer, basic
+	res := tx.Proposer.ValidateBasic()
+	if res.IsError() {
+		return res
+	}
+
+	// verify the proposer is one of the validators
+	res = isAValidator(tx.Proposer.Address, validatorAddresses)
+	if res.IsError() {
+		return res
+	}
 
 	crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	if view.ChainTransferHasBeenProcessed(crossChainTransferID) {
@@ -16,7 +73,11 @@ func (exec *CrossChainTransferExecutor) sanityCheck(chainID string, view *slst.S
 	}
 
 	// Other checks, e.g. signature check..
-	xxxx
+	// verify the proposer's signature
+	signBytes := tx.SignBytes(chainID)
+	if !tx.Proposer.Signature.Verify(signBytes, proposerAccount.Address) {
+		return result.Error("SignBytes: %X", signBytes)
+	}
 	
 	_, result := exec.smartContractExecutor.sanityCheck(chainID, view, smartContractTx)
 	if result.IsError() {
@@ -24,12 +85,12 @@ func (exec *CrossChainTransferExecutor) sanityCheck(chainID string, view *slst.S
 	}
 }
 
-func (exec *CrossChainTransferExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*stypes.CrossChainTransferTx)
 	crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	xferDetails, err := exec.mainchainWitness.GetCrossChainTransfer(crossChainTransferID)
 	if err != nil || xferDetails == nil {
-		return common.Hash{}, result.UndecidedWith(...) // not seen on mainchain yet
+		return common.Hash{}, result.UndecidedWith(result.Info{"newDynasty": newDynasty, "err": err}) // not seen on mainchain yet
 	}
 
 	if view.ChainTransferHasBeenProcessed(crossChainTransferID) {

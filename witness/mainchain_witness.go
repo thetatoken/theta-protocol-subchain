@@ -18,25 +18,39 @@ import (
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
+// SubchainRegisterSendToSubchainEvent
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
 type MainchainWitness struct {
-	mainChainID       *big.Int
-	subchainID        *big.Int
-	witnessedDynasty  *big.Int
-	validatorSetCache map[*big.Int]*score.ValidatorSet
-	client            *ec.Client
-	updateTicker      *time.Ticker
+	mainChainID          *big.Int
+	subchainID           *big.Int
+	witnessedDynasty     *big.Int
+	validatorSetCache    map[*big.Int]*score.ValidatorSet
+	CrossChainEventCache map[*big.Int]*CrossChainTransferEvent
+	client               *ec.Client
+	updateTicker         *time.Ticker
 
 	registerContractAddr common.Address
 	ercContractAddr      common.Address
 	registerContract     *sct.SubchainRegister
 	ercContract          *sct.SubchainERC
 
+	updateInterval int
+
 	// Life cycle
 	wg     *sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
+
+	lastQueryedMainChainHeight *big.Int
+}
+
+type CrossChainTransferEvent struct {
+	Sender      common.Address
+	Denom       string
+	Amount      *big.Int
+	EventNonce  *big.Int
+	BlockNumber *big.Int
 }
 
 // NewMainchainWitness creates a new MainchainWitness
@@ -45,6 +59,7 @@ func NewMainchainWitness(
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
+	updateInterval int,
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
@@ -71,10 +86,14 @@ func NewMainchainWitness(
 		validatorSetCache: make(map[*big.Int]*score.ValidatorSet),
 		client:            client,
 
-		registerContractAddr: registerContractAddr,
+		RegisterContractAddr: registerContractAddr,
 		ercContractAddr:      ercContractAddr,
 		registerContract:     subchainRegisterContract,
 		ercContract:          subchainERCContract,
+
+		updateInterval: updateInterval,
+
+		lastQueryedMainChainHeight: big.NewInt(0),
 
 		wg: &sync.WaitGroup{},
 	}
@@ -135,7 +154,7 @@ func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 }
 
 func (mw *MainchainWitness) mainloop(ctx context.Context) {
-	mw.updateTicker = time.NewTicker(time.Duration(100) * time.Millisecond) // TODO: make the ticker interval configurable
+	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -160,22 +179,37 @@ func (mw *MainchainWitness) update() {
 	}
 }
 
-// TODO:
-//    1) query the validators corresponding to the dynasty from the main chain
-//    2) query the stakes of the validators for the given dynasty
+func (mw *MainchainWitness) collectCrossChainTransferEvent() []CrossChainTransferEvent {
+	fromBlock = mw.lastQueryedMainChainHeight
+	toBlock, err := mw.GetMainchainBlockNumber()
+	if err != nil {
+		logger.Warnf("failed to get the mainchain block number %v\n", err)
+		return
+	}
+	scom.RpcEventLogQuery(fromBlock, toBlock, mw.RegisterContractAddr, &mw.CrossChainEventCache)
+}
+
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
-	validatorAddrs, err := mw.registerContract.GetLegalValidators(nil, mw.subchainID)
+	validatorAddrs, validatorStakes, err := mw.registerContract.GetValidatorAndStakeSetWithBlockHeight(nil, mw.subchainID, dynasty.Mul(dynasty, big.NewInt(100)))
 	if err != nil {
 		return nil, err
 	}
 
 	validatorSet := score.NewValidatorSet(dynasty)
-	for _, validatorAddr := range validatorAddrs {
-		validator := score.NewValidator(validatorAddr.Hex(), big.NewInt(1)) // TODO: set the actual stake
+	for i := 0; i < len(validatorAddrs); i++ {
+		validator := score.NewValidator(validatorAddrs[i].Hex(), validatorStakes[i])
 		validatorSet.AddValidator(validator)
 	}
 
 	mw.validatorSetCache[dynasty] = validatorSet
 
 	return validatorSet, nil
+}
+
+func (mw *MainchainWitness) IsCrossChainEventCacheEmpty() bool {
+	return len(mw.CrossChainEventCache) == 0
+}
+
+func (mw *MainchainWitness) GetCrossChainEventCache() *map[*big.Int]*CrossChainTransferEvent {
+	return mw.CrossChainEventCache
 }
