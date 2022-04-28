@@ -45,14 +45,6 @@ type MainchainWitness struct {
 	lastQueryedMainChainHeight *big.Int
 }
 
-type CrossChainTransferEvent struct {
-	Sender      common.Address
-	Denom       string
-	Amount      *big.Int
-	EventNonce  *big.Int
-	BlockNumber *big.Int
-}
-
 // NewMainchainWitness creates a new MainchainWitness
 func NewMainchainWitness(
 	ethClientAddress string,

@@ -265,7 +265,7 @@ func (sv *StoreView) GetLastProcessedEventNonce() *big.Int {
 	if data == nil || len(data) == 0 {
 		return nil
 	}
-	lastProcessedEventNonce := &big.Int{}
+	lastProcessedEventNonce := big.NewInt(0)
 	err := types.FromBytes(data, lastProcessedEventNonce)
 	if err != nil {
 		log.Panicf("Error reading validator set %X, error: %v",

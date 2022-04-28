@@ -28,29 +28,20 @@ const (
 type CrossChainTransferTx struct {
 	Proposer    types.TxInput
 	BlockNumber *big.Int
-	Denom       string
-	Nonce       *big.Int
-	Amount      *big.Int
-	Receiver    types.TxOutput
+	Event       CrossChainTransferEvent
 }
 
 type CrossChainTransferTxJSON struct {
-	Proposer    types.TxInput `json:"proposer"`
-	BlockNumber *big.Int      `json:"block_number"`
-	Denom       string        `json:"denom"`
-	Nonce       *big.Int      `json:"nonce"`
-	Amount      *big.Int      `json:"amount"`
-	// is it TxOutput?
-	Receiver types.TxOutput `json:"receiver"`
+	Proposer    types.TxInput           `json:"proposer"`
+	BlockNumber *big.Int                `json:"block_number"`
+	Event       CrossChainTransferEvent `json:"event"`
 }
 
 func NewCrossChainTransferTxJSON(a CrossChainTransferTx) CrossChainTransferTxJSON {
-	return NewCrossChainTransferTxJSON{
+	return CrossChainTransferTxJSON{
 		Proposer:    a.Proposer,
 		BlockNumber: a.BlockNumber,
-		Denom:       a.Denom,
-		Amount:      a.Amount,
-		Receiver:    a.Receiver,
+		Event:       a.Event,
 	}
 }
 
@@ -58,9 +49,7 @@ func (a CrossChainTransferTxJSON) CrossChainTransTx() CrossChainTransferTx {
 	return CrossChainTransferTx{
 		Proposer:    a.Proposer,
 		BlockNumber: a.BlockNumber,
-		Denom:       a.Denom,
-		Amount:      a.Amount,
-		Receiver:    a.Receiver,
+		Event:       a.Event,
 	}
 }
 
@@ -100,7 +89,7 @@ func (tx *CrossChainTransferTx) SetSignature(addr common.Address, sig *crypto.Si
 }
 
 func (tx *CrossChainTransferTx) String() string {
-	return fmt.Sprintf("CrossChainTransferTx with Nonce {%v}", tx.Nonce)
+	return fmt.Sprintf("CrossChainTransferTx with Nonce {%v}", tx.Event.EventNonce)
 }
 
 //---------------------------------SubchainValidatorSetUpdateTx--------------------------------------------

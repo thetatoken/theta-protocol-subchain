@@ -2,7 +2,7 @@ package common
 
 import (
 	scom "github.com/thetatoken/thetasubchain/common"
-	"github.com/thetatoken/thetasubchain/witness"
+	score "github.com/thetatoken/thetasubchain/core"
 	"math/big"
 )
 
@@ -36,7 +36,7 @@ func CalculateDynasty(mainchainHeight *big.Int) *big.Int {
 	return new(big.Int).Div(mainchainHeight, big.NewInt(NumMainchainBlocksPerDynasty))
 }
 
-func RpcEventLogQuery(fromBlock int, toBlock int, contractAddr common.Address, witnessXTransferCache *map[*big.Int]*witness.CrossChainTransferEvent) []witness.CrossChainTransferEvent {
+func RpcEventLogQuery(fromBlock int, toBlock int, contractAddr common.Address, witnessXTransferCache *map[*big.Int]*score.CrossChainTransferEvent) []score.CrossChainTransferEvent {
 	url := "http://127.0.0.1:18888/rpc"
 	queryStr := fmt.Sprintf(`{
 		"jsonrpc":"2.0",
@@ -71,7 +71,7 @@ func RpcEventLogQuery(fromBlock int, toBlock int, contractAddr common.Address, w
 		fmt.Println(err)
 	}
 
-	crossChainTransferEventArr := make([]witness.CrossChainTransferEvent, len(rpcres.Result))
+	crossChainTransferEventArr := make([]score.CrossChainTransferEvent, len(rpcres.Result))
 
 	for _, logData := range rpcres.Result {
 		logData := logData
@@ -86,7 +86,7 @@ func RpcEventLogQuery(fromBlock int, toBlock int, contractAddr common.Address, w
 			fmt.Println(err)
 		}
 		BlockNumberDec, _ := strconv.ParseUint(logData.BlockNumber[2:], 16, 32)
-		crossChainTransferEvent := &witness.CrossChainTransferEvent{
+		crossChainTransferEvent := &score.CrossChainTransferEvent{
 			Sender:      common.HexToAddress(logData.Topics[1]),
 			Denom:       event.Denom,
 			Amount:      event.Amount,

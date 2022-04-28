@@ -234,7 +234,7 @@ func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res re
 
 // ProposeBlockTxs collects and executes a list of transactions, which will be used to assemble the next blockl
 // It also clears these transactions from the mempool.
-func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
+func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool, includeCrosschainTransferTxsTillNonce *big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
 	// Must always acquire locks in following order to avoid deadlock: mempool, ledger.
 	// Otherwise, could cause deadlock since mempool.InsertTransaction() also first acquires the mempool, and then the ledger lock
 	logger.Debugf("ProposeBlockTxs: Propose block transactions, block.height = %v", block.Height)
@@ -257,7 +257,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 
 	// Add special transactions
 	rawTxCandidates := []common.Bytes{}
-	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs)
+	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs, includeCrosschainTransferTxsTillNonce)
 
 	// Add regular transactions submitted by the clients
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
@@ -612,7 +612,7 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block
-func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool) {
+func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool, includeCrosschainTransferTxsTillNonce *big.Int) {
 	if block == nil {
 		logger.Warnf("addSpecialTransactions: block is nil")
 		return
@@ -634,6 +634,21 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 		canIncludeValidatorUpdateTxs, hasValidatorSetUpdate, newDynasty, newValidatorSet)
 	if canIncludeValidatorUpdateTxs && hasValidatorSetUpdate {
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
+	}
+
+	// ------- Add crosschain transfer transaction ------- //
+	if includeCrosschainTransferTxsTillNonce.Cmp(big.NewInt(0)) == 0 {
+		return
+	}
+	nextEventNonce := ledger.view.GetLastProcessedEventNonce()
+	eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
+	for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0{
+		nextEvent, ok := eventCache[nextEventNonce]
+		if !ok {
+			break
+		}
+		ledger.addCrossChainTransferTx(view, &proposer, nextEvent, rawTxs)
+		nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 	}
 }
 
@@ -678,6 +693,9 @@ func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.V
 	return true, witnessedDynasty, witnessedValidatorSet
 }
 
+func (ledger *Ledger) getNextEventToProcess(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) (bool, *big.Int, *score.ValidatorSet) {
+
+}
 // addCoinbaseTx adds a Coinbase transaction
 func (ledger *Ledger) addCoinbaseTx(view *slst.StoreView, proposer *score.Validator,
 	validatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
@@ -739,18 +757,22 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
 }
 
-//  // addCrossChainTransferTx adds a cross-chain transaction
-func (ledger *Ledger) addCrossChainTransferTx(view *slst.StoreView, proposer *score.Validator,
-	newDynasty *big.Int, newValidatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
+// addCrossChainTransferTx adds a cross-chain transaction
+func (ledger *Ledger) addCrossChainTransferTx(view *slst.StoreView, proposer *score.Validator, nextCrossChainTransferEvent *score.CrossChainTransferEvent, rawTxs *[]common.Bytes) {
 	proposerAddress := proposer.Address
 	proposerTxIn := types.TxInput{
 		Address: proposerAddress,
 	}
+	type CrossChainTransferTx struct {
+		Proposer    types.TxInput
+		BlockNumber *big.Int
+		Event       CrossChainTransferEvent
+	}
 
 	crossChainTransferTx := &stypes.CrossChainTransferTx{
-		Proposer:   proposerTxIn,
-		Dynasty:    newDynasty,
-		Validators: newValidatorSet.Validators(),
+		Proposer:   	proposerTxIn,
+		BlockNumber:    nextCrossChainTransferEvent.BlockNumber,
+		Event:      	nextCrossChainTransferEvent,
 	}
 
 	signature, err := ledger.signTransaction(crossChainTransferTx)
