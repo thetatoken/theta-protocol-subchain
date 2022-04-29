@@ -163,7 +163,7 @@ func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.In
 	}
 
 	// Grandparent or root block.
-	if i == 0 || block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
+	if block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
 		stateRoot := block.BlockHeader.StateHash
 		storeView := slst.NewStoreView(block.Height, stateRoot, db)
 		if storeView == nil {

@@ -34,13 +34,15 @@ func NewSimulatedMainchainWitness(
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
+	crossChainEventCache score.CrossChainEventCache,
 ) *SimulatedMainchainWitness {
 	mw := &SimulatedMainchainWitness{
-		subchainID:        subchainID,
-		witnessedDynasty:  nil, // will be updated in the first update() call
-		validatorSetCache: make(map[*big.Int]*score.ValidatorSet),
-		startingTime:      time.Now(),
-		wg:                &sync.WaitGroup{},
+		subchainID:           subchainID,
+		witnessedDynasty:     nil, // will be updated in the first update() call
+		validatorSetCache:    make(map[*big.Int]*score.ValidatorSet),
+		startingTime:         time.Now(),
+		crossChainEventCache: crossChainEventCache,
+		wg:                   &sync.WaitGroup{},
 	}
 
 	return mw
@@ -180,10 +182,7 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 
 	return validatorSet, nil
 }
-func (mw *SimulatedMainchainWitness) IsCrossChainEventCacheEmpty() bool {
-	return len(mw.CrossChainEventCache) == 0
-}
 
-func (mw *SimulatedMainchainWitness) GetCrossChainEventCache() *map[*big.Int]*CrossChainTransferEvent {
-	return mw.CrossChainEventCache
+func (mw *SimulatedMainchainWitness) GetCrossChainEventCache() score.CrossChainEventCache {
+	return mw.crossChainEventCache
 }

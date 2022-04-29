@@ -1049,7 +1049,7 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 // process the crosschain event Tx from the last processed event to the event that has the nonce in the return value
 func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.ExtendedBlock) *big.Int {
 
-	if e.mainchainWitness.IsCrossChainEventCacheEmpty() {
+	if e.mainchainWitness.GetCrossChainEventCache().IsEmpty() {
 		return big.NewInt(0)
 	}
 

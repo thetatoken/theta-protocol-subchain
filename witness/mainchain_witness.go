@@ -26,7 +26,7 @@ type MainchainWitness struct {
 	subchainID           *big.Int
 	witnessedDynasty     *big.Int
 	validatorSetCache    map[*big.Int]*score.ValidatorSet
-	CrossChainEventCache map[*big.Int]*CrossChainTransferEvent
+	crossChainEventCache *core.CrossChainEventCache
 	client               *ec.Client
 	updateTicker         *time.Ticker
 
@@ -52,6 +52,7 @@ func NewMainchainWitness(
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
 	updateInterval int,
+	crossChainEventCache score.CrossChainEventCache,
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
@@ -84,6 +85,8 @@ func NewMainchainWitness(
 		ercContract:          subchainERCContract,
 
 		updateInterval: updateInterval,
+
+		crossChainEventCache: crossChainEventCache,
 
 		lastQueryedMainChainHeight: big.NewInt(0),
 
@@ -198,10 +201,6 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	return validatorSet, nil
 }
 
-func (mw *MainchainWitness) IsCrossChainEventCacheEmpty() bool {
-	return len(mw.CrossChainEventCache) == 0
-}
-
-func (mw *MainchainWitness) GetCrossChainEventCache() *map[*big.Int]*CrossChainTransferEvent {
-	return mw.CrossChainEventCache
+func (mw *MainchainWitness) GetCrossChainEventCache() score.CrossChainEventCache {
+	return mw.crossChainEventCache
 }

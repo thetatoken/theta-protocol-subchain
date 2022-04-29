@@ -75,8 +75,9 @@ func NewNode(params *Params) *Node {
 	validatorManager := sconsensus.NewRotatingValidatorManager()
 	dispatcher := dp.NewDispatcher(params.NetworkOld, params.Network)
 
+	crossChainEventCache := score.NewCrossChainEventCache(params.RollingDB)
 	// For testing...
-	mainchainWitness := witness.NewSimulatedMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
+	mainchainWitness := witness.NewSimulatedMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)), crossChainEventCache)
 	//mainchainWitness := witness.NewMainchainWitness(viper.GetString(scom.CfgMainchainAdaptorURL), big.NewInt(viper.GetInt64(scom.CfgSubchainID)), common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)), common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)))
 
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, mainchainWitness)

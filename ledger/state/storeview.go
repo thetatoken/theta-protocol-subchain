@@ -27,6 +27,7 @@ type StoreView struct {
 
 	coinbaseTransactinProcessed             bool
 	subchainValidatorSetTransactinProcessed bool
+	crossChainTransferTransactionProcessed  bool
 	slashIntents                            []types.SlashIntent
 	refund                                  uint64       // Gas refund during smart contract execution
 	logs                                    []*types.Log // Temporary store of events during smart contract execution
@@ -154,6 +155,16 @@ func (sv *StoreView) SubchainValidatorSetTransactionProcessed() bool {
 // SetSubchainValidatorSetTransactionProcessed sets whether the validator set update transaction for the current block has been processed
 func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool) {
 	sv.subchainValidatorSetTransactinProcessed = processed
+}
+
+// SubchainValidatorSetTransactionProcessed returns whether the validator set update transaction for the current block has been processed
+func (sv *StoreView) CrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) bool {
+	return sv.GetLastProcessedEventNonce().Cmp(crossChainTransferID) < 0
+}
+
+// SetSubchainValidatorSetTransactionProcessed sets whether the validator set update transaction for the current block has been processed
+func (sv *StoreView) SetCrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) {
+	sv.UpdateLastProcessedEventNonce(crossChainTransferID)
 }
 
 // GetAccount returns an account.

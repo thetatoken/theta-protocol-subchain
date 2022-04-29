@@ -16,11 +16,6 @@ import (
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "core"})
 
-var (
-	// ErrCrossChainTransferEventrNotFound for ID is not found in crosschain transfer event set.
-	ErrCrossChainTransferEventrNotFound = errors.New("CrossChainTransferEventNotFound")
-)
-
 // CrossChainTransferEvent contains the public information of a crosschain transfer event.
 type CrossChainTransferEvent struct {
 	Sender      common.Address
@@ -107,4 +102,65 @@ func (c *CrossChainTransferEvent) DecodeRLP(stream *rlp.Stream) error {
 	c.Sender, c.Receiver, c.Denom, c.Amount, c.Nonce, c.BlockNumber = event.Sender, event.Receiver, event.Denom, event.Amount, event.Nonce, event.BlockNumber
 
 	return stream.ListEnd()
+}
+
+// ------------------------------------Event Cache----------------------------------------------
+
+var (
+	// ErrCrossChainTransferEventrNotFound for ID is not found in crosschain transfer event set.
+	ErrCrossChainTransferEventNotFound      = errors.New("CrossChainTransferEventNotFound")
+	ErrCrossChainTransferEventExisted       = errors.New("CrossChainTransferEventrExisted")
+	ErrCrossChainTransferEventPersistFailed = errors.New("CrossChainTransferEventPersistFailed")
+)
+
+type CrossChainEventCache struct {
+	eventCache map[*big.Int]*CrossChainTransferEvent
+	db         database.Database
+}
+
+// NewCrossChainEventCache creates a new crosschain transfer event cache instance.
+func NewCrossChainEventCache(db database.Database) *CrossChainEventCache {
+	res := &CrossChainEventCache{
+		eventCache: map[*big.Int]*CrossChainTransferEvent{},
+		db: db,
+	}
+	return res
+}
+
+func (c *CrossChainEventCache) Size() int {
+	return len(c.EventCache)
+}
+
+func (c *CrossChainEventCache) IsEmpty() int {
+	return len(c.EventCache) == 0
+}
+
+func (c *CrossChainEventCache) Insert(event *CrossChainTransferEvent) error {
+	if _, ok := c.EventCache[event.Nonce]; ok {
+		return ErrCrossChainTransferEventrExisted
+	}
+	c.EventCache[event.Nonce] = event
+	persistent(event)
+
+}
+
+func (c *CrossChainEventCache) persistent(event *CrossChainTransferEvent) error {
+	store := kvstore.NewKVStore(db)
+	err := store.Put(blockchain.CrossChainEventIndexKey(event.Nonce), event)
+	if err != nil {
+		c.Delete(event.Nonce)
+		logger.Panic(err)
+	}
+}
+
+func (c *CrossChainEventCache) Delete(nonce *big.Int) {
+	delete(c.EventCache, nonce)
+}
+
+func (c *CrossChainEventCache) Get(nonce *big.Int) (event *CrossChainTransferEvent, error) {
+	if res, ok := c.EventCache[event.Nonce]; ok {
+		return res, nil
+	} else {
+		return nil, ErrCrossChainTransferEventNotFound
+	}
 }
