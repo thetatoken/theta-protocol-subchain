@@ -76,7 +76,7 @@ func NewMainchainWitness(
 		mainChainID:       mainChainID,
 		subchainID:        subchainID,
 		witnessedDynasty:  nil, // will be updated in the first update() call
-		validatorSetCache: make(map[*big.Int]*score.ValidatorSet),
+		validatorSetCache: make(map[string]*score.ValidatorSet),
 		client:            client,
 
 		RegisterContractAddr: registerContractAddr,
@@ -134,7 +134,7 @@ func (mw *MainchainWitness) GetMainchainBlockNumberUint() (uint64, error) {
 }
 
 func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
-	validatorSet, ok := mw.validatorSetCache[dynasty]
+	validatorSet, ok := mw.validatorSetCache[dynasty.String()]
 	if ok && validatorSet != nil && validatorSet.Dynasty() == dynasty {
 		return validatorSet, nil
 	}
@@ -196,7 +196,7 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 		validatorSet.AddValidator(validator)
 	}
 
-	mw.validatorSetCache[dynasty] = validatorSet
+	mw.validatorSetCache[dynasty.String()] = validatorSet
 
 	return validatorSet, nil
 }
