@@ -1093,7 +1093,7 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 	var nextEventToProcess score.CrossChainTransferEvent
 	processTillNonce := big.NewInt(0)
 	for {
-		nextEventToProcess, ok = crossChainEventCache[nextEventNonce]
+		nextEventToProcess, ok = crossChainEventCache.Get(nextEventNonce)
 		if !ok {
 			e.logger.WithFields(log.Fields{
 				"tip":        tip.Hash().Hex(),

@@ -643,7 +643,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	nextEventNonce := ledger.view.GetLastProcessedEventNonce()
 	eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
 	for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0{
-		nextEvent, ok := eventCache[nextEventNonce]
+		nextEvent, ok := eventCache.Get(nextEventNonce)
 		if !ok {
 			break
 		}

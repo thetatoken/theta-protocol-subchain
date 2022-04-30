@@ -18,7 +18,7 @@ const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
 type SimulatedMainchainWitness struct {
 	subchainID        *big.Int
 	witnessedDynasty  *big.Int
-	validatorSetCache map[*big.Int]*score.ValidatorSet
+	validatorSetCache map[string]*score.ValidatorSet
 	updateTicker      *time.Ticker
 	startingTime      time.Time
 
@@ -79,7 +79,7 @@ func (mw *SimulatedMainchainWitness) GetMainchainBlockNumberUint() (uint64, erro
 }
 
 func (mw *SimulatedMainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
-	validatorSet, ok := mw.validatorSetCache[dynasty]
+	validatorSet, ok := mw.validatorSetCache[dynasty.String()]
 	if ok && validatorSet != nil && validatorSet.Dynasty() == dynasty {
 		return validatorSet, nil
 	}
@@ -173,7 +173,7 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 		validatorSet.AddValidator(v4)
 	}
 
-	mw.validatorSetCache[dynasty] = validatorSet
+	mw.validatorSetCache[dynasty.String()] = validatorSet
 
 	logger.Infof("Witnessed validator set for dynasty %v", dynasty)
 	for _, v := range validatorSet.Validators() {

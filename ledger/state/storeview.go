@@ -27,7 +27,6 @@ type StoreView struct {
 
 	coinbaseTransactinProcessed             bool
 	subchainValidatorSetTransactinProcessed bool
-	crossChainTransferTransactionProcessed  bool
 	slashIntents                            []types.SlashIntent
 	refund                                  uint64       // Gas refund during smart contract execution
 	logs                                    []*types.Log // Temporary store of events during smart contract execution
@@ -157,12 +156,18 @@ func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool)
 	sv.subchainValidatorSetTransactinProcessed = processed
 }
 
-// SubchainValidatorSetTransactionProcessed returns whether the validator set update transaction for the current block has been processed
+// CrossChainTransferTransactionProcessed returns whether the cross chain transfer transaction has been processed
 func (sv *StoreView) CrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) bool {
 	return sv.GetLastProcessedEventNonce().Cmp(crossChainTransferID) < 0
 }
 
-// SetSubchainValidatorSetTransactionProcessed sets whether the validator set update transaction for the current block has been processed
+// ShouldProcessThisCrossChainTransferEvent returns whether the crossChainTransferID is the next nonce to process
+func (sv *StoreView) ShouldProcessThisCrossChainTransferEvent(crossChainTransferID *big.Int) bool {
+	// if the crossChainTransferID equals the LastProcessedEventNonce + 1 then process it
+	return crossChainTransferID.Cmp(new(big.Int).Add(sv.GetLastProcessedEventNonce(), big.NewInt(1))) == 0
+}
+
+// SetCrossChainTransferTransactionProcessed sets whether the validator set update transaction for the current block has been processed
 func (sv *StoreView) SetCrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) {
 	sv.UpdateLastProcessedEventNonce(crossChainTransferID)
 }

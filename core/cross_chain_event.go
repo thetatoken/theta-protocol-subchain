@@ -114,53 +114,47 @@ var (
 )
 
 type CrossChainEventCache struct {
-	eventCache map[*big.Int]*CrossChainTransferEvent
-	db         database.Database
+	db database.Database
 }
 
 // NewCrossChainEventCache creates a new crosschain transfer event cache instance.
 func NewCrossChainEventCache(db database.Database) *CrossChainEventCache {
-	res := &CrossChainEventCache{
-		eventCache: map[*big.Int]*CrossChainTransferEvent{},
+	cache := &CrossChainEventCache{
 		db: db,
 	}
-	return res
-}
-
-func (c *CrossChainEventCache) Size() int {
-	return len(c.EventCache)
-}
-
-func (c *CrossChainEventCache) IsEmpty() int {
-	return len(c.EventCache) == 0
+	return cache
 }
 
 func (c *CrossChainEventCache) Insert(event *CrossChainTransferEvent) error {
-	if _, ok := c.EventCache[event.Nonce]; ok {
-		return ErrCrossChainTransferEventrExisted
-	}
-	c.EventCache[event.Nonce] = event
-	persistent(event)
-
-}
-
-func (c *CrossChainEventCache) persistent(event *CrossChainTransferEvent) error {
 	store := kvstore.NewKVStore(db)
 	err := store.Put(blockchain.CrossChainEventIndexKey(event.Nonce), event)
-	if err != nil {
-		c.Delete(event.Nonce)
-		logger.Panic(err)
-	}
+	return err // the caller should handle the error
 }
 
 func (c *CrossChainEventCache) Delete(nonce *big.Int) {
-	delete(c.EventCache, nonce)
+	store := kvstore.NewKVStore(db)
+	err := store.Delete(blockchain.CrossChainEventIndexKey(nonce))
+	return err // the caller should handle the error
 }
 
-func (c *CrossChainEventCache) Get(nonce *big.Int) (event *CrossChainTransferEvent, error) {
-	if res, ok := c.EventCache[event.Nonce]; ok {
-		return res, nil
-	} else {
-		return nil, ErrCrossChainTransferEventNotFound
+func (c *CrossChainEventCache) Get(nonce *big.Int) (*CrossChainTransferEvent, error) {
+	event := CrossChainTransferEvent{}
+	store := kvstore.NewKVStore(db)
+	err := store.Get(blockchain.CrossChainEventIndexKey(nonce), &event)
+	return &event, err // the caller should handle the error
+}
+
+func (c *CrossChainEventCache) Exists(nonce *big.Int) (bool, error) {
+	event := CrossChainTransferEvent{}
+	store := kvstore.NewKVStore(db)
+	err := store.Get(blockchain.CrossChainEventIndexKey(nonce), &event)
+	if err == nil {
+		return true, nil
 	}
+
+	if err == store.ErrKeyNotFound {
+		return false, nil
+	}
+
+	return false, err // the caller should handle the error
 }
