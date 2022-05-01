@@ -148,7 +148,39 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
 }
 
-// GetFinalizedValidatorSet returns the validator set of the latest DIRECTLY finalized block
+// // GetFinalizedValidatorSet returns the validator set of the latest DIRECTLY finalized block
+// func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
+// 	db := ledger.state.DB()
+// 	store := kvstore.NewKVStore(db)
+
+// 	block, err := findBlock(store, blockHash)
+// 	if err != nil {
+// 		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
+// 		return nil, err
+// 	}
+// 	if block == nil {
+// 		return nil, fmt.Errorf("Block is nil for hash %v", blockHash.Hex())
+// 	}
+
+// 	if block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
+// 		stateRoot := block.BlockHeader.StateHash
+// 		storeView := slst.NewStoreView(block.Height, stateRoot, db)
+// 		if storeView == nil {
+// 			logger.WithFields(log.Fields{
+// 				"block.Hash":                  blockHash.Hex(),
+// 				"block.Height":                block.Height,
+// 				"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
+// 				"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
+// 				"block.Status.IsTrusted()":    block.Status.IsTrusted(),
+// 			}).Panic("Failed to load state for last processed event nonce")
+// 		}
+// 		lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
+// 		return lastProcessedEventNonce, nil
+// 	}
+
+// 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
+// }
+
 func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
 	db := ledger.state.DB()
 	store := kvstore.NewKVStore(db)
@@ -162,24 +194,20 @@ func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.In
 		return nil, fmt.Errorf("Block is nil for hash %v", blockHash.Hex())
 	}
 
-	// Grandparent or root block.
-	if block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
-		stateRoot := block.BlockHeader.StateHash
-		storeView := slst.NewStoreView(block.Height, stateRoot, db)
-		if storeView == nil {
-			logger.WithFields(log.Fields{
-				"block.Hash":                  blockHash.Hex(),
-				"block.Height":                block.Height,
-				"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
-				"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
-				"block.Status.IsTrusted()":    block.Status.IsTrusted(),
-			}).Panic("Failed to load state for last processed event nonce")
-		}
-		lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
-		return lastProcessedEventNonce, nil
+	stateRoot := block.BlockHeader.StateHash
+	storeView := slst.NewStoreView(block.Height, stateRoot, db)
+	if storeView == nil {
+		logger.WithFields(log.Fields{
+			"block.Hash":                  blockHash.Hex(),
+			"block.Height":                block.Height,
+			"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
+			"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
+			"block.Status.IsTrusted()":    block.Status.IsTrusted(),
+		}).Panic("Failed to load state for last processed event nonce")
 	}
+	lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
+	return lastProcessedEventNonce, nil
 
-	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
 }
 
 func findBlock(store store.Store, blockHash common.Hash) (*score.ExtendedBlock, error) {
@@ -640,14 +668,19 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	if includeCrosschainTransferTxsTillNonce.Cmp(big.NewInt(0)) == 0 {
 		return
 	}
-	nextEventNonce := ledger.view.GetLastProcessedEventNonce()
+	nextEventNonce, err := ledger.GetLastProcessedEventNonce(block.Hash())
+	if err != nil {
+		logger.Panicf("Failed to GetLastProcessedEventNonce err: %v", err)
+	}
 	eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
-	for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0{
+	for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0 {
 		nextEvent, ok := eventCache.Get(nextEventNonce)
-		if !ok {
+		if ok != nil {
 			break
 		}
 		ledger.addCrossChainTransferTx(view, &proposer, nextEvent, rawTxs)
+		logger.Debugf("Add special transactions: includeCrosschainTransferTxsTillNonce: %v, EventNonce: %v",
+			includeCrosschainTransferTxsTillNonce, nextEventNonce)
 		nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 	}
 }
@@ -693,9 +726,6 @@ func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.V
 	return true, witnessedDynasty, witnessedValidatorSet
 }
 
-func (ledger *Ledger) getNextEventToProcess(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) (bool, *big.Int, *score.ValidatorSet) {
-
-}
 // addCoinbaseTx adds a Coinbase transaction
 func (ledger *Ledger) addCoinbaseTx(view *slst.StoreView, proposer *score.Validator,
 	validatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
@@ -763,16 +793,11 @@ func (ledger *Ledger) addCrossChainTransferTx(view *slst.StoreView, proposer *sc
 	proposerTxIn := types.TxInput{
 		Address: proposerAddress,
 	}
-	type CrossChainTransferTx struct {
-		Proposer    types.TxInput
-		BlockNumber *big.Int
-		Event       CrossChainTransferEvent
-	}
 
 	crossChainTransferTx := &stypes.CrossChainTransferTx{
-		Proposer:   	proposerTxIn,
-		BlockNumber:    nextCrossChainTransferEvent.BlockNumber,
-		Event:      	nextCrossChainTransferEvent,
+		Proposer:    proposerTxIn,
+		BlockNumber: nextCrossChainTransferEvent.BlockNumber,
+		Event:       *nextCrossChainTransferEvent,
 	}
 
 	signature, err := ledger.signTransaction(crossChainTransferTx)
@@ -801,3 +826,4 @@ func (ledger *Ledger) signTransaction(tx types.Tx) (*crypto.Signature, error) {
 	}
 	return signature, nil
 }
+

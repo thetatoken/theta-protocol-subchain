@@ -1048,11 +1048,6 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 
 // process the crosschain event Tx from the last processed event to the event that has the nonce in the return value
 func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.ExtendedBlock) *big.Int {
-
-	if e.mainchainWitness.GetCrossChainEventCache().IsEmpty() {
-		return big.NewInt(0)
-	}
-
 	// Check if majority has greater block height.
 	epochVotes, err := e.state.GetEpochVotes()
 	if err != nil {
@@ -1076,48 +1071,65 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 		return big.NewInt(0)
 	}
 
-	for nonce, event := range e.mainchainWitness
-
-	// For better liveness, check if the majority votes have dynasties at least as large as the local dynasties.
-	mainchainHeight, err := e.mainchainWitness.GetMainchainBlockNumber()
 	if err != nil {
 		return big.NewInt(0)
 	}
 	crossChainEventCache := e.mainchainWitness.GetCrossChainEventCache()
-	lastEventNonce := e.ledger.GetLastProcessedEventNonce(tip.HCC.BlockHash)
-	if lastEventNonce == nil {
-		nextEventNonce := big.NewInt(1)
-	} else {
-		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
+	lastEventNonce, err := e.ledger.GetLastProcessedEventNonce(tip.Hash())
+	if err != nil {
+		e.logger.WithFields(log.Fields{
+			"error":         err,
+			"tip.StateHash": tip.StateHash.Hex(),
+			"tip":           tip,
+		}).Panic("Failed to get last processed event nonce :")
 	}
-	var nextEventToProcess score.CrossChainTransferEvent
+
+	nextEventNonce := big.NewInt(0)
+	if lastEventNonce == nil {
+		nextEventNonce = big.NewInt(1)
+	} else {
+		nextEventNonce = new(big.Int).Add(lastEventNonce, big.NewInt(1))
+	}
+
+	// next event is not existed
+	if isExisted, err := crossChainEventCache.Exists(nextEventNonce); !isExisted {
+		e.logger.WithFields(log.Fields{
+			"nextEventNonce": nextEventNonce,
+			"error":          err,
+		}).Panic("nextEventNonce not existed :")
+		return big.NewInt(0)
+	}
+
 	processTillNonce := big.NewInt(0)
 	for {
-		nextEventToProcess, ok = crossChainEventCache.Get(nextEventNonce)
-		if !ok {
+		nextEventToProcess, ok := crossChainEventCache.Get(nextEventNonce)
+		if ok != nil {
 			e.logger.WithFields(log.Fields{
 				"tip":        tip.Hash().Hex(),
 				"tip.Height": tip.Height,
 			}).Debug("cannot find the next event to process")
 			break
 		}
+		// For better liveness, check if the majority votes have dynasties at least as large as the block number in the event.
 		mainchainHeightVotes := score.NewVoteSet()
 		for _, v := range epochVotes.Votes() {
-			if (big.NewInt(int64(v.MainchainHeight)).Cmp(nextEventToProcess.BlockNumber) > 0){
+			if big.NewInt(int64(v.MainchainHeight)).Cmp(nextEventToProcess.BlockNumber) > 0 {
 				mainchainHeightVotes.AddVote(v)
 			}
 		}
-	
+
 		if !validators.HasMajority(mainchainHeightVotes) {
 			// The majority of the validators are still lagging behind this node. Hence, higly likely that if the
 			// proposed block includes the cross chain transfer tx, it will be ignored by the majority of the validators.
 			// So it is better not to include the tx so the block can be finalized. Otherwise, this proposer slot will be wasted.
 			break
 		}
-		processTillNonce := nextEventNonce
-		nextEventNonce = new(big.Int).Add(nextEventToProcess, big.NewInt(1))
+		processTillNonce = nextEventNonce
+		nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 	}
-
+	e.logger.WithFields(log.Fields{
+		"processTillNonce": processTillNonce,
+	}).Info("Process Till Nonce is : ")
 	return processTillNonce
 }
 
@@ -1207,7 +1219,6 @@ func (e *ConsensusEngine) propose() {
 
 	canIncludeValidatorUpdateTxs := e.canIncludeValidatorUpdateTxs(tip)
 	includeCrosschainTransferTxsTillNonce := e.includeCrosschainTransferTxsTillNonce(tip)
-
 	var proposal score.Proposal
 	var err error
 	lastProposal := e.state.GetLastProposal()
@@ -1287,3 +1298,4 @@ func isSyncing(lastestFinalizedBlock *score.ExtendedBlock, currentHeight uint64)
 
 	return isSyncing
 }
+

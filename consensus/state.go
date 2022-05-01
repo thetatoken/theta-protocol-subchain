@@ -207,14 +207,6 @@ func (s *State) AddVote(vote *score.Vote) error {
 	return nil
 }
 
-func (s *State) AddCrossChainTransferEvent(vote *score.CrossChainTransferEvent) error {
-	if err := s.AddEpochVote(vote); err != nil {
-		return err
-	}
-	s.chain.AddCrossChainEventToIndex(*vote)
-	return nil
-}
-
 func (s *State) GetEpochVotes() (*score.VoteSet, error) {
 	key := []byte(DBEpochVotesKey)
 	ret := score.NewVoteSet()
@@ -233,3 +225,4 @@ func (s *State) AddEpochVote(vote *score.Vote) error {
 	key := []byte(DBEpochVotesKey)
 	return s.db.Put(key, voteset)
 }
+

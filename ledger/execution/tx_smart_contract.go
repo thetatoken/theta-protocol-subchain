@@ -191,7 +191,7 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	contractInfo := result.Info{}
 	contractInfo[contractAddrInfoKey] = contractAddr
 
-	return txHash, result.OKWith{contractInfo}
+	return txHash, result.OKWith(contractInfo)
 }
 
 func (exec *SmartContractTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {
@@ -207,3 +207,4 @@ func (exec *SmartContractTxExecutor) calculateEffectiveGasPrice(transaction type
 	tx := transaction.(*types.SmartContractTx)
 	return tx.GasPrice
 }
+

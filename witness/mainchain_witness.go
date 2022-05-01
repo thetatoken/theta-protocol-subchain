@@ -25,8 +25,8 @@ type MainchainWitness struct {
 	mainChainID          *big.Int
 	subchainID           *big.Int
 	witnessedDynasty     *big.Int
-	validatorSetCache    map[*big.Int]*score.ValidatorSet
-	crossChainEventCache *core.CrossChainEventCache
+	validatorSetCache    map[string]*score.ValidatorSet
+	crossChainEventCache *score.CrossChainEventCache
 	client               *ec.Client
 	updateTicker         *time.Ticker
 
@@ -52,7 +52,7 @@ func NewMainchainWitness(
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
 	updateInterval int,
-	crossChainEventCache score.CrossChainEventCache,
+	crossChainEventCache *score.CrossChainEventCache,
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
@@ -79,7 +79,7 @@ func NewMainchainWitness(
 		validatorSetCache: make(map[string]*score.ValidatorSet),
 		client:            client,
 
-		RegisterContractAddr: registerContractAddr,
+		registerContractAddr: registerContractAddr,
 		ercContractAddr:      ercContractAddr,
 		registerContract:     subchainRegisterContract,
 		ercContract:          subchainERCContract,
@@ -174,14 +174,14 @@ func (mw *MainchainWitness) update() {
 	}
 }
 
-func (mw *MainchainWitness) collectCrossChainTransferEvent() []CrossChainTransferEvent {
-	fromBlock = mw.lastQueryedMainChainHeight
+func (mw *MainchainWitness) collectCrossChainTransferEvent() []score.CrossChainTransferEvent {
+	fromBlock := mw.lastQueryedMainChainHeight
 	toBlock, err := mw.GetMainchainBlockNumber()
 	if err != nil {
 		logger.Warnf("failed to get the mainchain block number %v\n", err)
-		return
+		return make([]score.CrossChainTransferEvent, 1)
 	}
-	scom.RpcEventLogQuery(fromBlock, toBlock, mw.RegisterContractAddr, &mw.CrossChainEventCache)
+	return scom.RpcEventLogQuery(fromBlock, toBlock, mw.registerContractAddr, mw.crossChainEventCache)
 }
 
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -201,6 +201,7 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	return validatorSet, nil
 }
 
-func (mw *MainchainWitness) GetCrossChainEventCache() score.CrossChainEventCache {
+func (mw *MainchainWitness) GetCrossChainEventCache() *score.CrossChainEventCache {
 	return mw.crossChainEventCache
 }
+

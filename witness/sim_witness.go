@@ -3,6 +3,7 @@ package witness
 import (
 	"context"
 	"math/big"
+	"math/rand"
 	"sync"
 	"time"
 
@@ -23,9 +24,12 @@ type SimulatedMainchainWitness struct {
 	startingTime      time.Time
 
 	// Life cycle
-	wg     *sync.WaitGroup
-	ctx    context.Context
-	cancel context.CancelFunc
+	wg                   *sync.WaitGroup
+	ctx                  context.Context
+	cancel               context.CancelFunc
+	crossChainEventCache *score.CrossChainEventCache
+
+	lastSimEventNonce *big.Int
 }
 
 // NewSimulatedMainchainWitness creates a new SimulatedMainchainWitness
@@ -34,17 +38,28 @@ func NewSimulatedMainchainWitness(
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
-	crossChainEventCache score.CrossChainEventCache,
+	crossChainEventCache *score.CrossChainEventCache,
 ) *SimulatedMainchainWitness {
 	mw := &SimulatedMainchainWitness{
 		subchainID:           subchainID,
 		witnessedDynasty:     nil, // will be updated in the first update() call
-		validatorSetCache:    make(map[*big.Int]*score.ValidatorSet),
+		validatorSetCache:    make(map[string]*score.ValidatorSet),
 		startingTime:         time.Now(),
 		crossChainEventCache: crossChainEventCache,
 		wg:                   &sync.WaitGroup{},
+		lastSimEventNonce:    big.NewInt(2),
 	}
-
+	err := mw.crossChainEventCache.Insert(&score.CrossChainTransferEvent{
+		Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Denom:       "test crosschain transfer",
+		Amount:      big.NewInt(int64(rand.Intn(1000000) + 1)),
+		Nonce:       big.NewInt(1),
+		BlockNumber: big.NewInt(0),
+	})
+	if err != nil {
+		logger.Panicf("Insert Fail!! %v", err)
+	}
 	return mw
 }
 
@@ -120,59 +135,31 @@ func (mw *SimulatedMainchainWitness) update() {
 		mw.witnessedDynasty = dynasty
 		logger.Infof("updated the witnessed dynasty to %v", dynasty)
 	}
+
+	for i := 0; i < rand.Intn(3); i++ {
+		event := &score.CrossChainTransferEvent{
+			Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+			Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+			Denom:       "test crosschain transfer",
+			Amount:      big.NewInt(int64(rand.Intn(1000000) + 1)),
+			Nonce:       mw.lastSimEventNonce,
+			BlockNumber: mainchainBlockNumber,
+		}
+		mw.crossChainEventCache.Insert(event)
+		// logger.Infof("Inserted Event %v", event)
+		mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
+	}
 }
 
 func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	// Simulate validator set updates
 	validatorAddrList := []string{
-		"0x9F1233798E905E173560071255140b4A8aBd3Ec6",
 		"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
-		"0xC15E24083152dD76Ae6FC2aEb5269FF23d70330B",
-		"0x7631958d57Cf6a5605635a5F06Aa2ae2e000820e",
 	}
-
 	validatorSet := score.NewValidatorSet(dynasty)
-	if dynasty.Cmp(big.NewInt(0)) == 0 {
-		// Dynasty 0: Start with a single validator
-
-		stake := big.NewInt(100000000)
-		v2 := score.NewValidator(validatorAddrList[1], stake)
-		validatorSet.AddValidator(v2)
-	} else if dynasty.Cmp(big.NewInt(1)) == 0 {
-		// Dynasty 1: Add more validators
-
-		stake1 := big.NewInt(6000000000)
-		stake2 := big.NewInt(300000000000)
-		stake3 := big.NewInt(6000000000)
-		v1 := score.NewValidator(validatorAddrList[0], stake1)
-		v2 := score.NewValidator(validatorAddrList[1], stake2)
-		v3 := score.NewValidator(validatorAddrList[2], stake3)
-		validatorSet.AddValidator(v1)
-		validatorSet.AddValidator(v2)
-		validatorSet.AddValidator(v3)
-	} else if dynasty.Cmp(big.NewInt(2)) == 0 {
-		// Dynasty 2: Remove validators
-
-		stake1 := big.NewInt(6000000000)
-		stake2 := big.NewInt(300000000000)
-		v1 := score.NewValidator(validatorAddrList[0], stake1)
-		v2 := score.NewValidator(validatorAddrList[1], stake2)
-		validatorSet.AddValidator(v1)
-		validatorSet.AddValidator(v2)
-	} else {
-		// Dynasty 3: Remove some validators, and add additional validators
-
-		stake2 := big.NewInt(300000000000)
-		stake3 := big.NewInt(7000000000)
-		stake4 := big.NewInt(22000000000)
-		v2 := score.NewValidator(validatorAddrList[1], stake2)
-		v3 := score.NewValidator(validatorAddrList[2], stake3)
-		v4 := score.NewValidator(validatorAddrList[3], stake4)
-		validatorSet.AddValidator(v2)
-		validatorSet.AddValidator(v3)
-		validatorSet.AddValidator(v4)
-	}
-
+	stake := big.NewInt(100000000)
+	v := score.NewValidator(validatorAddrList[0], stake)
+	validatorSet.AddValidator(v)
 	mw.validatorSetCache[dynasty.String()] = validatorSet
 
 	logger.Infof("Witnessed validator set for dynasty %v", dynasty)
@@ -183,6 +170,7 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 	return validatorSet, nil
 }
 
-func (mw *SimulatedMainchainWitness) GetCrossChainEventCache() score.CrossChainEventCache {
+func (mw *SimulatedMainchainWitness) GetCrossChainEventCache() *score.CrossChainEventCache {
 	return mw.crossChainEventCache
 }
+

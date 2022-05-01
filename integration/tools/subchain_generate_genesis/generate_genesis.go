@@ -89,6 +89,7 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 
 	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
 	setInitialValidatorSet(initValidatorSetFilePath, genesisHeight, sv)
+	// setInitalEventNonce(sv)
 
 	stateHash := sv.Hash()
 
@@ -140,6 +141,13 @@ func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint6
 	sv.Save()
 
 	return validatorSet
+}
+
+func setInitalEventNonce(sv *slst.StoreView) *big.Int {
+	sv.UpdateLastProcessedEventNonce(big.NewInt(0))
+	sv.Save()
+
+	return big.NewInt(0)
 }
 
 func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
@@ -231,3 +239,4 @@ func sanityChecks(sv *slst.StoreView) error {
 
 	return nil
 }
+

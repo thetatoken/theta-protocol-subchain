@@ -158,7 +158,7 @@ func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool)
 
 // CrossChainTransferTransactionProcessed returns whether the cross chain transfer transaction has been processed
 func (sv *StoreView) CrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) bool {
-	return sv.GetLastProcessedEventNonce().Cmp(crossChainTransferID) < 0
+	return sv.GetLastProcessedEventNonce().Cmp(crossChainTransferID) > 0
 }
 
 // ShouldProcessThisCrossChainTransferEvent returns whether the crossChainTransferID is the next nonce to process
@@ -648,3 +648,4 @@ func (sv *StoreView) Prune() error {
 func (sv *StoreView) AddLog(l *types.Log) {
 	sv.logs = append(sv.logs, l)
 }
+

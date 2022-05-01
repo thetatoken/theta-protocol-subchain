@@ -28,13 +28,13 @@ const (
 type CrossChainTransferTx struct {
 	Proposer    types.TxInput
 	BlockNumber *big.Int
-	Event       CrossChainTransferEvent
+	Event       score.CrossChainTransferEvent
 }
 
 type CrossChainTransferTxJSON struct {
-	Proposer    types.TxInput           `json:"proposer"`
-	BlockNumber *big.Int                `json:"block_number"`
-	Event       CrossChainTransferEvent `json:"event"`
+	Proposer    types.TxInput                 `json:"proposer"`
+	BlockNumber *big.Int                      `json:"block_number"`
+	Event       score.CrossChainTransferEvent `json:"event"`
 }
 
 func NewCrossChainTransferTxJSON(a CrossChainTransferTx) CrossChainTransferTxJSON {
@@ -89,7 +89,7 @@ func (tx *CrossChainTransferTx) SetSignature(addr common.Address, sig *crypto.Si
 }
 
 func (tx *CrossChainTransferTx) String() string {
-	return fmt.Sprintf("CrossChainTransferTx with Nonce {%v}", tx.Event.EventNonce)
+	return fmt.Sprintf("CrossChainTransferTx with Nonce {%v}", tx.Event.Nonce)
 }
 
 //---------------------------------SubchainValidatorSetUpdateTx--------------------------------------------
@@ -258,3 +258,4 @@ func TxFromBytes(raw []byte) (types.Tx, error) {
 		return nil, fmt.Errorf("Unknown TX type: %v", txType)
 	}
 }
+
