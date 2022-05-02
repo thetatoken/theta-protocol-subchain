@@ -2,6 +2,7 @@ package witness
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -190,6 +191,10 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 		return nil, err
 	}
 
+	if len(validatorAddrs) != len(validatorStakes) {
+		return nil, fmt.Errorf("the length of validatorAddrs and validatorStakes are not equal")
+	}
+
 	validatorSet := score.NewValidatorSet(dynasty)
 	for i := 0; i < len(validatorAddrs); i++ {
 		validator := score.NewValidator(validatorAddrs[i].Hex(), validatorStakes[i])
@@ -204,4 +209,3 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 func (mw *MainchainWitness) GetCrossChainEventCache() *score.CrossChainEventCache {
 	return mw.crossChainEventCache
 }
-
