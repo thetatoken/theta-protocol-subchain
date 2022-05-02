@@ -33,6 +33,8 @@ type MainchainWitness struct {
 	registerContract     *sct.SubchainRegister
 	ercContract          *sct.SubchainERC
 
+	updateInterval int
+
 	// Life cycle
 	wg     *sync.WaitGroup
 	ctx    context.Context
@@ -45,6 +47,7 @@ func NewMainchainWitness(
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
+	updateInterval int,
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
@@ -75,6 +78,8 @@ func NewMainchainWitness(
 		ercContractAddr:      ercContractAddr,
 		registerContract:     subchainRegisterContract,
 		ercContract:          subchainERCContract,
+
+		updateInterval: updateInterval,
 
 		wg: &sync.WaitGroup{},
 	}
@@ -135,7 +140,7 @@ func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 }
 
 func (mw *MainchainWitness) mainloop(ctx context.Context) {
-	mw.updateTicker = time.NewTicker(time.Duration(100) * time.Millisecond) // TODO: make the ticker interval configurable
+	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -160,18 +165,15 @@ func (mw *MainchainWitness) update() {
 	}
 }
 
-// TODO:
-//    1) query the validators corresponding to the dynasty from the main chain
-//    2) query the stakes of the validators for the given dynasty
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
-	validatorAddrs, err := mw.registerContract.GetLegalValidators(nil, mw.subchainID)
+	validatorAddrs, validatorStakes, err := mw.registerContract.GetValidatorAndStakeSetWithBlockHeight(nil, mw.subchainID, dynasty.Mul(dynasty, big.NewInt(100)))
 	if err != nil {
 		return nil, err
 	}
 
 	validatorSet := score.NewValidatorSet(dynasty)
-	for _, validatorAddr := range validatorAddrs {
-		validator := score.NewValidator(validatorAddr.Hex(), big.NewInt(1)) // TODO: set the actual stake
+	for i := 0; i < len(validatorAddrs); i++ {
+		validator := score.NewValidator(validatorAddrs[i].Hex(), validatorStakes[i])
 		validatorSet.AddValidator(validator)
 	}
 
@@ -179,3 +181,4 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 
 	return validatorSet, nil
 }
+

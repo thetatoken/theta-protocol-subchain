@@ -147,6 +147,8 @@ const (
 	CfgMainchainAdaptorURL = "subchain.clientURL"
 	// CfgSubchainID defines the subchainID
 	CfgSubchainID = "subchain.ID"
+	// CfgSubchainUpdateInterval defines the time interval in millisecond for the subchain to obtain the status update from the main chain
+	CfgSubchainUpdateInterval = "subchain.updateInterval"
 )
 
 // InitialConfig is the default configuration produced by init command.
@@ -216,3 +218,4 @@ func init() {
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
+
