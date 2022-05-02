@@ -89,7 +89,7 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 
 	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
 	setInitialValidatorSet(initValidatorSetFilePath, genesisHeight, sv)
-	// setInitalEventNonce(sv)
+	setInitalEventNonce(sv)
 
 	stateHash := sv.Hash()
 

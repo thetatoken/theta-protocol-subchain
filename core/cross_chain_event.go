@@ -165,8 +165,6 @@ func NewCrossChainEventCache(db database.Database) *CrossChainEventCache {
 
 // crossChainEventIndexKey constructs the DB key for the given block hash.
 func crossChainEventIndexKey(nonce *big.Int) common.Bytes {
-	key := "cce/" + nonce.String()
-	fmt.Println("!!!!!!!!!!!!!!!!!!!!!!!!!!!!" + key)
 	return common.Bytes("cce/" + nonce.String())
 }
 

@@ -62,13 +62,9 @@ func (exec *CrossChainTransferTxExecutor) sanityCheck(chainID string, view *slst
 
 	// crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	crossChainTransferID := tx.Event.Nonce
-	// // should we use CrossChainTransferTransactionProcessed or check whether the crossChainTransferID equals to last processed event nonce + 1?
-	if view.ShouldProcessThisCrossChainTransferEvent(crossChainTransferID) {
-		return result.Error("cross-chain chain transfer %v is not the next event to process", crossChainTransferID)
+	if view.CrossChainTransferTransactionProcessed(crossChainTransferID) {
+		return result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
 	}
-	// if view.CrossChainTransferTransactionProcessed(crossChainTransferID) {
-	// 	return result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
-	// }
 
 	// smartContracTx, err := constructSmartContractTx(tx) // construct a smart contract tx from the special tx (proposed and siged by the leader)
 	// if err != nil {
@@ -100,6 +96,11 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 	tx := transaction.(*stypes.CrossChainTransferTx)
 	// crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	crossChainTransferID := tx.Event.Nonce
+
+	// if view.ShouldProcessThisCrossChainTransferEvent(crossChainTransferID) {
+	// 	return common.Hash{}, result.Error("cross-chain chain transfer %v is not the next event to process", crossChainTransferID)
+	// }
+
 	eventCache := exec.mainchainWitness.GetCrossChainEventCache()
 	xferDetails, err := eventCache.Get(crossChainTransferID)
 	if err != nil || xferDetails == nil {

@@ -668,10 +668,11 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	if includeCrosschainTransferTxsTillNonce.Cmp(big.NewInt(0)) == 0 {
 		return
 	}
-	nextEventNonce, err := ledger.GetLastProcessedEventNonce(block.Hash())
-	if err != nil {
-		logger.Panicf("Failed to GetLastProcessedEventNonce err: %v", err)
+	lastEventNonce := view.GetLastProcessedEventNonce()
+	if lastEventNonce == nil {
+		logger.Panic("nil last event nonce")
 	}
+	nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
 	eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
 	for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0 {
 		nextEvent, ok := eventCache.Get(nextEventNonce)
@@ -679,8 +680,8 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 			break
 		}
 		ledger.addCrossChainTransferTx(view, &proposer, nextEvent, rawTxs)
-		logger.Debugf("Add special transactions: includeCrosschainTransferTxsTillNonce: %v, EventNonce: %v",
-			includeCrosschainTransferTxsTillNonce, nextEventNonce)
+		logger.Debugf("Add special transactions cross chain event Tx %v",
+			nextEvent)
 		nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 	}
 }
