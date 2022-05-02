@@ -1091,12 +1091,8 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 		nextEventNonce = new(big.Int).Add(lastEventNonce, big.NewInt(1))
 	}
 
-	// next event is not existed
-	if isExisted, err := crossChainEventCache.Exists(nextEventNonce); !isExisted {
-		e.logger.WithFields(log.Fields{
-			"nextEventNonce": nextEventNonce,
-			"error":          err,
-		}).Panic("nextEventNonce not existed :")
+	// next event is not existed yet
+	if isExisted, _ := crossChainEventCache.Exists(nextEventNonce); !isExisted {
 		return big.NewInt(0)
 	}
 

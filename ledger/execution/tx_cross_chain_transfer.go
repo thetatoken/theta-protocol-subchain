@@ -97,9 +97,9 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 	// crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	crossChainTransferID := tx.Event.Nonce
 
-	// if view.ShouldProcessThisCrossChainTransferEvent(crossChainTransferID) {
-	// 	return common.Hash{}, result.Error("cross-chain chain transfer %v is not the next event to process", crossChainTransferID)
-	// }
+	if !view.ShouldProcessThisCrossChainTransferEvent(crossChainTransferID) {
+		return common.Hash{}, result.Error("cross-chain chain transfer %v is not the next event to process, expected nonce is %v", crossChainTransferID, view.GetLastProcessedEventNonce())
+	}
 
 	eventCache := exec.mainchainWitness.GetCrossChainEventCache()
 	xferDetails, err := eventCache.Get(crossChainTransferID)
