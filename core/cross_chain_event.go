@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+
 	// "sort"
 
 	// log "github.com/sirupsen/logrus"
@@ -163,34 +164,34 @@ func NewCrossChainEventCache(db database.Database) *CrossChainEventCache {
 	return cache
 }
 
-// crossChainEventIndexKey constructs the DB key for the given block hash.
-func crossChainEventIndexKey(nonce *big.Int) common.Bytes {
+// CrossChainEventIndexKey constructs the DB key for the given block hash.
+func CrossChainEventIndexKey(nonce *big.Int) common.Bytes {
 	return common.Bytes("cce/" + nonce.String())
 }
 
 func (c *CrossChainEventCache) Insert(event *CrossChainTransferEvent) error {
 	store := kvstore.NewKVStore(c.db)
-	err := store.Put(crossChainEventIndexKey(event.Nonce), event)
+	err := store.Put(CrossChainEventIndexKey(event.Nonce), event)
 	return err // the caller should handle the error
 }
 
 func (c *CrossChainEventCache) Delete(nonce *big.Int) error {
 	store := kvstore.NewKVStore(c.db)
-	err := store.Delete(crossChainEventIndexKey(nonce))
+	err := store.Delete(CrossChainEventIndexKey(nonce))
 	return err // the caller should handle the error
 }
 
 func (c *CrossChainEventCache) Get(nonce *big.Int) (*CrossChainTransferEvent, error) {
 	event := CrossChainTransferEvent{}
 	store := kvstore.NewKVStore(c.db)
-	err := store.Get(crossChainEventIndexKey(nonce), &event)
+	err := store.Get(CrossChainEventIndexKey(nonce), &event)
 	return &event, err // the caller should handle the error
 }
 
 func (c *CrossChainEventCache) Exists(nonce *big.Int) (bool, error) {
 	event := CrossChainTransferEvent{}
 	store := kvstore.NewKVStore(c.db)
-	err := store.Get(crossChainEventIndexKey(nonce), &event)
+	err := store.Get(CrossChainEventIndexKey(nonce), &event)
 	if err == nil {
 		return true, nil
 	}
@@ -201,4 +202,3 @@ func (c *CrossChainEventCache) Exists(nonce *big.Int) (bool, error) {
 
 	return false, err // the caller should handle the error
 }
-
