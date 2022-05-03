@@ -221,3 +221,4 @@ func init() {
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
+
