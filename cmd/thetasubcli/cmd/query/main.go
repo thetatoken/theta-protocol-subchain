@@ -31,4 +31,5 @@ func init() {
 	QueryCmd.AddCommand(vsCmd)
 	QueryCmd.AddCommand(peersCmd)
 	QueryCmd.AddCommand(versionCmd)
+	QueryCmd.AddCommand(tokenBankAddrCmd)
 }

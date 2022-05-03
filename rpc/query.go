@@ -614,6 +614,27 @@ func (t *ThetaRPCService) GetValidatorSetByHeight(args *GetValidatorSetByHeightA
 	return nil
 }
 
+// ------------------------------- GetTokenBankContractAddress -----------------------------------
+
+type GetTokenBankContractAddressArgs struct {
+}
+
+type GetTokenBankContractAddressResult struct {
+	Address string `json:"address"`
+}
+
+func (t *ThetaRPCService) GetTokenBankContractAddress(args *GetTokenBankContractAddressArgs, result *GetTokenBankContractAddressResult) (err error) {
+	deliveredView, err := t.ledger.GetDeliveredSnapshot()
+	if err != nil {
+		return err
+	}
+
+	contractAddr := deliveredView.GetTokenBankContractAddress()
+	result.Address = contractAddr.Hex()
+
+	return nil
+}
+
 // ------------------------------- GetCode -----------------------------------
 
 type GetCodeArgs struct {

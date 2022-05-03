@@ -275,6 +275,21 @@ func (sv *StoreView) UpdateValidatorSet(vs *score.ValidatorSet) {
 	sv.Set(ValidatorSetKey(), vsBytes)
 }
 
+// GetValidatorSet gets the validator set.
+func (sv *StoreView) GetTokenBankContractAddress() *common.Address {
+	data := sv.Get(TokenBankContractAddressKey())
+	if len(data) == 0 {
+		return nil
+	}
+	tbca := &common.Address{}
+	err := types.FromBytes(data, tbca)
+	if err != nil {
+		log.Panicf("Error reading token bank contract address %X, error: %v",
+			data, err.Error())
+	}
+	return tbca
+}
+
 // GetLastProcessedEventNonce gets the last processed event nonce.
 func (sv *StoreView) GetLastProcessedEventNonce() *big.Int {
 	data := sv.Get(EventNonceKey())
@@ -648,4 +663,3 @@ func (sv *StoreView) Prune() error {
 func (sv *StoreView) AddLog(l *types.Log) {
 	sv.logs = append(sv.logs, l)
 }
-

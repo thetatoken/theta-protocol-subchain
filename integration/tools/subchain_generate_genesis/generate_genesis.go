@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -14,10 +15,12 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
+	"github.com/thetatoken/theta/ledger/vm"
 	"github.com/thetatoken/theta/rlp"
 	"github.com/thetatoken/theta/store/database/backend"
 	"github.com/thetatoken/theta/store/trie"
 
+	scomm "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 )
@@ -88,8 +91,13 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 	genesisHeight := score.GenesisBlockHeight
 
 	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
+
 	setInitialValidatorSet(initValidatorSetFilePath, genesisHeight, sv)
 	setInitalEventNonce(sv)
+	err := deployInitialSmartContracts(chainID, sv)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to deploy initial smart contracts: %v", err))
+	}
 
 	stateHash := sv.Hash()
 
@@ -157,6 +165,37 @@ func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	return vp, err
 }
 
+func deployInitialSmartContracts(chainID string, sv *slst.StoreView) error {
+	dummyGasLimit := uint64(10000000)
+	dummyGasPrice := big.NewInt(1)
+
+	// Token Bank contract
+	tokenBankContractBytecode, err := hex.DecodeString(scomm.TokenBankContractBytecode)
+	if err != nil {
+		return err
+	}
+	deploySCTx := types.SmartContractTx{
+		To:       types.TxOutput{Address: common.Address{}}, // deploy contract
+		GasLimit: dummyGasLimit,
+		GasPrice: dummyGasPrice,
+		Data:     tokenBankContractBytecode,
+	}
+	parentBlockInfo := vm.NewBlockInfo(0, big.NewInt(0), chainID)
+	_, tokenBankContractAddr, _, evmErr := vm.Execute(parentBlockInfo, &deploySCTx, sv)
+	if evmErr != nil {
+		return evmErr
+	}
+
+	tbcaBytes, err := types.ToBytes(tokenBankContractAddr)
+	if err != nil {
+		log.Panicf("Error writing token bank contract adddress %v, error: %v",
+			tokenBankContractAddr.Hex(), err.Error())
+	}
+	sv.Set(slst.TokenBankContractAddressKey(), tbcaBytes)
+
+	return nil
+}
+
 // writeGenesisSnapshot writes genesis snapshot to file system.
 func writeGenesisSnapshot(sv *slst.StoreView, metadata *score.SnapshotMetadata, genesisSnapshotFilePath string) error {
 	file, err := os.Create(genesisSnapshotFilePath)
@@ -194,6 +233,8 @@ func writeStoreView(sv *slst.StoreView, needAccountStorage bool, writer *bufio.W
 }
 
 func sanityChecks(sv *slst.StoreView) error {
+	logger.Infof("------------------------------------------------------------------------------")
+
 	vsAnalyzed := false
 	sv.GetStore().Traverse(nil, func(key, val common.Bytes) bool {
 		if bytes.Equal(key, slst.ValidatorSetKey()) {
@@ -203,9 +244,7 @@ func sanityChecks(sv *slst.StoreView) error {
 				panic(fmt.Sprintf("Failed to decode validator set: %v", err))
 			}
 			for _, validator := range vs.Validators() {
-				logger.Infof("------------------------------------------------------------------------------")
 				logger.Infof("Initial validator: %v, stake: %v", validator.Address.Hex(), validator.Stake)
-				logger.Infof("------------------------------------------------------------------------------")
 			}
 			vsAnalyzed = true
 		} else if bytes.Equal(key, slst.ValidatorSetUpdateTxHeightListKey()) {
@@ -224,6 +263,14 @@ func sanityChecks(sv *slst.StoreView) error {
 		return true
 	})
 
+	tokenBankContractAddr := sv.GetTokenBankContractAddress()
+	if tokenBankContractAddr == nil {
+		panic("Token bank contract is not set")
+	}
+	logger.Infof("Token Bank Contract Address: %v", tokenBankContractAddr.Hex())
+
+	logger.Infof("------------------------------------------------------------------------------")
+
 	// Sanity checks for the initial validator set
 	vsProof, err := proveValidatorSet(sv)
 	if err != nil {
@@ -239,4 +286,3 @@ func sanityChecks(sv *slst.StoreView) error {
 
 	return nil
 }
-

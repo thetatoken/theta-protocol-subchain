@@ -54,3 +54,9 @@ func ValidatorSetUpdateTxHeightListKey() common.Bytes {
 func StatePruningProgressKey() common.Bytes {
 	return common.Bytes("ls/spp")
 }
+
+// StatePruningProgressKey returns the key for looking up the address of the
+// token bank contract deployed in the genesis block
+func TokenBankContractAddressKey() common.Bytes {
+	return common.Bytes("ls/tbca")
+}
