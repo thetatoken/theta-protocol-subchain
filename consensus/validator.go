@@ -9,7 +9,7 @@ import (
 	score "github.com/thetatoken/thetasubchain/core"
 )
 
-const MaxValidatorCount int = 31
+const MaxValidatorCount int = 121
 
 //
 // -------------------------------- FixedValidatorManager ----------------------------------

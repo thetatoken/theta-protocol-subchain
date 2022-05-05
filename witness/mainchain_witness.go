@@ -11,7 +11,7 @@ import (
 
 	// "github.com/thetatoken/theta/crypto"
 	scom "github.com/thetatoken/thetasubchain/common"
-	sct "github.com/thetatoken/thetasubchain/contracts"
+	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
@@ -33,8 +33,8 @@ type MainchainWitness struct {
 
 	registerContractAddr common.Address
 	ercContractAddr      common.Address
-	registerContract     *sct.SubchainRegister
-	ercContract          *sct.SubchainERC
+	registerContract     *scta.SubchainRegister
+	ercContract          *scta.SubchainERC
 
 	updateInterval int
 
@@ -59,11 +59,11 @@ func NewMainchainWitness(
 	if err != nil {
 		logger.Fatalf("the eth client failed to connect %v\n", err)
 	}
-	subchainRegisterContract, err := sct.NewSubchainRegister(registerContractAddr, client)
+	subchainRegisterContract, err := scta.NewSubchainRegister(registerContractAddr, client)
 	if err != nil {
 		logger.Fatalf("failed to create subchain register contract %v\n", err)
 	}
-	subchainERCContract, err := sct.NewSubchainERC(ercContractAddr, client)
+	subchainERCContract, err := scta.NewSubchainERC(ercContractAddr, client)
 	if err != nil {
 		logger.Fatalf("failed to create erc contract %v\n", err)
 	}
@@ -182,7 +182,7 @@ func (mw *MainchainWitness) collectCrossChainTransferEvent() []score.CrossChainT
 		logger.Warnf("failed to get the mainchain block number %v\n", err)
 		return make([]score.CrossChainTransferEvent, 1)
 	}
-	return scom.RpcEventLogQuery(fromBlock, toBlock, mw.registerContractAddr, mw.crossChainEventCache)
+	return rpcEventLogQuery(fromBlock, toBlock, mw.registerContractAddr, mw.crossChainEventCache)
 }
 
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -208,4 +208,68 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 
 func (mw *MainchainWitness) GetCrossChainEventCache() *score.CrossChainEventCache {
 	return mw.crossChainEventCache
+}
+
+func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.CrossChainEventCache) []score.CrossChainTransferEvent {
+	// url := "http://127.0.0.1:18888/rpc"
+	// queryStr := fmt.Sprintf(`{
+	// 	"jsonrpc":"2.0",
+	// 	"method":"eth_getLogs",
+	// 	"params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["0xfcaf9544852e1f0902dbcf8a118d2ae8235ed282692bbb5dc2aff212e4888a41"]}],
+	// 	"id":74
+	// }`, fromBlock, toBlock, mw.RegisterContractAddr.Hex())
+	// var jsonData = []byte(queryStr)
+
+	// request, error := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	// request.Header.Set("Content-Type", "application/json")
+
+	// client := &http.Client{}
+	// response, error := client.Do(request)
+	// if error != nil {
+	// 	panic(error)
+	// }
+	// defer response.Body.Close()
+
+	// body, _ := ioutil.ReadAll(response.Body)
+	// fmt.Println("response Body:", string(body))
+
+	// var rpcres RPCResult
+	// err := json.Unmarshal(body, &rpcres)
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+	// fmt.Println(rpcres.Result[0].Data)
+
+	// contractAbi, err := abi.JSON(strings.NewReader(string(ct.SubchainRegisterABI)))
+	// if err != nil {
+	// 	fmt.Println(err)
+	// }
+
+	// crossChainTransferEventArr := make([]score.CrossChainTransferEvent, len(rpcres.Result))
+
+	// for _, logData := range rpcres.Result {
+	// 	logData := logData
+	// 	var event TransferEvent
+	// 	h, _ := hex.DecodeString(logData.Data[2:])
+	// 	err := contractAbi.UnpackIntoInterface(&event, "SendToSubchainEvent", h)
+	// 	if _, ok := witnessXTransferCache.Get(event.Nonce); ok {
+	// 		continue
+	// 	}
+	// 	resEventArr = append(resEventArr, event)
+	// 	if err != nil {
+	// 		fmt.Println(err)
+	// 	}
+	// 	BlockNumberDec, _ := strconv.ParseUint(logData.BlockNumber[2:], 16, 32)
+	// 	crossChainTransferEvent := &score.CrossChainTransferEvent{
+	// 		Sender:      scom.HexToAddress(logData.Topics[1]),
+	// 		Denom:       event.Denom,
+	// 		Amount:      event.Amount,
+	// 		EventNonce:  event.Nonce,
+	// 		BlockNumber: big.NewInt(BlockNumberDec),
+	// 	}
+	// 	crossChainTransferEventArr = append(crossChainTransferEventArr, crossChainTransferEvent)
+	// }
+
+	// return crossChainTransferEventArr
+	return make([]score.CrossChainTransferEvent, 1)
 }

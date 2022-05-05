@@ -1,14 +1,18 @@
 package execution
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/result"
 	"github.com/thetatoken/theta/ledger/types"
+	"github.com/thetatoken/theta/ledger/vm"
 	"github.com/thetatoken/theta/store/database"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	"github.com/thetatoken/thetasubchain/contracts/predeployed"
+	"github.com/thetatoken/thetasubchain/core"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
@@ -60,41 +64,27 @@ func (exec *CrossChainTransferTxExecutor) sanityCheck(chainID string, view *slst
 		return res
 	}
 
-	// crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	crossChainTransferID := tx.Event.Nonce
 	if view.CrossChainTransferTransactionProcessed(crossChainTransferID) {
 		return result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
 	}
 
-	// smartContracTx, err := constructSmartContractTx(tx) // construct a smart contract tx from the special tx (proposed and siged by the leader)
-	// if err != nil {
-	// 	return result.Error("error constructing smart contract tx: %v", err)
-	// }
-
-	// Other checks, e.g. signature check..
-
+	// verify the proposer's signature
 	proposerAccount, res := getOrMakeInput(view, tx.Proposer)
 	if res.IsError() {
 		return res
 	}
 
-	// verify the proposer's signature
 	signBytes := tx.SignBytes(chainID)
 	if !tx.Proposer.Signature.Verify(signBytes, proposerAccount.Address) {
 		return result.Error("SignBytes: %X", signBytes)
 	}
-
-	// _, result := exec.smartContractExecutor.sanityCheck(chainID, view, smartContractTx)
-	// if result.IsError() {
-	// 	return result
-	// }
 
 	return result.OK
 }
 
 func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*stypes.CrossChainTransferTx)
-	// crossChainTransferID := exec.state.GetCrossChainTransferID(tx)
 	crossChainTransferID := tx.Event.Nonce
 
 	if !view.ShouldProcessThisCrossChainTransferEvent(crossChainTransferID) {
@@ -116,82 +106,61 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 		return common.Hash{}, result.Error("cross-chain transfer verification failed for ID %v", crossChainTransferID)
 	}
 
-	// smartContracTx, err := constructSmartContractTx(tx) // construct a smart contract tx from the special tx (proposed and siged by the leader)
-	// if err != nil {
-	// 	return common.Hash{}, result.Error("error constructing smart contract tx: %v", err)
-	// }
+	pb := exec.state.ParentBlock()
+	parentBlockInfo := vm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
 
-	// mainchainTokenContractAddress := tx.GetSourceTokenContractAddrOnMainChain()
-	// isContractDeployment := (smartContracTx.To.Address == commmon.Address{})
-	// tokenVoucherContractAddress := view.GetTokenVoucherContract(mainchainTokenContractAddress)
-	// if isContractDeployment && (tokenVoucherContractAddress != commmon.Address{}) {
-	// 	// the token voucher contract should not have been deployed, otherwise the tx is malicious
-	// 	return result.Error("token voucher contract for %v has already been deployed at %v, the tx is invalid", mainchainTokenContractAddress.Hex(), tokenVoucherContractAddress.Hex())
-	// }
-	// if !isContractDeployment && (tokenVoucherContractAddress != smartContracTx.To) {
-	// 	return result.Error("token voucher contract mismatch, %v vs %v", tokenVoucherContractAddress.Hex(), smartContracTx.To.Hex())
-	// }
+	proxySctx, err := exec.constructProxyMintVoucherSctx(view, tx)
+	if err != nil {
+		return common.Hash{}, result.Error("error constructing proxy mint voucher sctx: %v", err)
+	}
 
-	// _, result := exec.smartContractExecutor.process(chainID, view, smartContractTx)
-	// if result.IsError() {
-	// 	return result
-	// }
+	evmRet, contractAddr, gasUsed, evmErr := vm.Execute(parentBlockInfo, proxySctx, view)
 
-	// if isContractDeployment {
-	// 	tokenVoucherContractAddress = (result.Info[contractAddrInfoKey]).(commmon.Address)
-	// 	view.SetTokenVoucherContract(mainchainTokenContractAddress, tokenVoucherContractAddress)
-	// }
+	// TODO: Do we need to increase the sequence number of the proposer?
 
-	// sourceTokenContractAddrOnMainChain := xferDetails.SourceTokenContractAddrOnMainChain
-	// if sourceTokenContractAddrOnMainChain == nil
+	// TODO: Add tx receipt: status and events
+	logs := view.PopLogs()
+	if evmErr != nil {
+		// Do not record events if transaction is reverted
+		logs = nil
+	}
+	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
 
 	view.SetCrossChainTransferTransactionProcessed(crossChainTransferID)
 	txHash := types.TxID(chainID, tx)
 	return txHash, result.OK
 }
 
-// to be called by Ledger to compose the special tx for cross-chain transfers
-// func GenerateCrossChainTransferTx(proposerAddress common.Address, view *slst.StoreView) (*types.SmartContractTx, error) {
-// 	xferDetails, err := exec.mainchainWitness.GetCrossChainTransfer(crossChainTransferID)
-// 	if err != nil || xferDetails == nil {
-// 		return nil, err
-// 	}
+func (exec *CrossChainTransferTxExecutor) constructProxyMintVoucherSctx(view *slst.StoreView, tx *stypes.CrossChainTransferTx) (*types.SmartContractTx, error) {
+	tokenType, err := core.ExtractCrossChainTokenTypeFromDenom(tx.Event.Denom)
+	if err != nil || tokenType == core.CrossChainTokenTypeInvalid {
+		return nil, fmt.Errorf("failed to extract token type from denom %v: %v", tx.Event.Denom, err)
+	}
 
-// 	proposerSeq := getProposerSequence(proposerAddress)
+	sourceChainID, err := core.ExtractSourceChainIDFromDenom(tx.Event.Denom)
+	if err != nil {
+		return nil, fmt.Errorf("failed to extract source chain ID from denom %v: %v", tx.Event.Denom, err)
+	}
 
-// 	from := types.TxInput{
-// 		Address: proposerAddr,
-// 		Coins: types.Coins{
-// 			ThetaWei: new(big.Int).SetUint64(0),
-// 			TFuelWei: new(big.Int).SetUint64(0),
-// 		},
-// 		Sequence: proposerSeq + 1,
-// 	}
+	var tokenBank predeployed.TokenBank
+	switch tokenType {
+	case core.CrossChainTokenTypeTFuel:
+		tokenBank = predeployed.NewTFuelTokenBank()
+	// case core.CrossChainTokenTypeTNT20:
+	// 	tokenBank = predeployed.NewTNT20TokenBank()
+	// case core.CrossChainTokenTypeTNT721:
+	// 	tokenBank = predeployed.NewTNT721TokenBank()
+	default:
+		return nil, fmt.Errorf("unsupported token type: %v", tokenType)
+	}
 
-// 	sourceTokenContractAddrOnMainChain := xferDetails.SourceTokenContractAddrOnMainChain
-// 	tokenVoucherContract := view.GetTokenVoucherContract(sourceTokenContractAddrOnMainChain)
-// 	var to types.TxOutput
-// 	var data []byte
-// 	if tokenVoucherContract == nil { // token voucher contract not yet exists, should deploy and mint
-// 		// generate a tx with "deploy and mint" data field
-// 		to.Address = commmon.Address{}
-// 		data = xxxx // need to handle both TFuel and TNT tokens, will add a precomiled contract for minting TFuel
-// 	} else { // token voucher contract already exists, should mint the token voucher
-// 		// generate a tx with "mint" data field
-// 		to.Address = tokenVoucherContract.Address
-// 		data = xxxx // need to handle both TFuel and TNT tokens
-// 	}
+	proxySctx, err := tokenBank.GetMintVouchersProxySctx(sourceChainID, view, tx)
+	if err != nil {
+		return nil, err
+	}
 
-// 	sctx := &types.SmartContractTx{
-// 		From:     from,
-// 		To:       to,
-// 		GasLimit: gasLimit,
-// 		GasPrice: gasPrice,
-// 		Data:     data,
-// 	}
-
-// 	return sctx, nil
-// }
+	return proxySctx, nil
+}
 
 func (exec *CrossChainTransferTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {
 	return &score.TxInfo{
@@ -202,4 +171,3 @@ func (exec *CrossChainTransferTxExecutor) getTxInfo(transaction types.Tx) *score
 func (exec *CrossChainTransferTxExecutor) calculateEffectiveGasPrice(transaction types.Tx) *big.Int {
 	return new(big.Int).SetUint64(0)
 }
-

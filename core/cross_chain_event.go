@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"strconv"
+	"strings"
 
 	// "sort"
 
@@ -51,6 +53,9 @@ func (c CrossChainTransferEvent) Equals(x CrossChainTransferEvent) bool {
 		return false
 	}
 	if c.Receiver.Hex() != x.Receiver.Hex() {
+		return false
+	}
+	if c.Denom != x.Denom {
 		return false
 	}
 	if c.BlockNumber.Cmp(x.BlockNumber) != 0 {
@@ -201,4 +206,54 @@ func (c *CrossChainEventCache) Exists(nonce *big.Int) (bool, error) {
 	}
 
 	return false, err // the caller should handle the error
+}
+
+// ------------------------------------ Denom Utils ----------------------------------------------
+
+type CrossChainTokenType int
+
+const (
+	CrossChainTokenTypeInvalid CrossChainTokenType = -1
+	CrossChainTokenTypeTFuel   CrossChainTokenType = 0
+	CrossChainTokenTypeTNT20   CrossChainTokenType = 1
+	CrossChainTokenTypeTNT721  CrossChainTokenType = 2
+)
+
+// sourceChainID: the chainID of the chain that the token was originated
+func TFuelDenom(sourceChainID string) string {
+	return fmt.Sprintf("%v/%v/0x0000000000000000000000000000000000000000", sourceChainID, CrossChainTokenTypeTFuel)
+}
+
+func TNT20Denom(sourceChainID string, contractAddress common.Address) string {
+	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT20, contractAddress.Hex())
+}
+
+func TNT721Denom(sourceChainID string, contractAddress common.Address) string {
+	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT721, contractAddress.Hex())
+}
+
+func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, error) {
+	parts := strings.Split(denom, "/")
+	if len(parts) != 3 {
+		return CrossChainTokenTypeInvalid, fmt.Errorf("invalid denom: %v", denom)
+	}
+	tokenType, err := strconv.Atoi(parts[1])
+	if err != nil {
+		return CrossChainTokenTypeInvalid, fmt.Errorf("invalid denom: %v", denom)
+	}
+
+	if (tokenType != int(CrossChainTokenTypeTFuel)) && (tokenType != int(CrossChainTokenTypeTNT20)) && (tokenType != int(CrossChainTokenTypeTNT721)) {
+		return CrossChainTokenTypeInvalid, fmt.Errorf("invalid denom: %v", denom)
+	}
+
+	return CrossChainTokenType(tokenType), nil
+}
+
+func ExtractSourceChainIDFromDenom(denom string) (string, error) {
+	parts := strings.Split(denom, "/")
+	if len(parts) != 3 {
+		return "", fmt.Errorf("invalid denom: %v", denom)
+	}
+
+	return parts[0], nil
 }

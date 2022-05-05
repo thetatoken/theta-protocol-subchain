@@ -15,6 +15,7 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	"github.com/thetatoken/thetasubchain/core"
 	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/thetasubchain/ledger/state"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
@@ -617,6 +618,7 @@ func (t *ThetaRPCService) GetValidatorSetByHeight(args *GetValidatorSetByHeightA
 // ------------------------------- GetTokenBankContractAddress -----------------------------------
 
 type GetTokenBankContractAddressArgs struct {
+	TokenType core.CrossChainTokenType `json:"token_type"`
 }
 
 type GetTokenBankContractAddressResult struct {
@@ -629,7 +631,22 @@ func (t *ThetaRPCService) GetTokenBankContractAddress(args *GetTokenBankContract
 		return err
 	}
 
-	contractAddr := deliveredView.GetTokenBankContractAddress()
+	var contractAddr *common.Address
+	switch args.TokenType {
+	case core.CrossChainTokenTypeTFuel:
+		contractAddr = deliveredView.GetTFuelTokenBankContractAddress()
+	case core.CrossChainTokenTypeTNT20:
+		contractAddr = deliveredView.GetTNT20TokenBankContractAddress()
+	case core.CrossChainTokenTypeTNT721:
+		contractAddr = deliveredView.GetTNT721TokenBankContractAddress()
+	default:
+		return fmt.Errorf("unknown token type: %v", args.TokenType)
+	}
+
+	if contractAddr == nil {
+		return fmt.Errorf("token bank contract address for %v is not set", args.TokenType)
+	}
+
 	result.Address = contractAddr.Hex()
 
 	return nil

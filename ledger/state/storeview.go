@@ -275,16 +275,46 @@ func (sv *StoreView) UpdateValidatorSet(vs *score.ValidatorSet) {
 	sv.Set(ValidatorSetKey(), vsBytes)
 }
 
-// GetValidatorSet gets the validator set.
-func (sv *StoreView) GetTokenBankContractAddress() *common.Address {
-	data := sv.Get(TokenBankContractAddressKey())
+// GetTFuelTokenBankContractAddress gets the TFuel token bank contract address.
+func (sv *StoreView) GetTFuelTokenBankContractAddress() *common.Address {
+	data := sv.Get(TFuelTokenBankContractAddressKey())
 	if len(data) == 0 {
 		return nil
 	}
 	tbca := &common.Address{}
 	err := types.FromBytes(data, tbca)
 	if err != nil {
-		log.Panicf("Error reading token bank contract address %X, error: %v",
+		log.Panicf("Error reading TFuel token bank contract address %X, error: %v",
+			data, err.Error())
+	}
+	return tbca
+}
+
+// GetTNT20TokenBankContractAddress gets the TFuel token bank contract address.
+func (sv *StoreView) GetTNT20TokenBankContractAddress() *common.Address {
+	data := sv.Get(TNT20TokenBankContractAddressKey())
+	if len(data) == 0 {
+		return nil
+	}
+	tbca := &common.Address{}
+	err := types.FromBytes(data, tbca)
+	if err != nil {
+		log.Panicf("Error reading TNT20 token bank contract address %X, error: %v",
+			data, err.Error())
+	}
+	return tbca
+}
+
+// GetTNT721TokenBankContractAddress gets the TFuel token bank contract address.
+func (sv *StoreView) GetTNT721TokenBankContractAddress() *common.Address {
+	data := sv.Get(TNT721TokenBankContractAddressKey())
+	if len(data) == 0 {
+		return nil
+	}
+	tbca := &common.Address{}
+	err := types.FromBytes(data, tbca)
+	if err != nil {
+		log.Panicf("Error reading TNT721 token bank contract address %X, error: %v",
 			data, err.Error())
 	}
 	return tbca

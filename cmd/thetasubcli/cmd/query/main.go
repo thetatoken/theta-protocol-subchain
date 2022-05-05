@@ -15,6 +15,7 @@ var (
 	endFlag              uint64
 	skipEdgeNodeFlag     bool
 	includeEthTxHashFlag bool
+	tokenTypeFlag        int
 )
 
 // QueryCmd represents the query command

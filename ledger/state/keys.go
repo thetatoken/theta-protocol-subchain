@@ -55,8 +55,20 @@ func StatePruningProgressKey() common.Bytes {
 	return common.Bytes("ls/spp")
 }
 
-// StatePruningProgressKey returns the key for looking up the address of the
-// token bank contract deployed in the genesis block
-func TokenBankContractAddressKey() common.Bytes {
-	return common.Bytes("ls/tbca")
+// TFuelTokenBankContractAddressKey returns the key for looking up the address of the
+// TFuel token bank contract deployed in the genesis block
+func TFuelTokenBankContractAddressKey() common.Bytes {
+	return common.Bytes("ls/tbca/tfuel")
+}
+
+// TNT20TokenBankContractAddressKey returns the key for looking up the address of the
+// TNT20 token bank contract deployed in the genesis block
+func TNT20TokenBankContractAddressKey() common.Bytes {
+	return common.Bytes("ls/tbca/tnt20")
+}
+
+// TNT721TokenBankContractAddressKey returns the key for looking up the address of the
+// TNT721 token bank contract deployed in the genesis block
+func TNT721TokenBankContractAddressKey() common.Bytes {
+	return common.Bytes("ls/tbca/tnt721")
 }

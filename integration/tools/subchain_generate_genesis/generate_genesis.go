@@ -20,7 +20,7 @@ import (
 	"github.com/thetatoken/theta/store/database/backend"
 	"github.com/thetatoken/theta/store/trie"
 
-	scomm "github.com/thetatoken/thetasubchain/common"
+	"github.com/thetatoken/thetasubchain/contracts/predeployed"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 )
@@ -94,10 +94,7 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 
 	setInitialValidatorSet(initValidatorSetFilePath, genesisHeight, sv)
 	setInitalEventNonce(sv)
-	err := deployInitialSmartContracts(chainID, sv)
-	if err != nil {
-		panic(fmt.Sprintf("Failed to deploy initial smart contracts: %v", err))
-	}
+	deployInitialSmartContracts(chainID, sv)
 
 	stateHash := sv.Hash()
 
@@ -165,33 +162,51 @@ func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	return vp, err
 }
 
-func deployInitialSmartContracts(chainID string, sv *slst.StoreView) error {
+func deployInitialSmartContracts(chainID string, sv *slst.StoreView) {
+	deployer := common.Address{}
+	contractBytecodes := []string{
+		predeployed.TFuelTokenBankContractBytecode,
+	}
+	contractAddressKeys := []common.Bytes{
+		slst.TFuelTokenBankContractAddressKey(),
+	}
+
+	for sequence, contractBytecode := range contractBytecodes {
+		contractAddressKey := contractAddressKeys[sequence]
+		err := deploySmartContract(chainID, sv, contractBytecode, deployer, sequence, contractAddressKey)
+		if err != nil {
+			logger.Panicf("Failed to deploy smart contract (sequence = %v): %v", sequence, err)
+		}
+	}
+}
+
+func deploySmartContract(chainID string, sv *slst.StoreView, contractBytecodeStr string, deployer common.Address, sequence int, contractAddressKey common.Bytes) error {
 	dummyGasLimit := uint64(10000000)
 	dummyGasPrice := big.NewInt(1)
 
 	// Token Bank contract
-	tokenBankContractBytecode, err := hex.DecodeString(scomm.TokenBankContractBytecode)
+	contractBytecode, err := hex.DecodeString(contractBytecodeStr)
 	if err != nil {
 		return err
 	}
 	deploySCTx := types.SmartContractTx{
+		From:     types.NewTxInput(common.Address{}, types.NewCoins(0, 0), sequence),
 		To:       types.TxOutput{Address: common.Address{}}, // deploy contract
 		GasLimit: dummyGasLimit,
 		GasPrice: dummyGasPrice,
-		Data:     tokenBankContractBytecode,
+		Data:     contractBytecode,
 	}
 	parentBlockInfo := vm.NewBlockInfo(0, big.NewInt(0), chainID)
-	_, tokenBankContractAddr, _, evmErr := vm.Execute(parentBlockInfo, &deploySCTx, sv)
+	_, contractAddr, _, evmErr := vm.Execute(parentBlockInfo, &deploySCTx, sv)
 	if evmErr != nil {
 		return evmErr
 	}
 
-	tbcaBytes, err := types.ToBytes(tokenBankContractAddr)
+	tbcaBytes, err := types.ToBytes(contractAddr)
 	if err != nil {
-		log.Panicf("Error writing token bank contract adddress %v, error: %v",
-			tokenBankContractAddr.Hex(), err.Error())
+		return err
 	}
-	sv.Set(slst.TokenBankContractAddressKey(), tbcaBytes)
+	sv.Set(contractAddressKey, tbcaBytes)
 
 	return nil
 }
@@ -263,11 +278,11 @@ func sanityChecks(sv *slst.StoreView) error {
 		return true
 	})
 
-	tokenBankContractAddr := sv.GetTokenBankContractAddress()
+	tokenBankContractAddr := sv.GetTFuelTokenBankContractAddress()
 	if tokenBankContractAddr == nil {
 		panic("Token bank contract is not set")
 	}
-	logger.Infof("Token Bank Contract Address: %v", tokenBankContractAddr.Hex())
+	logger.Infof("TFuel Token Bank Contract Address: %v", tokenBankContractAddr.Hex())
 
 	logger.Infof("------------------------------------------------------------------------------")
 

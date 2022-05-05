@@ -664,25 +664,24 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
 	}
 
-	// ------- Add crosschain transfer transaction ------- //
-	if includeCrosschainTransferTxsTillNonce.Cmp(big.NewInt(0)) == 0 {
-		return
-	}
-	lastEventNonce := view.GetLastProcessedEventNonce()
-	if lastEventNonce == nil {
-		logger.Panic("nil last event nonce")
-	}
-	nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
-	eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
-	for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0 {
-		nextEvent, ok := eventCache.Get(nextEventNonce)
-		if ok != nil {
-			break
+	// ------- Add crosschain transfer transactions ------- //
+	if includeCrosschainTransferTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
+		lastEventNonce := view.GetLastProcessedEventNonce()
+		if lastEventNonce == nil {
+			logger.Panic("nil last event nonce")
 		}
-		ledger.addCrossChainTransferTx(view, &proposer, nextEvent, rawTxs)
-		logger.Debugf("Add special transactions cross chain event Tx %v",
-			nextEvent)
-		nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
+		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
+		eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
+		for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0 {
+			nextEvent, ok := eventCache.Get(nextEventNonce)
+			if ok != nil {
+				break
+			}
+			ledger.addCrossChainTransferTx(view, &proposer, nextEvent, rawTxs)
+			logger.Debugf("Add special transactions cross chain event Tx %v",
+				nextEvent)
+			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
+		}
 	}
 }
 
@@ -827,4 +826,3 @@ func (ledger *Ledger) signTransaction(tx types.Tx) (*crypto.Signature, error) {
 	}
 	return signature, nil
 }
-
