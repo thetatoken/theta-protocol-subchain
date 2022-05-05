@@ -37,18 +37,7 @@ type PrecompiledContract interface {
 	Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) // Run runs the precompiled contract
 }
 
-// PrecompiledContractsHomestead contains the default set of pre-compiled Ethereum
-// contracts used in the Frontier and Homestead releases.
-var PrecompiledContractsHomestead = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-}
-
-// PrecompiledContractsByzantium contains the default set of pre-compiled Ethereum
-// contracts used in the Byzantium release.
-var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
+var PrecompiledContracts = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{1}): &ecrecover{},
 	common.BytesToAddress([]byte{2}): &sha256hash{},
 	common.BytesToAddress([]byte{3}): &ripemd160hash{},
@@ -58,23 +47,13 @@ var PrecompiledContractsByzantium = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 
-	common.BytesToAddress([]byte{201}): &thetaBalance{},
-	common.BytesToAddress([]byte{202}): &thetaStake{},
-}
+	common.BytesToAddress([]byte{181}): &hasPreviledgedAccess{},
+	common.BytesToAddress([]byte{182}): &mintTFuel{},
+	common.BytesToAddress([]byte{183}): &burnTFuel{},
 
-var PrecompiledContractsThetaSupport = map[common.Address]PrecompiledContract{
-	common.BytesToAddress([]byte{1}): &ecrecover{},
-	common.BytesToAddress([]byte{2}): &sha256hash{},
-	common.BytesToAddress([]byte{3}): &ripemd160hash{},
-	common.BytesToAddress([]byte{4}): &dataCopy{},
-	common.BytesToAddress([]byte{5}): &bigModExp{},
-	common.BytesToAddress([]byte{6}): &bn256Add{},
-	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
-	common.BytesToAddress([]byte{8}): &bn256Pairing{},
-
-	common.BytesToAddress([]byte{201}): &thetaBalance{},
-	common.BytesToAddress([]byte{202}): &thetaStake{},
-	common.BytesToAddress([]byte{203}): &transferTheta{},
+	// common.BytesToAddress([]byte{201}): &thetaBalance{},
+	// common.BytesToAddress([]byte{202}): &thetaStake{},
+	// common.BytesToAddress([]byte{203}): &transferTheta{},
 }
 
 // RunPrecompiledContract runs and evaluates the output of a precompiled contract.
@@ -390,58 +369,73 @@ func (c *bn256Pairing) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 	return false32Byte, nil
 }
 
-// thetaBalance retrieves the ThetaWei balance of the given address
-type thetaBalance struct {
+// hasPreviledgedAccess return if the current execution context has previledged access
+type hasPreviledgedAccess struct {
 }
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *thetaBalance) RequiredGas(input []byte, blockHeight uint64) uint64 {
-	return params.ThetaBalanceGas
+func (c *hasPreviledgedAccess) RequiredGas(input []byte, blockHeight uint64) uint64 {
+	const previledgeAcessCheckGas = uint64(50)
+	return previledgeAcessCheckGas
 }
 
-func (c *thetaBalance) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	address := common.BytesToAddress(input)
-	thetaBalance := evm.StateDB.GetThetaBalance(address)
-	thetaBalanceBytes := thetaBalance.Bytes()
-	thetaBalanceBytes32 := common.LeftPadBytes(thetaBalanceBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
-	return thetaBalanceBytes32, nil
+func (c *hasPreviledgedAccess) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	hasPreviledgedAccess := big.NewInt(0).SetUint64(0)
+	if evm.HasPreviledgedAccess() {
+		hasPreviledgedAccess.SetUint64(1)
+	}
+	hasPreviledgedAccessBytes := hasPreviledgedAccess.Bytes()
+	hasPreviledgedAccessBytes32 := common.LeftPadBytes(hasPreviledgedAccessBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
+	return hasPreviledgedAccessBytes32, nil
 }
 
-// thetaStake retrieves the total amount of ThetaWei the address staked to validators and/or guardians
-type thetaStake struct {
+// mintTFuel mints TFuel for a given account when the current execution context has previledge access
+type mintTFuel struct {
 }
 
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *thetaStake) RequiredGas(input []byte, blockHeight uint64) uint64 {
-	return params.ThetaStakeGas
+func (c *mintTFuel) RequiredGas(input []byte, blockHeight uint64) uint64 {
+	const mintTFuelGas = uint64(200)
+	return mintTFuelGas
 }
 
-func (c *thetaStake) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	address := common.BytesToAddress(input)
-	thetaStake := evm.StateDB.GetThetaStake(address)
-	thetaStakeBytes := thetaStake.Bytes()
-	thetaStakeBytes32 := common.LeftPadBytes(thetaStakeBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
-	return thetaStakeBytes32, nil
-}
-
-// transferTheta transfers the Theta token
-type transferTheta struct {
-}
-
-// RequiredGas returns the gas required to execute the pre-compiled contract.
-func (c *transferTheta) RequiredGas(input []byte, blockHeight uint64) uint64 {
-	return params.ThetaTransferGas
-}
-
-func (c *transferTheta) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	recipient := common.BytesToAddress(getData(input, 0, 20))
-	thetaWeiAmount := new(big.Int).SetBytes(getData(input, 20, 32))
-	if !CanTransferTheta(evm.StateDB, callerAddr, thetaWeiAmount) {
-		return common.Bytes{}, ErrInsufficientThetaBlance
+func (c *mintTFuel) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	if !evm.HasPreviledgedAccess() {
+		return nil, errors.New("the execution context does not have previledged access")
 	}
 
-	// send Theta from the contract to the specified recipient
-	TransferTheta(evm.StateDB, callerAddr, recipient, thetaWeiAmount)
+	recipient := common.BytesToAddress(getData(input, 0, 20))
+	mintAmount := new(big.Int).SetBytes(getData(input, 20, 32))
+	if mintAmount.Cmp(big.NewInt(0)) < 0 {
+		return common.Bytes{}, errors.New("mint amount must not be negative")
+	}
+
+	db := evm.StateDB
+	db.AddBalance(recipient, mintAmount)
+
+	return common.Bytes{}, nil
+}
+
+// burnTFuel burns TFuel for a given smart contract account. Note that this precomplied contract does NOT
+// need a current execution context with previledge access. A smart contract method that calls burnTFuel
+// will burn the entire TFuel balance of the contract. The access control model is similar to TFuel transfer.
+// It is up to the smart contract logic ensure that the caller has the previledge to burn the TFuel balance.
+type burnTFuel struct {
+}
+
+func (c *burnTFuel) RequiredGas(input []byte, blockHeight uint64) uint64 {
+	const burnTFuelGas = uint64(200)
+	return burnTFuelGas
+}
+
+func (c *burnTFuel) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	burnAmount := new(big.Int).SetBytes(getData(input, 0, 32))
+	if burnAmount.Cmp(big.NewInt(0)) < 0 {
+		return common.Bytes{}, errors.New("burn amount must not be negative")
+	}
+	if !CanTransfer(evm.StateDB, callerAddr, burnAmount) {
+		return common.Bytes{}, ErrInsufficientBalance
+	}
+	db := evm.StateDB
+	db.SubBalance(callerAddr, burnAmount)
 
 	return common.Bytes{}, nil
 }

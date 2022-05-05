@@ -37,19 +37,10 @@ type (
 	GetHashFunc func(uint64) common.Hash
 )
 
-func SupportThetaTransferInEVM(blockHeight uint64) bool {
-	return blockHeight >= common.HeightSupportThetaTokenInSmartContract
-}
-
 // CanTransfer checks whether there are enough funds in the address' account to make a transfer.
 // This does not take the necessary gas in to account to make the transfer valid.
 func CanTransfer(db StateDB, addr common.Address, amount *big.Int) bool {
 	return db.GetBalance(addr).Cmp(amount) >= 0
-}
-
-// CanTransferTheta checks whether there are enough funds in the address' account to make a Theta transfer.
-func CanTransferTheta(db StateDB, addr common.Address, amount *big.Int) bool {
-	return db.GetThetaBalance(addr).Cmp(amount) >= 0
 }
 
 // Transfer subtracts amount from sender and adds amount to recipient using the given Db
@@ -58,19 +49,8 @@ func Transfer(db StateDB, sender, recipient common.Address, amount *big.Int) {
 	db.AddBalance(recipient, amount)
 }
 
-// TransferTheta subtracts the given amount of Theta from sender and adds amount to recipient using the given Db
-func TransferTheta(db StateDB, sender, recipient common.Address, amount *big.Int) {
-	db.SubThetaBalance(sender, amount)
-	db.AddThetaBalance(recipient, amount)
-}
-
 func getPrecompiledContracts(blockHeight uint64) map[common.Address]PrecompiledContract {
-	var precompiles map[common.Address]PrecompiledContract
-	if blockHeight < common.HeightSupportThetaTokenInSmartContract {
-		precompiles = PrecompiledContractsByzantium
-	} else {
-		precompiles = PrecompiledContractsThetaSupport
-	}
+	precompiles := PrecompiledContracts
 	return precompiles
 }
 
@@ -99,6 +79,13 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 	return nil, ErrNoCompatibleInterpreter
 }
 
+type ExecutionAccessLevelEnum uint8
+
+const (
+	PreviledgedAccess ExecutionAccessLevelEnum = iota
+	NormalAccess
+)
+
 // Context provides the EVM with auxiliary information. Once provided
 // it shouldn't be modified.
 type Context struct {
@@ -120,6 +107,8 @@ type Context struct {
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
+
+	ExecutionAccessLevel ExecutionAccessLevelEnum // execution prevideledge
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -211,10 +200,6 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		return nil, gas, ErrInsufficientBalance
 	}
 
-	if SupportThetaTransferInEVM(blockHeight) && !CanTransferTheta(evm.StateDB, caller.Address(), thetaValue) {
-		return nil, gas, ErrInsufficientThetaBlance
-	}
-
 	var (
 		to       = AccountRef(addr)
 		snapshot = evm.StateDB.Snapshot()
@@ -231,17 +216,10 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 			return nil, gas, nil
 		}
 
-		if !SupportThetaTransferInEVM(blockHeight) { // just for backward compatibility
-			evm.StateDB.CreateAccount(addr)
-		} else { // should not wipe out the Theta/TFuel balance sent to the contract address prior to contract creation
-			evm.StateDB.CreateAccountWithPreviousBalance(addr)
-		}
+		// should not wipe out the Theta/TFuel balance sent to the contract address prior to contract creation
+		evm.StateDB.CreateAccountWithPreviousBalance(addr)
 	}
 	Transfer(evm.StateDB, caller.Address(), to.Address(), value)
-
-	if SupportThetaTransferInEVM(blockHeight) {
-		TransferTheta(evm.StateDB, caller.Address(), to.Address(), thetaValue)
-	}
 
 	// Initialise a new contract and set the code that is to be used by the EVM.
 	// The contract is a scoped environment for this execution context only.
@@ -395,10 +373,6 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 		return nil, common.Address{}, gas, ErrInsufficientBalance
 	}
 
-	blockHeight := evm.StateDB.GetBlockHeight()
-	if SupportThetaTransferInEVM(blockHeight) && !CanTransferTheta(evm.StateDB, caller.Address(), thetaValue) {
-		return nil, common.Address{}, gas, ErrInsufficientThetaBlance
-	}
 	nonce := evm.StateDB.GetNonce(caller.Address())
 	evm.StateDB.SetNonce(caller.Address(), nonce+1)
 
@@ -410,16 +384,9 @@ func (evm *EVM) create(caller ContractRef, codeAndHash *codeAndHash, gas uint64,
 	// Create a new account on the state
 	snapshot := evm.StateDB.Snapshot()
 
-	if !SupportThetaTransferInEVM(blockHeight) { // just for backward compatibility
-		evm.StateDB.CreateAccount(address)
-	} else { // should not wipe out the Theta/TFuel balance sent to the contract address prior to contract creation
-		evm.StateDB.CreateAccountWithPreviousBalance(address)
-	}
+	// should not wipe out the Theta/TFuel balance sent to the contract address prior to contract creation
+	evm.StateDB.CreateAccountWithPreviousBalance(address)
 	Transfer(evm.StateDB, caller.Address(), address, value)
-
-	if SupportThetaTransferInEVM(blockHeight) {
-		TransferTheta(evm.StateDB, caller.Address(), address, thetaValue)
-	}
 
 	// initialise a new contract and set the code that is to be used by the
 	// EVM. The contract is a scoped environment for this execution context
@@ -491,3 +458,7 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 
 // ChainConfig returns the environment's chain configuration
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
+
+func (evm *EVM) HasPreviledgedAccess() bool {
+	return (evm.Context.ExecutionAccessLevel == PreviledgedAccess)
+}

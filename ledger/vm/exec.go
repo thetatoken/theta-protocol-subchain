@@ -24,17 +24,18 @@ func NewBlockInfo(height uint64, timestamp *big.Int, chainID string) *BlockInfo 
 }
 
 // Execute executes the given smart contract
-func Execute(parentBlockInfo *BlockInfo, tx *types.SmartContractTx, statedb StateDB) (evmRet common.Bytes,
+func Execute(parentBlockInfo *BlockInfo, tx *types.SmartContractTx, statedb StateDB, execAccessLevel ExecutionAccessLevelEnum) (evmRet common.Bytes,
 	contractAddr common.Address, gasUsed uint64, evmErr error) {
 	context := Context{
-		CanTransfer: CanTransfer,
-		Transfer:    Transfer,
-		Origin:      tx.From.Address,
-		GasPrice:    tx.GasPrice,
-		GasLimit:    tx.GasLimit,
-		BlockNumber: new(big.Int).SetUint64(parentBlockInfo.Height + 1),
-		Time:        parentBlockInfo.Timestamp,
-		Difficulty:  new(big.Int).SetInt64(0),
+		CanTransfer:          CanTransfer,
+		Transfer:             Transfer,
+		Origin:               tx.From.Address,
+		GasPrice:             tx.GasPrice,
+		GasLimit:             tx.GasLimit,
+		BlockNumber:          new(big.Int).SetUint64(parentBlockInfo.Height + 1),
+		Time:                 parentBlockInfo.Timestamp,
+		Difficulty:           new(big.Int).SetInt64(0),
+		ExecutionAccessLevel: execAccessLevel,
 	}
 	chainIDBigInt := types.MapChainID(parentBlockInfo.ChainID, context.BlockNumber.Uint64())
 	chainConfig := &params.ChainConfig{

@@ -147,7 +147,7 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	//       Otherwise, the fromAccount returned by getInput() will have incorrect balance.
 	pb := exec.state.ParentBlock()
 	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
-	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, tx, view)
+	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, tx, view, svm.NormalAccess)
 
 	fromAddress := tx.From.Address
 	fromAccount, success := getInput(view, tx.From)

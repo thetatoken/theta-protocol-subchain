@@ -113,7 +113,7 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 		return common.Hash{}, result.Error("error constructing proxy mint voucher sctx: %v", err)
 	}
 
-	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, proxySctx, view)
+	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, proxySctx, view, svm.PreviledgedAccess)
 
 	// TODO: Do we need to increase the sequence number of the proposer?
 
