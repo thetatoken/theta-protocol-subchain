@@ -15,7 +15,6 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
-	"github.com/thetatoken/theta/ledger/vm"
 	"github.com/thetatoken/theta/rlp"
 	"github.com/thetatoken/theta/store/database/backend"
 	"github.com/thetatoken/theta/store/trie"
@@ -23,6 +22,7 @@ import (
 	"github.com/thetatoken/thetasubchain/contracts/predeployed"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "genesis"})
@@ -196,8 +196,8 @@ func deploySmartContract(chainID string, sv *slst.StoreView, contractBytecodeStr
 		GasPrice: dummyGasPrice,
 		Data:     contractBytecode,
 	}
-	parentBlockInfo := vm.NewBlockInfo(0, big.NewInt(0), chainID)
-	_, contractAddr, _, evmErr := vm.Execute(parentBlockInfo, &deploySCTx, sv)
+	parentBlockInfo := svm.NewBlockInfo(0, big.NewInt(0), chainID)
+	_, contractAddr, _, evmErr := svm.Execute(parentBlockInfo, &deploySCTx, sv)
 	if evmErr != nil {
 		return evmErr
 	}

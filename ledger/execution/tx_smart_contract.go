@@ -9,11 +9,11 @@ import (
 	"github.com/thetatoken/theta/common/result"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
-	"github.com/thetatoken/theta/ledger/vm"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 )
 
 var _ TxExecutor = (*SmartContractTxExecutor)(nil)
@@ -122,18 +122,10 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 	}
 
 	var minimalBalance types.Coins
-	value := coins.TFuelWei      // NoNil() already guarantees value is NOT nil
-	thetaValue := coins.ThetaWei // NoNil() already guarantees value is NOT nil
-	if !vm.SupportThetaTransferInEVM(blockHeight) {
-		minimalBalance = types.Coins{
-			ThetaWei: zero,
-			TFuelWei: feeLimit.Add(feeLimit, value),
-		}
-	} else {
-		minimalBalance = types.Coins{
-			ThetaWei: thetaValue,
-			TFuelWei: feeLimit.Add(feeLimit, value),
-		}
+	value := coins.TFuelWei // NoNil() already guarantees value is NOT nil
+	minimalBalance = types.Coins{
+		ThetaWei: zero,
+		TFuelWei: feeLimit.Add(feeLimit, value),
 	}
 
 	if !fromAccount.Balance.IsGTE(minimalBalance) {
@@ -154,8 +146,8 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	//       deployed smart contract. Thus, we should call vm.Execute() before calling getInput().
 	//       Otherwise, the fromAccount returned by getInput() will have incorrect balance.
 	pb := exec.state.ParentBlock()
-	parentBlockInfo := vm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
-	evmRet, contractAddr, gasUsed, evmErr := vm.Execute(parentBlockInfo, tx, view)
+	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
+	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, tx, view)
 
 	fromAddress := tx.From.Address
 	fromAccount, success := getInput(view, tx.From)
@@ -173,7 +165,7 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	}
 
 	createContract := (tx.To.Address == common.Address{})
-	if !createContract { // vm.create() increments the sequence of the from account
+	if !createContract { // svm.create() increments the sequence of the from account
 		fromAccount.Sequence++
 	}
 	view.SetAccount(fromAddress, fromAccount)
@@ -207,4 +199,3 @@ func (exec *SmartContractTxExecutor) calculateEffectiveGasPrice(transaction type
 	tx := transaction.(*types.SmartContractTx)
 	return tx.GasPrice
 }
-

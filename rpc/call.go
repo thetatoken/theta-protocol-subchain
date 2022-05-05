@@ -6,10 +6,10 @@ import (
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
-	"github.com/thetatoken/theta/ledger/vm"
 
 	sldst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
+	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 )
 
 // ------------------------------- CallSmartContract -----------------------------------
@@ -55,8 +55,8 @@ func (t *ThetaRPCService) CallSmartContract(args *CallSmartContractArgs, result 
 	}
 
 	pb := t.ledger.State().ParentBlock()
-	parentBlockInfo := vm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
-	vmRet, contractAddr, gasUsed, vmErr := vm.Execute(parentBlockInfo, sctx, ledgerState)
+	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
+	vmRet, contractAddr, gasUsed, vmErr := svm.Execute(parentBlockInfo, sctx, ledgerState)
 	ledgerState.Save()
 
 	result.VmReturn = hex.EncodeToString(vmRet)

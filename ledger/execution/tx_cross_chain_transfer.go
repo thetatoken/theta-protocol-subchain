@@ -7,15 +7,14 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/result"
 	"github.com/thetatoken/theta/ledger/types"
-	"github.com/thetatoken/theta/ledger/vm"
 	"github.com/thetatoken/theta/store/database"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	"github.com/thetatoken/thetasubchain/contracts/predeployed"
-	"github.com/thetatoken/thetasubchain/core"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
+	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 	"github.com/thetatoken/thetasubchain/witness"
 )
 
@@ -107,14 +106,14 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 	}
 
 	pb := exec.state.ParentBlock()
-	parentBlockInfo := vm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
+	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
 
 	proxySctx, err := exec.constructProxyMintVoucherSctx(view, tx)
 	if err != nil {
 		return common.Hash{}, result.Error("error constructing proxy mint voucher sctx: %v", err)
 	}
 
-	evmRet, contractAddr, gasUsed, evmErr := vm.Execute(parentBlockInfo, proxySctx, view)
+	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, proxySctx, view)
 
 	// TODO: Do we need to increase the sequence number of the proposer?
 
@@ -132,23 +131,23 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 }
 
 func (exec *CrossChainTransferTxExecutor) constructProxyMintVoucherSctx(view *slst.StoreView, tx *stypes.CrossChainTransferTx) (*types.SmartContractTx, error) {
-	tokenType, err := core.ExtractCrossChainTokenTypeFromDenom(tx.Event.Denom)
-	if err != nil || tokenType == core.CrossChainTokenTypeInvalid {
+	tokenType, err := score.ExtractCrossChainTokenTypeFromDenom(tx.Event.Denom)
+	if err != nil || tokenType == score.CrossChainTokenTypeInvalid {
 		return nil, fmt.Errorf("failed to extract token type from denom %v: %v", tx.Event.Denom, err)
 	}
 
-	sourceChainID, err := core.ExtractSourceChainIDFromDenom(tx.Event.Denom)
+	sourceChainID, err := score.ExtractSourceChainIDFromDenom(tx.Event.Denom)
 	if err != nil {
 		return nil, fmt.Errorf("failed to extract source chain ID from denom %v: %v", tx.Event.Denom, err)
 	}
 
 	var tokenBank predeployed.TokenBank
 	switch tokenType {
-	case core.CrossChainTokenTypeTFuel:
+	case score.CrossChainTokenTypeTFuel:
 		tokenBank = predeployed.NewTFuelTokenBank()
-	// case core.CrossChainTokenTypeTNT20:
+	// case score.CrossChainTokenTypeTNT20:
 	// 	tokenBank = predeployed.NewTNT20TokenBank()
-	// case core.CrossChainTokenTypeTNT721:
+	// case score.CrossChainTokenTypeTNT721:
 	// 	tokenBank = predeployed.NewTNT721TokenBank()
 	default:
 		return nil, fmt.Errorf("unsupported token type: %v", tokenType)
