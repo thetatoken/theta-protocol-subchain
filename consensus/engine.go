@@ -1074,7 +1074,7 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 	if err != nil {
 		return big.NewInt(0)
 	}
-	crossChainEventCache := e.mainchainWitness.GetCrossChainEventCache()
+	crossChainEventCache := e.mainchainWitness.GetInterChainEventCache()
 	lastEventNonce, err := e.ledger.GetLastProcessedEventNonce(tip.Hash())
 	if err != nil {
 		e.logger.WithFields(log.Fields{
@@ -1116,7 +1116,7 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 
 		if !validators.HasMajority(mainchainHeightVotes) {
 			// The majority of the validators are still lagging behind this node. Hence, higly likely that if the
-			// proposed block includes the cross chain transfer tx, it will be ignored by the majority of the validators.
+			// proposed block includes the cross-chain transfer tx, it will be ignored by the majority of the validators.
 			// So it is better not to include the tx so the block can be finalized. Otherwise, this proposer slot will be wasted.
 			break
 		}
@@ -1294,4 +1294,3 @@ func isSyncing(lastestFinalizedBlock *score.ExtendedBlock, currentHeight uint64)
 
 	return isSyncing
 }
-

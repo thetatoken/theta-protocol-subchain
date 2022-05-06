@@ -7,6 +7,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/rlp"
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 
@@ -27,7 +28,7 @@ type SimulatedMainchainWitness struct {
 	wg                   *sync.WaitGroup
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	crossChainEventCache *score.CrossChainEventCache
+	crossChainEventCache *score.InterChainEventCache
 
 	lastSimEventNonce *big.Int
 }
@@ -38,7 +39,7 @@ func NewSimulatedMainchainWitness(
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
-	crossChainEventCache *score.CrossChainEventCache,
+	crossChainEventCache *score.InterChainEventCache,
 ) *SimulatedMainchainWitness {
 	mw := &SimulatedMainchainWitness{
 		subchainID:           subchainID,
@@ -49,11 +50,21 @@ func NewSimulatedMainchainWitness(
 		wg:                   &sync.WaitGroup{},
 		lastSimEventNonce:    big.NewInt(2),
 	}
-	err := mw.crossChainEventCache.Insert(&score.CrossChainTransferEvent{
+
+	tfuelDenom := score.TFuelDenom("mainnet")
+	amount := big.NewInt(int64(rand.Intn(1000000) + 1))
+	data, err := rlp.EncodeToBytes([]interface{}{
+		tfuelDenom,
+		amount,
+	})
+	if err != nil {
+		logger.Panicf("Insert Fail!! %v", err)
+	}
+
+	err = mw.crossChainEventCache.Insert(&score.InterChainMessageEvent{
 		Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Denom:       "test crosschain transfer",
-		Amount:      big.NewInt(int64(rand.Intn(1000000) + 1)),
+		Data:        data,
 		Nonce:       big.NewInt(1),
 		BlockNumber: big.NewInt(0),
 	})
@@ -136,12 +147,22 @@ func (mw *SimulatedMainchainWitness) update() {
 		logger.Infof("updated the witnessed dynasty to %v", dynasty)
 	}
 
+	tfuelDenom := score.TFuelDenom("mainnet")
+	amount := big.NewInt(int64(rand.Intn(1000000) + 1))
+	data, err := rlp.EncodeToBytes([]interface{}{
+		tfuelDenom,
+		amount,
+	})
+	if err != nil {
+		logger.Warnf("failed to get encode inter-chain message event data %v", err)
+		return
+	}
+
 	for i := 0; i < rand.Intn(3); i++ {
-		event := &score.CrossChainTransferEvent{
+		event := &score.InterChainMessageEvent{
 			Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 			Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-			Denom:       "test crosschain transfer",
-			Amount:      big.NewInt(int64(rand.Intn(1000000) + 1)),
+			Data:        data,
 			Nonce:       mw.lastSimEventNonce,
 			BlockNumber: mainchainBlockNumber,
 		}
@@ -170,7 +191,6 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 	return validatorSet, nil
 }
 
-func (mw *SimulatedMainchainWitness) GetCrossChainEventCache() *score.CrossChainEventCache {
+func (mw *SimulatedMainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
 	return mw.crossChainEventCache
 }
-

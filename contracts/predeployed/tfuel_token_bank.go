@@ -1,12 +1,12 @@
 package predeployed
 
 import (
+	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/rlp"
 
-	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
-	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 )
 
 // Bytecode of the smart contracts hardcoded in the genesis block through pre-deployment
@@ -22,14 +22,14 @@ func NewTFuelTokenBank() *TFuelTokenBank {
 
 // Mint vouchers for the token transferred cross-chain. If the voucher contract for the token does not yet exist, the
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
-func (tb *TFuelTokenBank) GetMintVouchersProxySctx(sourceChainID string, view *slst.StoreView, tx *stypes.CrossChainTransferTx) (*types.SmartContractTx, error) {
-	proposerAddr := tx.Proposer.Address
-	voucherReceiver := tx.Event.Receiver
-	amount := tx.Event.Amount
+func (tb *TFuelTokenBank) GetMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTFuelTransferEvent) (*types.SmartContractTx, error) {
+	voucherReceiver := ccte.Receiver
+	denom := ccte.Denom
+	amount := ccte.Amount
 	callData, err := rlp.EncodeToBytes([]interface{}{
 		mintVouchersFuncSelector,
-		[]byte(score.TFuelDenom(sourceChainID)),
 		voucherReceiver.Bytes(),
+		denom,
 		amount.Bytes(),
 	})
 	if err != nil {
@@ -37,7 +37,7 @@ func (tb *TFuelTokenBank) GetMintVouchersProxySctx(sourceChainID string, view *s
 	}
 
 	tfuelTokenBankContractAddr := view.GetTFuelTokenBankContractAddress()
-	sctx, err := constructProxySmartContractTx(proposerAddr, *tfuelTokenBankContractAddr, callData)
+	sctx, err := constructProxySmartContractTx(blockProposer, *tfuelTokenBankContractAddr, callData)
 	if err != nil {
 		return nil, err
 	}

@@ -10,20 +10,20 @@ import (
 	"github.com/thetatoken/theta/store/database"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
-	"github.com/thetatoken/thetasubchain/contracts/predeployed"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/ledger/execution/interchain"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 	"github.com/thetatoken/thetasubchain/witness"
 )
 
-var _ TxExecutor = (*CrossChainTransferTxExecutor)(nil)
+var _ TxExecutor = (*InterChainMessageTxExecutor)(nil)
 
-// ------------------------------- CrossChainTransfer Transaction -----------------------------------
+// ------------------------------- InterChainMessage Transaction -----------------------------------
 
-// CrossChainTransferTxExecutor implements the TxExecutor interface
-type CrossChainTransferTxExecutor struct {
+// InterChainMessageTxExecutor implements the TxExecutor interface
+type InterChainMessageTxExecutor struct {
 	db               database.Database
 	chain            *sbc.Chain
 	state            *slst.LedgerState
@@ -32,10 +32,10 @@ type CrossChainTransferTxExecutor struct {
 	mainchainWitness witness.ChainWitness
 }
 
-// NewCrossChainTransferTxExecutor creates a new instance of CrossChainTransferTxExecutor
-func NewCrossChainTransferTxExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *CrossChainTransferTxExecutor {
-	return &CrossChainTransferTxExecutor{
+// NewInterChainMessageTxExecutor creates a new instance of InterChainMessageTxExecutor
+func NewInterChainMessageTxExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
+	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *InterChainMessageTxExecutor {
+	return &InterChainMessageTxExecutor{
 		db:               db,
 		chain:            chain,
 		state:            state,
@@ -45,9 +45,9 @@ func NewCrossChainTransferTxExecutor(db database.Database, chain *sbc.Chain, sta
 	}
 }
 
-func (exec *CrossChainTransferTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *InterChainMessageTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
 	// basic checks, and verify the tx proposer is a validator
-	tx := transaction.(*stypes.CrossChainTransferTx)
+	tx := transaction.(*stypes.InterChainMessageTx)
 	validatorSet := getValidatorSet(exec.consensus.GetLedger(), exec.valMgr)
 	validatorAddresses := getValidatorAddresses(validatorSet)
 
@@ -64,7 +64,7 @@ func (exec *CrossChainTransferTxExecutor) sanityCheck(chainID string, view *slst
 	}
 
 	crossChainTransferID := tx.Event.Nonce
-	if view.CrossChainTransferTransactionProcessed(crossChainTransferID) {
+	if view.InterChainMessageTransactionProcessed(crossChainTransferID) {
 		return result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
 	}
 
@@ -82,33 +82,33 @@ func (exec *CrossChainTransferTxExecutor) sanityCheck(chainID string, view *slst
 	return result.OK
 }
 
-func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
-	tx := transaction.(*stypes.CrossChainTransferTx)
+func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+	tx := transaction.(*stypes.InterChainMessageTx)
 	crossChainTransferID := tx.Event.Nonce
 
-	if !view.ShouldProcessThisCrossChainTransferEvent(crossChainTransferID) {
+	if !view.ShouldProcessThisInterChainMessageEvent(crossChainTransferID) {
 		return common.Hash{}, result.Error("cross-chain chain transfer %v is not the next event to process, expected nonce is %v", crossChainTransferID, view.GetLastProcessedEventNonce())
 	}
 
-	eventCache := exec.mainchainWitness.GetCrossChainEventCache()
-	xferDetails, err := eventCache.Get(crossChainTransferID)
-	if err != nil || xferDetails == nil {
+	eventCache := exec.mainchainWitness.GetInterChainEventCache()
+	event, err := eventCache.Get(crossChainTransferID)
+	if err != nil || event == nil {
 		return common.Hash{}, result.UndecidedWith(result.Info{"new event": tx.Event, "err": err}) // not seen on mainchain yet
 	}
 
-	if view.CrossChainTransferTransactionProcessed(crossChainTransferID) {
+	if view.InterChainMessageTransactionProcessed(crossChainTransferID) {
 		return common.Hash{}, result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
 	}
 
 	// the leader could be malicious, so we need to verify if the cross-chain xfer proposed by the leader is consistent with the query results
-	if !xferDetails.Equals(tx.Event) {
+	if !event.Equals(&tx.Event) {
 		return common.Hash{}, result.Error("cross-chain transfer verification failed for ID %v", crossChainTransferID)
 	}
 
 	pb := exec.state.ParentBlock()
 	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
 
-	proxySctx, err := exec.constructProxyMintVoucherSctx(view, tx)
+	proxySctx, err := exec.constructProxySctx(view, tx)
 	if err != nil {
 		return common.Hash{}, result.Error("error constructing proxy mint voucher sctx: %v", err)
 	}
@@ -125,35 +125,24 @@ func (exec *CrossChainTransferTxExecutor) process(chainID string, view *slst.Sto
 	}
 	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
 
-	view.SetCrossChainTransferTransactionProcessed(crossChainTransferID)
+	view.SetInterChainMessageTransactionProcessed(crossChainTransferID)
 	txHash := types.TxID(chainID, tx)
 	return txHash, result.OK
 }
 
-func (exec *CrossChainTransferTxExecutor) constructProxyMintVoucherSctx(view *slst.StoreView, tx *stypes.CrossChainTransferTx) (*types.SmartContractTx, error) {
-	tokenType, err := score.ExtractCrossChainTokenTypeFromDenom(tx.Event.Denom)
-	if err != nil || tokenType == score.CrossChainTokenTypeInvalid {
-		return nil, fmt.Errorf("failed to extract token type from denom %v: %v", tx.Event.Denom, err)
-	}
-
-	sourceChainID, err := score.ExtractSourceChainIDFromDenom(tx.Event.Denom)
-	if err != nil {
-		return nil, fmt.Errorf("failed to extract source chain ID from denom %v: %v", tx.Event.Denom, err)
-	}
-
-	var tokenBank predeployed.TokenBank
-	switch tokenType {
-	case score.CrossChainTokenTypeTFuel:
-		tokenBank = predeployed.NewTFuelTokenBank()
-	// case score.CrossChainTokenTypeTNT20:
-	// 	tokenBank = predeployed.NewTNT20TokenBank()
-	// case score.CrossChainTokenTypeTNT721:
-	// 	tokenBank = predeployed.NewTNT721TokenBank()
+func (exec *InterChainMessageTxExecutor) constructProxySctx(view *slst.StoreView, tx *stypes.InterChainMessageTx) (*types.SmartContractTx, error) {
+	var proxySctx *types.SmartContractTx
+	var err error
+	eventType := tx.Event.Type
+	switch eventType {
+	case score.IMCEventTypeCrossChainTFuelTransfer:
+		proxySctx, err = interchain.ConstructProxyMintTFuelVoucherSctx(tx.Proposer.Address, view, &tx.Event)
+	case score.IMCEventTypeCrossChainTNT20Transfer:
+		proxySctx, err = interchain.ConstructProxyMintTNT20VoucherSctx(tx.Proposer.Address, view, &tx.Event)
 	default:
-		return nil, fmt.Errorf("unsupported token type: %v", tokenType)
+		return nil, fmt.Errorf("unsupported event type: %v", eventType)
 	}
 
-	proxySctx, err := tokenBank.GetMintVouchersProxySctx(sourceChainID, view, tx)
 	if err != nil {
 		return nil, err
 	}
@@ -161,12 +150,12 @@ func (exec *CrossChainTransferTxExecutor) constructProxyMintVoucherSctx(view *sl
 	return proxySctx, nil
 }
 
-func (exec *CrossChainTransferTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {
+func (exec *InterChainMessageTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {
 	return &score.TxInfo{
 		EffectiveGasPrice: exec.calculateEffectiveGasPrice(transaction),
 	}
 }
 
-func (exec *CrossChainTransferTxExecutor) calculateEffectiveGasPrice(transaction types.Tx) *big.Int {
+func (exec *InterChainMessageTxExecutor) calculateEffectiveGasPrice(transaction types.Tx) *big.Int {
 	return new(big.Int).SetUint64(0)
 }

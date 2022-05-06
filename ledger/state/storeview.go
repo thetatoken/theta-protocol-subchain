@@ -156,19 +156,19 @@ func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool)
 	sv.subchainValidatorSetTransactinProcessed = processed
 }
 
-// CrossChainTransferTransactionProcessed returns whether the cross chain transfer transaction has been processed
-func (sv *StoreView) CrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) bool {
+// InterChainMessageTransactionProcessed returns whether the cross-chain transfer transaction has been processed
+func (sv *StoreView) InterChainMessageTransactionProcessed(crossChainTransferID *big.Int) bool {
 	return sv.GetLastProcessedEventNonce().Cmp(crossChainTransferID) > 0
 }
 
-// ShouldProcessThisCrossChainTransferEvent returns whether the crossChainTransferID is the next nonce to process
-func (sv *StoreView) ShouldProcessThisCrossChainTransferEvent(crossChainTransferID *big.Int) bool {
+// ShouldProcessThisInterChainMessageEvent returns whether the crossChainTransferID is the next nonce to process
+func (sv *StoreView) ShouldProcessThisInterChainMessageEvent(crossChainTransferID *big.Int) bool {
 	// if the crossChainTransferID equals the LastProcessedEventNonce + 1 then process it
 	return crossChainTransferID.Cmp(new(big.Int).Add(sv.GetLastProcessedEventNonce(), big.NewInt(1))) == 0
 }
 
-// SetCrossChainTransferTransactionProcessed sets whether the validator set update transaction for the current block has been processed
-func (sv *StoreView) SetCrossChainTransferTransactionProcessed(crossChainTransferID *big.Int) {
+// SetInterChainMessageTransactionProcessed sets whether the validator set update transaction for the current block has been processed
+func (sv *StoreView) SetInterChainMessageTransactionProcessed(crossChainTransferID *big.Int) {
 	sv.UpdateLastProcessedEventNonce(crossChainTransferID)
 }
 

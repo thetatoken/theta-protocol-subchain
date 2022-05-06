@@ -671,14 +671,14 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 			logger.Panic("nil last event nonce")
 		}
 		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
-		eventCache := ledger.mainchainWitness.GetCrossChainEventCache()
+		eventCache := ledger.mainchainWitness.GetInterChainEventCache()
 		for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0 {
 			nextEvent, ok := eventCache.Get(nextEventNonce)
 			if ok != nil {
 				break
 			}
-			ledger.addCrossChainTransferTx(view, &proposer, nextEvent, rawTxs)
-			logger.Debugf("Add special transactions cross chain event Tx %v",
+			ledger.addInterChainMessageTx(view, &proposer, nextEvent, rawTxs)
+			logger.Debugf("Add special transactions cross-chain event Tx %v",
 				nextEvent)
 			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 		}
@@ -787,17 +787,17 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
 }
 
-// addCrossChainTransferTx adds a cross-chain transaction
-func (ledger *Ledger) addCrossChainTransferTx(view *slst.StoreView, proposer *score.Validator, nextCrossChainTransferEvent *score.CrossChainTransferEvent, rawTxs *[]common.Bytes) {
+// addInterChainMessageTx adds a cross-chain transaction
+func (ledger *Ledger) addInterChainMessageTx(view *slst.StoreView, proposer *score.Validator, nextInterChainMessageEvent *score.InterChainMessageEvent, rawTxs *[]common.Bytes) {
 	proposerAddress := proposer.Address
 	proposerTxIn := types.TxInput{
 		Address: proposerAddress,
 	}
 
-	crossChainTransferTx := &stypes.CrossChainTransferTx{
+	crossChainTransferTx := &stypes.InterChainMessageTx{
 		Proposer:    proposerTxIn,
-		BlockNumber: nextCrossChainTransferEvent.BlockNumber,
-		Event:       *nextCrossChainTransferEvent,
+		BlockNumber: nextInterChainMessageEvent.BlockNumber,
+		Event:       *nextInterChainMessageEvent,
 	}
 
 	signature, err := ledger.signTransaction(crossChainTransferTx)

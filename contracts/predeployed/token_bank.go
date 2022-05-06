@@ -12,7 +12,7 @@ import (
 )
 
 type TokenBank interface {
-	GetMintVouchersProxySctx(sourceChainID string, view *slst.StoreView, tx *stypes.CrossChainTransferTx) (*types.SmartContractTx, error)
+	GetMintVouchersProxySctx(sourceChainID string, view *slst.StoreView, tx *stypes.InterChainMessageTx) (*types.SmartContractTx, error)
 }
 
 var mintVouchersFuncSelector = crypto.Keccak256([]byte("mintVouchers(string,address,bytes)"))[:4]

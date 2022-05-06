@@ -12,13 +12,13 @@ import (
 )
 
 type StateStub struct {
-	Root                        common.Hash
-	HighestCCBlock              common.Hash
-	LastFinalizedBlock          common.Hash
-	LastProposal                score.Proposal
-	LastVote                    score.Vote
-	LastCrossChainTransferEvent score.CrossChainTransferEvent
-	Epoch                       uint64
+	Root                       common.Hash
+	HighestCCBlock             common.Hash
+	LastFinalizedBlock         common.Hash
+	LastProposal               score.Proposal
+	LastVote                   score.Vote
+	LastInterChainMessageEvent score.InterChainMessageEvent
+	Epoch                      uint64
 }
 
 const (
@@ -36,10 +36,10 @@ type State struct {
 	highestCCBlock     common.Hash
 	lastFinalizedBlock common.Hash
 
-	LastProposal                score.Proposal
-	LastVote                    score.Vote
-	LastCrossChainTransferEvent score.CrossChainTransferEvent
-	epoch                       uint64
+	LastProposal               score.Proposal
+	LastVote                   score.Vote
+	LastInterChainMessageEvent score.InterChainMessageEvent
+	epoch                      uint64
 }
 
 func NewState(db store.Store, chain *sbc.Chain) *State {
@@ -225,4 +225,3 @@ func (s *State) AddEpochVote(vote *score.Vote) error {
 	key := []byte(DBEpochVotesKey)
 	return s.db.Put(key, voteset)
 }
-

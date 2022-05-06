@@ -27,7 +27,7 @@ type MainchainWitness struct {
 	subchainID           *big.Int
 	witnessedDynasty     *big.Int
 	validatorSetCache    map[string]*score.ValidatorSet
-	crossChainEventCache *score.CrossChainEventCache
+	crossChainEventCache *score.InterChainEventCache
 	client               *ec.Client
 	updateTicker         *time.Ticker
 
@@ -53,7 +53,7 @@ func NewMainchainWitness(
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
 	updateInterval int,
-	crossChainEventCache *score.CrossChainEventCache,
+	crossChainEventCache *score.InterChainEventCache,
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
@@ -175,12 +175,12 @@ func (mw *MainchainWitness) update() {
 	}
 }
 
-func (mw *MainchainWitness) collectCrossChainTransferEvent() []score.CrossChainTransferEvent {
+func (mw *MainchainWitness) collectInterChainMessageEvent() []score.InterChainMessageEvent {
 	fromBlock := mw.lastQueryedMainChainHeight
 	toBlock, err := mw.GetMainchainBlockNumber()
 	if err != nil {
 		logger.Warnf("failed to get the mainchain block number %v\n", err)
-		return make([]score.CrossChainTransferEvent, 1)
+		return make([]score.InterChainMessageEvent, 1)
 	}
 	return rpcEventLogQuery(fromBlock, toBlock, mw.registerContractAddr, mw.crossChainEventCache)
 }
@@ -206,11 +206,35 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	return validatorSet, nil
 }
 
-func (mw *MainchainWitness) GetCrossChainEventCache() *score.CrossChainEventCache {
+func (mw *MainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
 	return mw.crossChainEventCache
 }
 
-func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.CrossChainEventCache) []score.CrossChainTransferEvent {
+type LogData struct {
+	LogIndex         string   `json:"logIndex"`
+	TransactionIndex string   `json:"transactionIndex"`
+	TransactionHash  string   `json:"transactionHash"`
+	BlockHash        string   `json:"blockHash"`
+	BlockNumber      string   `json:"blockNumber"`
+	Address          string   `json:"address"`
+	Data             string   `json:"data"`
+	Topics           []string `json:"topics"`
+	Type             string   `json:"type"`
+}
+
+type RPCResult struct {
+	Jsonrpc string    `json:"jsonrpc"`
+	Id      int64     `json:"id"`
+	Result  []LogData `json:"result"`
+}
+
+type TransferEvent struct {
+	Denom  string
+	Amount *big.Int
+	Nonce  *big.Int
+}
+
+func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
 	// url := "http://127.0.0.1:18888/rpc"
 	// queryStr := fmt.Sprintf(`{
 	// 	"jsonrpc":"2.0",
@@ -245,7 +269,7 @@ func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.
 	// 	fmt.Println(err)
 	// }
 
-	// crossChainTransferEventArr := make([]score.CrossChainTransferEvent, len(rpcres.Result))
+	// InterChainMessageEventArr := make([]score.InterChainMessageEvent, len(rpcres.Result))
 
 	// for _, logData := range rpcres.Result {
 	// 	logData := logData
@@ -260,16 +284,16 @@ func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.
 	// 		fmt.Println(err)
 	// 	}
 	// 	BlockNumberDec, _ := strconv.ParseUint(logData.BlockNumber[2:], 16, 32)
-	// 	crossChainTransferEvent := &score.CrossChainTransferEvent{
+	// 	InterChainMessageEvent := &score.InterChainMessageEvent{
 	// 		Sender:      scom.HexToAddress(logData.Topics[1]),
 	// 		Denom:       event.Denom,
 	// 		Amount:      event.Amount,
 	// 		EventNonce:  event.Nonce,
 	// 		BlockNumber: big.NewInt(BlockNumberDec),
 	// 	}
-	// 	crossChainTransferEventArr = append(crossChainTransferEventArr, crossChainTransferEvent)
+	// 	InterChainMessageEventArr = append(InterChainMessageEventArr, InterChainMessageEvent)
 	// }
 
-	// return crossChainTransferEventArr
-	return make([]score.CrossChainTransferEvent, 1)
+	// return InterChainMessageEventArr
+	return make([]score.InterChainMessageEvent, 1)
 }

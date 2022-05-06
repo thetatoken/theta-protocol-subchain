@@ -14,6 +14,5 @@ type ChainWitness interface {
 	GetMainchainBlockNumber() (*big.Int, error)
 	GetMainchainBlockNumberUint() (uint64, error)
 	GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error)
-	GetCrossChainEventCache() *score.CrossChainEventCache
+	GetInterChainEventCache() *score.InterChainEventCache
 }
-

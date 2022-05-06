@@ -20,45 +20,45 @@ const maxTxSize = 8 * 1024 * 1024
 
 const (
 	TxSubchainValidatorSetUpdate types.TxType = 1001
-	TxCrossChainTransfer         types.TxType = 1002
+	TxInterChainMessage          types.TxType = 1002
 )
 
-//---------------------------------CrossChainTransferTx--------------------------------------------
+//---------------------------------InterChainMessageTx--------------------------------------------
 
-type CrossChainTransferTx struct {
+type InterChainMessageTx struct {
 	Proposer    types.TxInput
 	BlockNumber *big.Int
-	Event       score.CrossChainTransferEvent
+	Event       score.InterChainMessageEvent
 }
 
-type CrossChainTransferTxJSON struct {
-	Proposer    types.TxInput                 `json:"proposer"`
-	BlockNumber *big.Int                      `json:"block_number"`
-	Event       score.CrossChainTransferEvent `json:"event"`
+type InterChainMessageTxJSON struct {
+	Proposer    types.TxInput                `json:"proposer"`
+	BlockNumber *big.Int                     `json:"block_number"`
+	Event       score.InterChainMessageEvent `json:"event"`
 }
 
-func NewCrossChainTransferTxJSON(a CrossChainTransferTx) CrossChainTransferTxJSON {
-	return CrossChainTransferTxJSON{
+func NewInterChainMessageTxJSON(a InterChainMessageTx) InterChainMessageTxJSON {
+	return InterChainMessageTxJSON{
 		Proposer:    a.Proposer,
 		BlockNumber: a.BlockNumber,
 		Event:       a.Event,
 	}
 }
 
-func (a CrossChainTransferTxJSON) CrossChainTransTx() CrossChainTransferTx {
-	return CrossChainTransferTx{
+func (a InterChainMessageTxJSON) CrossChainTransTx() InterChainMessageTx {
+	return InterChainMessageTx{
 		Proposer:    a.Proposer,
 		BlockNumber: a.BlockNumber,
 		Event:       a.Event,
 	}
 }
 
-func (a CrossChainTransferTxJSON) MarshalJSON() ([]byte, error) {
-	return json.Marshal(CrossChainTransferTxJSON(a))
+func (a InterChainMessageTxJSON) MarshalJSON() ([]byte, error) {
+	return json.Marshal(InterChainMessageTxJSON(a))
 }
 
-func (a *CrossChainTransferTx) UnmarshalJSON(data []byte) error {
-	var b CrossChainTransferTxJSON
+func (a *InterChainMessageTx) UnmarshalJSON(data []byte) error {
+	var b InterChainMessageTxJSON
 	if err := json.Unmarshal(data, &b); err != nil {
 		return err
 	}
@@ -66,9 +66,9 @@ func (a *CrossChainTransferTx) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-func (_ *CrossChainTransferTx) AssertIsTx() {}
+func (_ *InterChainMessageTx) AssertIsTx() {}
 
-func (tx *CrossChainTransferTx) SignBytes(chainID string) []byte {
+func (tx *InterChainMessageTx) SignBytes(chainID string) []byte {
 	signBytes := encodeToBytes(chainID)
 	sig := tx.Proposer.Signature
 	tx.Proposer.Signature = nil
@@ -80,7 +80,7 @@ func (tx *CrossChainTransferTx) SignBytes(chainID string) []byte {
 	return signBytes
 }
 
-func (tx *CrossChainTransferTx) SetSignature(addr common.Address, sig *crypto.Signature) bool {
+func (tx *InterChainMessageTx) SetSignature(addr common.Address, sig *crypto.Signature) bool {
 	if tx.Proposer.Address == addr {
 		tx.Proposer.Signature = sig
 		return true
@@ -88,8 +88,8 @@ func (tx *CrossChainTransferTx) SetSignature(addr common.Address, sig *crypto.Si
 	return false
 }
 
-func (tx *CrossChainTransferTx) String() string {
-	return fmt.Sprintf("CrossChainTransferTx with Nonce {%v}", tx.Event.Nonce)
+func (tx *InterChainMessageTx) String() string {
+	return fmt.Sprintf("InterChainMessageTx with Nonce {%v}", tx.Event.Nonce)
 }
 
 //---------------------------------SubchainValidatorSetUpdateTx--------------------------------------------
@@ -210,8 +210,8 @@ func TxToBytes(t types.Tx) ([]byte, error) {
 		txType = types.TxSmartContract
 	case *SubchainValidatorSetUpdateTx:
 		txType = TxSubchainValidatorSetUpdate
-	case *CrossChainTransferTx:
-		txType = TxCrossChainTransfer
+	case *InterChainMessageTx:
+		txType = TxInterChainMessage
 	default:
 		return nil, errors.New("unsupported message type")
 	}
@@ -250,12 +250,11 @@ func TxFromBytes(raw []byte) (types.Tx, error) {
 		data := &SubchainValidatorSetUpdateTx{}
 		err = s.Decode(data)
 		return data, err
-	} else if txType == TxCrossChainTransfer {
-		data := &CrossChainTransferTx{}
+	} else if txType == TxInterChainMessage {
+		data := &InterChainMessageTx{}
 		err = s.Decode(data)
 		return data, err
 	} else {
 		return nil, fmt.Errorf("Unknown TX type: %v", txType)
 	}
 }
-
