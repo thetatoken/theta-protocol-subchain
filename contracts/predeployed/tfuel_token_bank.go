@@ -22,7 +22,7 @@ func NewTFuelTokenBank() *TFuelTokenBank {
 
 // Mint vouchers for the token transferred cross-chain. If the voucher contract for the token does not yet exist, the
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
-func (tb *TFuelTokenBank) GetMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTFuelTransferEvent) (*types.SmartContractTx, error) {
+func (tb *TFuelTokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTFuelTransferEvent) (*types.SmartContractTx, error) {
 	voucherReceiver := ccte.Receiver
 	denom := ccte.Denom
 	amount := ccte.Amount

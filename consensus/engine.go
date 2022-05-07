@@ -1046,8 +1046,8 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 	return true
 }
 
-// process the crosschain event Tx from the last processed event to the event that has the nonce in the return value
-func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.ExtendedBlock) *big.Int {
+// process the inter-chain event tx from the last processed event to the event that has the nonce in the return value
+func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.ExtendedBlock) *big.Int {
 	// Check if majority has greater block height.
 	epochVotes, err := e.state.GetEpochVotes()
 	if err != nil {
@@ -1074,7 +1074,7 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 	if err != nil {
 		return big.NewInt(0)
 	}
-	crossChainEventCache := e.mainchainWitness.GetInterChainEventCache()
+	interChainEventCache := e.mainchainWitness.GetInterChainEventCache()
 	lastEventNonce, err := e.ledger.GetLastProcessedEventNonce(tip.Hash())
 	if err != nil {
 		e.logger.WithFields(log.Fields{
@@ -1092,13 +1092,13 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 	}
 
 	// next event is not existed yet
-	if isExisted, _ := crossChainEventCache.Exists(nextEventNonce); !isExisted {
+	if isExisted, _ := interChainEventCache.Exists(nextEventNonce); !isExisted {
 		return big.NewInt(0)
 	}
 
 	processTillNonce := big.NewInt(0)
 	for {
-		nextEventToProcess, ok := crossChainEventCache.Get(nextEventNonce)
+		nextEventToProcess, ok := interChainEventCache.Get(nextEventNonce)
 		if ok != nil {
 			e.logger.WithFields(log.Fields{
 				"tip":        tip.Hash().Hex(),
@@ -1116,7 +1116,7 @@ func (e *ConsensusEngine) includeCrosschainTransferTxsTillNonce(tip *score.Exten
 
 		if !validators.HasMajority(mainchainHeightVotes) {
 			// The majority of the validators are still lagging behind this node. Hence, higly likely that if the
-			// proposed block includes the cross-chain transfer tx, it will be ignored by the majority of the validators.
+			// proposed block includes the inter-chain message tx, it will be ignored by the majority of the validators.
 			// So it is better not to include the tx so the block can be finalized. Otherwise, this proposer slot will be wasted.
 			break
 		}
@@ -1146,7 +1146,7 @@ func (e *ConsensusEngine) shouldProposeByID(previousBlock common.Hash, epoch uin
 	return true
 }
 
-func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool, includeCrosschainTransferTxsTillNonce *big.Int) (score.Proposal, error) {
+func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) (score.Proposal, error) {
 	tip := e.GetTipToExtend()
 	//result := e.ledger.ResetState(tip.Height, tip.StateHash)
 	result := e.ledger.ResetState(tip.Block)
@@ -1171,7 +1171,7 @@ func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool, incl
 	block.HCC.Votes = e.chain.FindVotesByHash(block.HCC.BlockHash).UniqueVoter().FilterByValidators(hccValidators)
 
 	// Add Txs.
-	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, canIncludeValidatorUpdateTxs, includeCrosschainTransferTxsTillNonce)
+	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonce)
 	if result.IsError() || result.IsUndecided() { // the proposer should NOT propose a block that is either invalid or undecided
 		err := fmt.Errorf("Failed to collect Txs for block proposal: %v", result.String())
 		return score.Proposal{}, err
@@ -1214,7 +1214,7 @@ func (e *ConsensusEngine) propose() {
 	}
 
 	canIncludeValidatorUpdateTxs := e.canIncludeValidatorUpdateTxs(tip)
-	includeCrosschainTransferTxsTillNonce := e.includeCrosschainTransferTxsTillNonce(tip)
+	includeInterChainMessageTxsTillNonce := e.includeInterChainMessageTxsTillNonce(tip)
 	var proposal score.Proposal
 	var err error
 	lastProposal := e.state.GetLastProposal()
@@ -1222,7 +1222,7 @@ func (e *ConsensusEngine) propose() {
 		proposal = lastProposal
 		e.logger.WithFields(log.Fields{"proposal": proposal}).Info("Repeating proposal")
 	} else {
-		proposal, err = e.createProposal(canIncludeValidatorUpdateTxs, includeCrosschainTransferTxsTillNonce)
+		proposal, err = e.createProposal(canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonce)
 		if err != nil {
 			e.logger.WithFields(log.Fields{"error": err}).Error("Failed to create proposal")
 			return

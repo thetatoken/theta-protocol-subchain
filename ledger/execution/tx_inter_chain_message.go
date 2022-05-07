@@ -63,9 +63,9 @@ func (exec *InterChainMessageTxExecutor) sanityCheck(chainID string, view *slst.
 		return res
 	}
 
-	crossChainTransferID := tx.Event.Nonce
-	if view.InterChainMessageTransactionProcessed(crossChainTransferID) {
-		return result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
+	icmNonce := tx.Event.Nonce
+	if view.InterChainMessageTransactionProcessed(icmNonce) {
+		return result.Error("inter-chain message %v has already been processed", icmNonce)
 	}
 
 	// verify the proposer's signature
@@ -84,30 +84,29 @@ func (exec *InterChainMessageTxExecutor) sanityCheck(chainID string, view *slst.
 
 func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*stypes.InterChainMessageTx)
-	crossChainTransferID := tx.Event.Nonce
+	icmNonce := tx.Event.Nonce
 
-	if !view.ShouldProcessThisInterChainMessageEvent(crossChainTransferID) {
-		return common.Hash{}, result.Error("cross-chain chain transfer %v is not the next event to process, expected nonce is %v", crossChainTransferID, view.GetLastProcessedEventNonce())
+	if !view.ShouldProcessThisInterChainMessageEvent(icmNonce) {
+		return common.Hash{}, result.Error("inter-chain message nonce %v mismatches with the expected nonce %v", icmNonce, view.GetLastProcessedEventNonce())
 	}
 
 	eventCache := exec.mainchainWitness.GetInterChainEventCache()
-	event, err := eventCache.Get(crossChainTransferID)
-	if err != nil || event == nil {
-		return common.Hash{}, result.UndecidedWith(result.Info{"new event": tx.Event, "err": err}) // not seen on mainchain yet
+	witnessedEvent, err := eventCache.Get(icmNonce)
+	if err != nil || witnessedEvent == nil {
+		return common.Hash{}, result.UndecidedWith(result.Info{"event not seen yet": tx.Event, "err": err}) // not seen on mainchain yet
 	}
 
-	if view.InterChainMessageTransactionProcessed(crossChainTransferID) {
-		return common.Hash{}, result.Error("cross-chain chain transfer %v has already been processed", crossChainTransferID)
+	if view.InterChainMessageTransactionProcessed(icmNonce) {
+		return common.Hash{}, result.Error("inter-chain message with nonce %v has already been processed", icmNonce)
 	}
 
-	// the leader could be malicious, so we need to verify if the cross-chain xfer proposed by the leader is consistent with the query results
-	if !event.Equals(&tx.Event) {
-		return common.Hash{}, result.Error("cross-chain transfer verification failed for ID %v", crossChainTransferID)
+	// the leader could be malicious, so we need to verify if the inter-chain message event proposed by the leader is consistent with the query results
+	if !witnessedEvent.Equals(&tx.Event) {
+		return common.Hash{}, result.Error("event mismatch, inter-chain message verification failed for ID %v", icmNonce)
 	}
 
 	pb := exec.state.ParentBlock()
 	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
-
 	proxySctx, err := exec.constructProxySctx(view, tx)
 	if err != nil {
 		return common.Hash{}, result.Error("error constructing proxy mint voucher sctx: %v", err)
@@ -125,7 +124,7 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 	}
 	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
 
-	view.SetInterChainMessageTransactionProcessed(crossChainTransferID)
+	view.SetInterChainMessageTransactionProcessed(icmNonce)
 	txHash := types.TxID(chainID, tx)
 	return txHash, result.OK
 }
@@ -133,6 +132,7 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 func (exec *InterChainMessageTxExecutor) constructProxySctx(view *slst.StoreView, tx *stypes.InterChainMessageTx) (*types.SmartContractTx, error) {
 	var proxySctx *types.SmartContractTx
 	var err error
+
 	eventType := tx.Event.Type
 	switch eventType {
 	case score.IMCEventTypeCrossChainTFuelTransfer:

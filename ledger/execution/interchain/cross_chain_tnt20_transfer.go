@@ -30,7 +30,7 @@ func ConstructProxyMintTNT20VoucherSctx(blockProposer common.Address, view *slst
 	}
 
 	tokenBank := predeployed.NewTNT20TokenBank()
-	proxySctx, err := tokenBank.GetMintVouchersProxySctx(blockProposer, view, ccte)
+	proxySctx, err := tokenBank.GenerateMintVouchersProxySctx(blockProposer, view, ccte)
 	if err != nil {
 		return nil, err
 	}

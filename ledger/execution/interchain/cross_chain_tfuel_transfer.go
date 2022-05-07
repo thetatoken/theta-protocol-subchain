@@ -30,7 +30,7 @@ func ConstructProxyMintTFuelVoucherSctx(blockProposer common.Address, view *slst
 	}
 
 	tokenBank := predeployed.NewTFuelTokenBank()
-	proxySctx, err := tokenBank.GetMintVouchersProxySctx(blockProposer, view, ccte)
+	proxySctx, err := tokenBank.GenerateMintVouchersProxySctx(blockProposer, view, ccte)
 	if err != nil {
 		return nil, err
 	}

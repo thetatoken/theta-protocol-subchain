@@ -24,7 +24,7 @@ func NewTNT20TokenBank() *TNT20TokenBank {
 
 // Mint vouchers for the token transferred cross-chain. If the voucher contract for the token does not yet exist, the
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
-func (tb *TNT20TokenBank) GetMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT20TransferEvent) (*types.SmartContractTx, error) {
+func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT20TransferEvent) (*types.SmartContractTx, error) {
 	voucherReceiver := ccte.Receiver
 	denom := ccte.Denom
 	name := ccte.Name
