@@ -262,7 +262,7 @@ func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res re
 
 // ProposeBlockTxs collects and executes a list of transactions, which will be used to assemble the next blockl
 // It also clears these transactions from the mempool.
-func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool, includeCrosschainTransferTxsTillNonce *big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
+func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
 	// Must always acquire locks in following order to avoid deadlock: mempool, ledger.
 	// Otherwise, could cause deadlock since mempool.InsertTransaction() also first acquires the mempool, and then the ledger lock
 	logger.Debugf("ProposeBlockTxs: Propose block transactions, block.height = %v", block.Height)
@@ -285,7 +285,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 
 	// Add special transactions
 	rawTxCandidates := []common.Bytes{}
-	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs, includeCrosschainTransferTxsTillNonce)
+	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonce)
 
 	// Add regular transactions submitted by the clients
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
@@ -640,7 +640,7 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block
-func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool, includeCrosschainTransferTxsTillNonce *big.Int) {
+func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) {
 	if block == nil {
 		logger.Warnf("addSpecialTransactions: block is nil")
 		return
@@ -664,22 +664,21 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
 	}
 
-	// ------- Add crosschain transfer transactions ------- //
-	if includeCrosschainTransferTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
+	// ------- Add inter-chain message transactions ------- //
+	if includeInterChainMessageTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
 		lastEventNonce := view.GetLastProcessedEventNonce()
 		if lastEventNonce == nil {
 			logger.Panic("nil last event nonce")
 		}
 		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
 		eventCache := ledger.mainchainWitness.GetInterChainEventCache()
-		for nextEventNonce.Cmp(includeCrosschainTransferTxsTillNonce) <= 0 {
+		for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
 			nextEvent, ok := eventCache.Get(nextEventNonce)
 			if ok != nil {
 				break
 			}
 			ledger.addInterChainMessageTx(view, &proposer, nextEvent, rawTxs)
-			logger.Debugf("Add special transactions cross-chain event Tx %v",
-				nextEvent)
+			logger.Debugf("Add special transactions cross-chain event Tx %v", nextEvent)
 			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 		}
 	}

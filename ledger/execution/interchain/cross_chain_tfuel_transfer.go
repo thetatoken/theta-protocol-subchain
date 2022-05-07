@@ -10,7 +10,7 @@ import (
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 )
 
-func ConstructProxyMintTFuelVoucherSctx(blockProposer common.Address, view *slst.StoreView, icme *score.InterChainMessageEvent) (*types.SmartContractTx, error) {
+func ConstructMintTFuelVoucherProxySctx(blockProposer common.Address, view *slst.StoreView, icme *score.InterChainMessageEvent) (*types.SmartContractTx, error) {
 	ccte, err := score.ParseToCrossChainTFuelTransferEvent(icme)
 	if err != nil {
 		return nil, err

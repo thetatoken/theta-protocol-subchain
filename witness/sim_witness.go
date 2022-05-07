@@ -53,9 +53,9 @@ func NewSimulatedMainchainWitness(
 
 	tfuelDenom := score.TFuelDenom("mainnet")
 	amount := big.NewInt(int64(rand.Intn(1000000) + 1))
-	data, err := rlp.EncodeToBytes([]interface{}{
-		tfuelDenom,
-		amount,
+	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
+		Denom:  tfuelDenom,
+		Amount: amount,
 	})
 	if err != nil {
 		logger.Panicf("Insert Fail!! %v", err)
@@ -95,7 +95,7 @@ func (mw *SimulatedMainchainWitness) Wait() {
 }
 
 func (mw *SimulatedMainchainWitness) GetMainchainBlockNumber() (*big.Int, error) {
-	blockNumber := int64((time.Now().Sub(mw.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
+	blockNumber := int64((time.Since(mw.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
 	return big.NewInt(int64(blockNumber)), nil
 }
 
@@ -149,9 +149,9 @@ func (mw *SimulatedMainchainWitness) update() {
 
 	tfuelDenom := score.TFuelDenom("mainnet")
 	amount := big.NewInt(int64(rand.Intn(1000000) + 1))
-	data, err := rlp.EncodeToBytes([]interface{}{
-		tfuelDenom,
-		amount,
+	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
+		Denom:  tfuelDenom,
+		Amount: amount,
 	})
 	if err != nil {
 		logger.Warnf("failed to get encode inter-chain message event data %v", err)

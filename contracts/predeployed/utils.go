@@ -6,14 +6,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
-
-	slst "github.com/thetatoken/thetasubchain/ledger/state"
-	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 )
-
-type TokenBank interface {
-	GetMintVouchersProxySctx(sourceChainID string, view *slst.StoreView, tx *stypes.InterChainMessageTx) (*types.SmartContractTx, error)
-}
 
 var mintVouchersFuncSelector = crypto.Keccak256([]byte("mintVouchers(string,address,bytes)"))[:4]
 

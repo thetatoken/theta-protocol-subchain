@@ -10,7 +10,7 @@ import (
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 )
 
-func ConstructProxyMintTNT20VoucherSctx(blockProposer common.Address, view *slst.StoreView, icme *score.InterChainMessageEvent) (*types.SmartContractTx, error) {
+func ConstructMintTNT20VoucherProxySctx(blockProposer common.Address, view *slst.StoreView, icme *score.InterChainMessageEvent) (*types.SmartContractTx, error) {
 	ccte, err := score.ParseToCrossChainTNT20TransferEvent(icme)
 	if err != nil {
 		return nil, err

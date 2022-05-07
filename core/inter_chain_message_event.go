@@ -225,6 +225,11 @@ func (c *InterChainEventCache) Exists(nonce *big.Int) (bool, error) {
 
 // Cross-Chain TFuel Transfer
 
+type TfuelTransferMetaData struct {
+	Denom  string
+	Amount *big.Int
+}
+
 type CrossChainTFuelTransferEvent struct {
 	Sender      common.Address
 	Receiver    common.Address
@@ -244,11 +249,7 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
-	type tfuelTransferMetaData struct {
-		Denom  string
-		Amount *big.Int
-	}
-	var tma tfuelTransferMetaData
+	var tma TfuelTransferMetaData
 	if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
 		return nil, err
 	}
@@ -262,20 +263,28 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 
 // Cross-Chain TNT20 Transfer
 
+type TNT20TransferMetaData struct {
+	Denom    string
+	Name     string
+	Symbol   string
+	Decimals uint8
+	Amount   *big.Int
+}
+
 type CrossChainTNT20TransferEvent struct {
 	Sender      common.Address
 	Receiver    common.Address
 	Denom       string
 	Name        string
 	Symbol      string
-	Decimals    uint
+	Decimals    uint8
 	Amount      *big.Int
 	Nonce       *big.Int
 	BlockNumber *big.Int
 }
 
 func NewCrossChainTNT20TransferEvent(sender common.Address, receiver common.Address, denom string,
-	name string, symbol string, decimals uint, amount *big.Int, nonce *big.Int, blockNumber *big.Int) *CrossChainTNT20TransferEvent {
+	name string, symbol string, decimals uint8, amount *big.Int, nonce *big.Int, blockNumber *big.Int) *CrossChainTNT20TransferEvent {
 	return &CrossChainTNT20TransferEvent{sender, receiver, denom, name, symbol, decimals, amount, nonce, blockNumber}
 }
 
@@ -284,14 +293,7 @@ func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossCh
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
-	type tnt20TransferMetaData struct {
-		Denom    string
-		Name     string
-		Symbol   string
-		Decimals uint
-		Amount   *big.Int
-	}
-	var tma tnt20TransferMetaData
+	var tma TNT20TransferMetaData
 	if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
 		return nil, err
 	}
