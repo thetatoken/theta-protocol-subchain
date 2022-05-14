@@ -673,8 +673,9 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
 		eventCache := ledger.mainchainWitness.GetInterChainEventCache()
 		for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
-			nextEvent, ok := eventCache.Get(nextEventNonce)
-			if ok != nil {
+			nextEvent, err := eventCache.Get(nextEventNonce)
+
+			if err != nil {
 				break
 			}
 			ledger.addInterChainMessageTx(view, &proposer, nextEvent, rawTxs)
@@ -783,7 +784,8 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 	}
 
 	*rawTxs = append(*rawTxs, subchainValidatorSetUpdateTxBytes)
-	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", subchainValidatorSetUpdateTx, hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
+	logger.Infof("Added subchain validator set update transction: tx: %v", subchainValidatorSetUpdateTx)
+	logger.Debugf("Subchain validator set update transction bytes: %v", hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
 }
 
 // addInterChainMessageTx adds a cross-chain transaction
@@ -812,7 +814,8 @@ func (ledger *Ledger) addInterChainMessageTx(view *slst.StoreView, proposer *sco
 	}
 
 	*rawTxs = append(*rawTxs, crossChainTransferTxBytes)
-	logger.Infof("Added subchain validator set update transction: tx: %v, bytes: %v", crossChainTransferTx, hex.EncodeToString(crossChainTransferTxBytes))
+	logger.Infof("Added inter-chain message transction: tx: %v", crossChainTransferTx)
+	logger.Debugf("Inter-chain message transction bytes: %v", hex.EncodeToString(crossChainTransferTxBytes))
 }
 
 // signTransaction signs the given transaction

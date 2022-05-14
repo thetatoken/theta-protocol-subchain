@@ -4,11 +4,8 @@ import (
 	"math/big"
 
 	"github.com/thetatoken/theta/common"
-	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
 )
-
-var mintVouchersFuncSelector = crypto.Keccak256([]byte("mintVouchers(string,address,bytes)"))[:4]
 
 func constructProxySmartContractTx(proposerAddr common.Address, smartContractAddress common.Address, callData []byte) (*types.SmartContractTx, error) {
 	from := types.TxInput{

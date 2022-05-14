@@ -24,7 +24,7 @@ import (
 
 // var logger *log.Entry = log.WithFields(log.Fields{"prefix": "core"})
 
-type InterChainMessageEventType int
+type InterChainMessageEventType uint64
 
 const (
 	IMCEventTypeUnknown                  InterChainMessageEventType = 0
@@ -76,7 +76,8 @@ func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 
 // String represents the string representation of the validator
 func (c *InterChainMessageEvent) String() string {
-	return fmt.Sprintf("{ID: %v, Data: %v, from: %v, to: %v}", c.ID(), string(c.Data), c.Sender.Hex(), c.Receiver.Hex())
+	return fmt.Sprintf("{ID: %v, Type: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockNumber: %v}",
+		c.ID(), c.Type, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockNumber.String())
 }
 
 // ByID implements sort.Interface for InterChainMessageEvent based on ID (Nonce).
@@ -94,6 +95,7 @@ func (c *InterChainMessageEvent) EncodeRLP(w io.Writer) error {
 		return rlp.Encode(w, &InterChainMessageEvent{})
 	}
 	return rlp.Encode(w, []interface{}{
+		c.Type,
 		c.Sender,
 		c.Receiver,
 		c.Data,
@@ -108,6 +110,13 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 	if err != nil {
 		return err
 	}
+
+	eventType := InterChainMessageEventType(0)
+	err = stream.Decode(&eventType)
+	if err != nil {
+		return err
+	}
+	c.Type = eventType
 
 	sender := &common.Address{}
 	err = stream.Decode(sender)

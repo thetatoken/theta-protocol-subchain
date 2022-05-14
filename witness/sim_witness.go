@@ -3,7 +3,6 @@ package witness
 import (
 	"context"
 	"math/big"
-	"math/rand"
 	"sync"
 	"time"
 
@@ -51,23 +50,12 @@ func NewSimulatedMainchainWitness(
 		lastSimEventNonce:    big.NewInt(2),
 	}
 
-	tfuelDenom := score.TFuelDenom("mainnet")
-	amount := big.NewInt(int64(rand.Intn(1000000) + 1))
-	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
-		Denom:  tfuelDenom,
-		Amount: amount,
-	})
-	if err != nil {
-		logger.Panicf("Insert Fail!! %v", err)
-	}
+	amount := big.NewInt(88888)
+	nonce := big.NewInt(1)
+	mainchainBlockNumber := big.NewInt(0)
+	event := mw.generateInterChainEventForTFuelTransfer(amount, nonce, mainchainBlockNumber)
 
-	err = mw.crossChainEventCache.Insert(&score.InterChainMessageEvent{
-		Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Data:        data,
-		Nonce:       big.NewInt(1),
-		BlockNumber: big.NewInt(0),
-	})
+	err := mw.crossChainEventCache.Insert(event)
 	if err != nil {
 		logger.Panicf("Insert Fail!! %v", err)
 	}
@@ -147,25 +135,9 @@ func (mw *SimulatedMainchainWitness) update() {
 		logger.Infof("updated the witnessed dynasty to %v", dynasty)
 	}
 
-	tfuelDenom := score.TFuelDenom("mainnet")
-	amount := big.NewInt(int64(rand.Intn(1000000) + 1))
-	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
-		Denom:  tfuelDenom,
-		Amount: amount,
-	})
-	if err != nil {
-		logger.Warnf("failed to get encode inter-chain message event data %v", err)
-		return
-	}
-
-	for i := 0; i < rand.Intn(3); i++ {
-		event := &score.InterChainMessageEvent{
-			Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-			Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-			Data:        data,
-			Nonce:       mw.lastSimEventNonce,
-			BlockNumber: mainchainBlockNumber,
-		}
+	for i := 0; i < 3; i++ {
+		amount := big.NewInt(int64(9999999 + i*1234567))
+		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce, mainchainBlockNumber)
 		mw.crossChainEventCache.Insert(event)
 		// logger.Infof("Inserted Event %v", event)
 		mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
@@ -193,4 +165,26 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 
 func (mw *SimulatedMainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
 	return mw.crossChainEventCache
+}
+
+func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
+	tfuelDenom := score.TFuelDenom("mainnet")
+	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
+		Denom:  tfuelDenom,
+		Amount: amount,
+	})
+	if err != nil {
+		logger.Panicf("failed to get encode inter-chain message event data for TFuel transfer: %v", err)
+	}
+
+	event := &score.InterChainMessageEvent{
+		Type:        score.IMCEventTypeCrossChainTFuelTransfer,
+		Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Data:        data,
+		Nonce:       nonce,
+		BlockNumber: mainchainBlockNumber,
+	}
+
+	return event
 }

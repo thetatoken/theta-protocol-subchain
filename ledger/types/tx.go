@@ -19,8 +19,8 @@ import (
 const maxTxSize = 8 * 1024 * 1024
 
 const (
-	TxSubchainValidatorSetUpdate types.TxType = 1001
-	TxInterChainMessage          types.TxType = 1002
+	TxSubchainValidatorSetUpdate types.TxType = 201
+	TxInterChainMessage          types.TxType = 202
 )
 
 //---------------------------------InterChainMessageTx--------------------------------------------

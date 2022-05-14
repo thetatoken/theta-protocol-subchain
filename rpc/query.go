@@ -268,6 +268,9 @@ const (
 	TxTypeWithdrawStake
 	TxTypeDepositStakeTxV2
 	TxTypeStakeRewardDistributionTx
+
+	TxSubchainValidatorSetUpdate = byte(201)
+	TxInterChainMessage          = byte(202)
 )
 
 func (t *ThetaRPCService) GetBlock(args *GetBlockArgs, result *GetBlockResult) (err error) {
@@ -839,6 +842,10 @@ func getTxType(tx types.Tx) byte {
 		t = TxTypeDepositStakeTxV2
 	case *types.StakeRewardDistributionTx:
 		t = TxTypeStakeRewardDistributionTx
+	case *stypes.SubchainValidatorSetUpdateTx:
+		t = TxSubchainValidatorSetUpdate
+	case *stypes.InterChainMessageTx:
+		t = TxInterChainMessage
 	}
 
 	return t
