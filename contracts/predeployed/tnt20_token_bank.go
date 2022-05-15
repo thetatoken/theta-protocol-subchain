@@ -2,11 +2,11 @@ package predeployed
 
 import (
 	"encoding/hex"
+	"math/big"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
-	"github.com/thetatoken/theta/rlp"
 
 	"github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
@@ -27,6 +27,9 @@ func NewTNT20TokenBank() *TNT20TokenBank {
 
 // Mint vouchers for the token transferred cross-chain. If the voucher contract for the token does not yet exist, the
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
+// Note: if a user calls the the TFuelTokenBank.mintVouchers() function (e.g. with the following command), the transaction should fail with the "evm revert" error.
+//       This is because mintVouchers() is only allowed in the privileged execution context
+//       thetasubcli tx smart_contract --chain="private_subchain" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=0x5a443704dd4B594B382c22a083e2BD3090A6feF3 --gas_price=4000000000000wei --gas_limit=5000000 --data=ba2c329c00000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000120000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000013c9647e25a994000000000000000000000000000000000000000000000000000000000000000000346d61696e6e65742f312f30783133333637333942303543374162386135323644343044434330643034613832366235663842303300000000000000000000000000000000000000000000000000000000000000000000000000000000000000055444726f7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055444524f50000000000000000000000000000000000000000000000000000000 --password=qwertyuiop --seq=2
 func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT20TransferEvent) (*types.SmartContractTx, error) {
 	voucherReceiver := ccte.Receiver
 	denom := ccte.Denom
@@ -34,19 +37,8 @@ func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Add
 	symbol := ccte.Symbol
 	decimals := ccte.Decimals
 	amount := ccte.Amount
-	calldata, err := rlp.EncodeToBytes([]interface{}{
-		mintTNT20VouchersFuncSelector,
-		denom,
-		name,
-		symbol,
-		decimals,
-		hex.EncodeToString(voucherReceiver.Bytes()),
-		amount,
-	})
-	if err != nil {
-		return nil, err
-	}
 
+	calldata := tb.encodeCalldata(denom, name, symbol, decimals, voucherReceiver, amount)
 	tnt20TokenBankContractAddr := view.GetTNT20TokenBankContractAddress()
 	sctx, err := constructProxySmartContractTx(blockProposer, *tnt20TokenBankContractAddr, calldata)
 	if err != nil {
@@ -54,4 +46,65 @@ func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Add
 	}
 
 	return sctx, nil
+}
+
+// Calldata encoding standard: https://medium.com/@libertylocked/what-are-abi-encoding-functions-in-solidity-0-4-24-c1a90b5ddce8
+// function mintVouchers(string memory denom, string memory name, string memory symbol, uint8 decimals, address voucherReceiver, uint mintAmount)
+// Assume that we pass the following parameters to the function:
+//     denom          : mainnet/1/0x1336739B05C7Ab8a526D40DCC0d04a826b5f8B03
+//     name           : TDrop
+//     symbol         : TDROP
+//     decimals       : 18
+//     voucherReceiver: 0x2E833968E5bB786Ae419c4d13189fB081Cc43bab
+//     mintAmount     : 365000000000000000000
+// Then, the calldata for the above function and params is: ba2c329c00000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000120000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000013c9647e25a994000000000000000000000000000000000000000000000000000000000000000000346d61696e6e65742f312f30783133333637333942303543374162386135323644343044434330643034613832366235663842303300000000000000000000000000000000000000000000000000000000000000000000000000000000000000055444726f7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055444524f50000000000000000000000000000000000000000000000000000000
+//
+// Let's break the above calldata into parts, and see what each part represents:
+//
+// ba2c329c // the function selector, i.e mintTNT20VouchersFuncSelector
+// 00000000000000000000000000000000000000000000000000000000000000c0 // offset of the first parameter, i.e denom
+// 0000000000000000000000000000000000000000000000000000000000000120 // offset of the second parameter, i.e name
+// 0000000000000000000000000000000000000000000000000000000000000160 // offset of the third parameter, i.e symbol
+// 0000000000000000000000000000000000000000000000000000000000000012 // decimals, 0x12 = 18
+// 0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab // voucherReceiver, left padded to 32 bytes with zeros
+// 000000000000000000000000000000000000000000000013c9647e25a9940000 // mintAmount, left padded to 32 bytes with zeros, 0x13c9647e25a9940000 = 365000000000000000000
+// 0000000000000000000000000000000000000000000000000000000000000034 // length of the first parameter (i.e. denom), 0x34 = 52 = len("6d61696e6e65742f312f307831333336373339423035433741623861353236443430444343306430346138323662356638423033") / 2
+// 6d61696e6e65742f312f30783133333637333942303543374162386135323644 // denom, right padded to 64 bytes with zeros, where "6d61....3033" is the UTF8-Hex encoding of "mainnet/1/0x1336739B05C7Ab8a526D40DCC0d04a826b5f8B03"
+// 3430444343306430346138323662356638423033000000000000000000000000
+// 0000000000000000000000000000000000000000000000000000000000000005 // length of the second parameter (i.e. name), 0x05 = 5 = len("5444726f70") / 2
+// 5444726f70000000000000000000000000000000000000000000000000000000 // name, right padded to 64 bytes with zeros, where "5444726f70" is the UTF8-Hex encoding of "TDrop"
+// 0000000000000000000000000000000000000000000000000000000000000005 // length of the third parameter (i.e. symbol), 0x05 = 5 = len("5444524f50") / 2
+// 5444524f50000000000000000000000000000000000000000000000000000000 // symbol, right padded to 64 bytes with zeros, where "5444524f50" is the UTF8-Hex encoding of "TDROP"
+//
+// TODO: maybe we can call eth.abi.Pack() to encode the calldata instead of manually doing it?
+func (tb *TNT20TokenBank) encodeCalldata(denom string, name string, symbol string, decimals uint8, voucherReceiver common.Address, mintAmount *big.Int) []byte {
+	denomData, denomWordSize := packStringParam(denom)
+	nameData, nameWordSize := packStringParam(name)
+	symbolData, _ := packStringParam(symbol)
+
+	denomParamOffset := 6 * wordSizeInBytes // 6: the offsets of the three string params, plus decimals, voucherReceiver, and mintAmount that fit into one word
+	nameParamOffset := denomParamOffset + denomWordSize
+	symbolParamOffset := nameParamOffset + nameWordSize
+
+	// the function selector
+	calldata := append([]byte{}, mintTNT20VouchersFuncSelector...)
+
+	// the offsets
+	calldata = append(calldata, packUintParam(denomParamOffset)...)
+	calldata = append(calldata, packUintParam(nameParamOffset)...)
+	calldata = append(calldata, packUintParam(symbolParamOffset)...)
+
+	// the params that can fit into one word
+	calldata = append(calldata, packUintParam(uint(decimals))...)
+	calldata = append(calldata, common.LeftPadBytes(voucherReceiver.Bytes(), int(wordSizeInBytes))...)
+	calldata = append(calldata, common.LeftPadBytes(packBigIntParam(mintAmount), int(wordSizeInBytes))...)
+
+	// rest of the params
+	calldata = append(calldata, denomData...)
+	calldata = append(calldata, nameData...)
+	calldata = append(calldata, symbolData...)
+
+	logger.Debugf("mint TNT20 voucher sctx calldata: %v", hex.EncodeToString(calldata))
+
+	return calldata
 }

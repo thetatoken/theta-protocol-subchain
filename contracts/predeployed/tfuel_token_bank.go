@@ -2,7 +2,7 @@ package predeployed
 
 import (
 	"encoding/hex"
-	"fmt"
+	"math/big"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
@@ -27,21 +27,14 @@ func NewTFuelTokenBank() *TFuelTokenBank {
 
 // Mint vouchers for the token transferred cross-chain. If the voucher contract for the token does not yet exist, the
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
+// Note: mintVouchers() is only allowed in the privileged execution context. Hence, if a user calls the the TFuelTokenBank.mintVouchers() function (e.g. with the following command),
+// the transaction should fail with the "evm revert" error:
+//       thetasubcli tx smart_contract --chain="private_subchain" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=0xBd770416a3345F91E4B34576cb804a576fa48EB1 --gas_price=4000000000000wei --gas_limit=5000000 --data=da837d5a0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000004c53ecdc18a600000 --password=qwertyuiop --seq=2
 func (tb *TFuelTokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTFuelTransferEvent) (*types.SmartContractTx, error) {
 	voucherReceiver := ccte.Receiver
 	amount := ccte.Amount
-	amountHexBytes, err := hex.DecodeString(fmt.Sprintf("%032x", amount))
-	if err != nil {
-		panic(fmt.Sprintf("Failed to encode amount %v: %v", fmt.Sprintf("%x", amount), err)) // should never happen
-	}
 
-	calldata := append([]byte{}, mintTFuelVouchersFuncSelector...)
-	calldata = append(calldata, common.LeftPadBytes(voucherReceiver.Bytes(), 32)...)
-	calldata = append(calldata, common.LeftPadBytes(amountHexBytes, 32)...)
-
-	// calldata example: ba14d6060000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab0000000000000000000000000000000000000000000000000000000000000064
-	logger.Debugf("mint TFuel voucher sctx calldata: %v", hex.EncodeToString(calldata))
-
+	calldata := tb.encodeCalldata(voucherReceiver, amount)
 	tfuelTokenBankContractAddr := view.GetTFuelTokenBankContractAddress()
 	sctx, err := constructProxySmartContractTx(blockProposer, *tfuelTokenBankContractAddr, calldata)
 	if err != nil {
@@ -49,4 +42,20 @@ func (tb *TFuelTokenBank) GenerateMintVouchersProxySctx(blockProposer common.Add
 	}
 
 	return sctx, nil
+}
+
+// calldata example: da837d5a0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000004c53ecdc18a600000
+// Let's break the above calldata into parts, and see what each part represents:
+//
+// da837d5a // the function selector, i.e mintTFuelVouchersFuncSelector
+// 0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab // voucherReceiver, left padded to 32 bytes with zeros
+// 000000000000000000000000000000000000000000000004c53ecdc18a600000 // mintAmount, left padded to 32 bytes with zeros, 0x13c9647e25a9940000 = 88000000000000000000L TFuelWei = 99 TFuel
+func (tb *TFuelTokenBank) encodeCalldata(voucherReceiver common.Address, amount *big.Int) []byte {
+	calldata := append([]byte{}, mintTFuelVouchersFuncSelector...)
+	calldata = append(calldata, common.LeftPadBytes(voucherReceiver.Bytes(), int(wordSizeInBytes))...)
+	calldata = append(calldata, common.LeftPadBytes(packBigIntParam(amount), int(wordSizeInBytes))...)
+
+	logger.Debugf("mint TFuel voucher sctx calldata: %v", hex.EncodeToString(calldata))
+
+	return calldata
 }
