@@ -3,11 +3,15 @@ package predeployed
 import (
 	"math/big"
 
+	log "github.com/sirupsen/logrus"
+
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
 )
 
-func constructProxySmartContractTx(proposerAddr common.Address, smartContractAddress common.Address, callData []byte) (*types.SmartContractTx, error) {
+var logger *log.Entry = log.WithFields(log.Fields{"prefix": "predeployed"})
+
+func constructProxySmartContractTx(proposerAddr common.Address, smartContractAddress common.Address, calldata []byte) (*types.SmartContractTx, error) {
 	from := types.TxInput{
 		Address: proposerAddr,
 		Coins: types.Coins{
@@ -28,7 +32,7 @@ func constructProxySmartContractTx(proposerAddr common.Address, smartContractAdd
 		To:       to,
 		GasLimit: dummyGasLimit,
 		GasPrice: dummyGasPrice,
-		Data:     callData,
+		Data:     calldata,
 	}
 
 	return sctx, nil

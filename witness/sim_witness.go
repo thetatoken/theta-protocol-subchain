@@ -136,7 +136,10 @@ func (mw *SimulatedMainchainWitness) update() {
 	}
 
 	for i := 0; i < 3; i++ {
-		amount := big.NewInt(int64(9999999 + i*1234567))
+		amount, ok := big.NewInt(0).SetString("88000000000000000000", 10) // 88 TFuel
+		if !ok {
+			logger.Panicf("failed to set amount %v", err)
+		}
 		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce, mainchainBlockNumber)
 		mw.crossChainEventCache.Insert(event)
 		// logger.Infof("Inserted Event %v", event)
