@@ -42,22 +42,36 @@ func constructProxySmartContractTx(proposerAddr common.Address, smartContractAdd
 	return sctx, nil
 }
 
+func packAddressParam(param common.Address) []byte {
+	paramBytes := common.LeftPadBytes(param.Bytes(), int(wordSizeInBytes))
+	return paramBytes
+}
+
 func packUintParam(param uint) []byte {
-	paramBytes := common.LeftPadBytes([]byte(fmt.Sprintf("%032x", param)), int(wordSizeInBytes))
+	paramBytes, err := hex.DecodeString(fmt.Sprintf("%064x", param))
+	if err != nil {
+		panic(fmt.Sprintf("Failed to encode uint param %v: %v", fmt.Sprintf("%x", param), err)) // should never happen
+	}
+	paramBytes = common.LeftPadBytes(paramBytes, int(wordSizeInBytes))
 	return paramBytes
 }
 
 func packBigIntParam(param *big.Int) []byte {
-	paramBytes, err := hex.DecodeString(fmt.Sprintf("%032x", param))
+	paramBytes, err := hex.DecodeString(fmt.Sprintf("%064x", param))
 	if err != nil {
 		panic(fmt.Sprintf("Failed to encode *big.Int param %v: %v", fmt.Sprintf("%x", param), err)) // should never happen
 	}
-
+	paramBytes = common.LeftPadBytes(paramBytes, int(wordSizeInBytes))
 	return paramBytes
 }
 
 func packStringParam(param string) ([]byte, uint) {
 	hexParam := hex.EncodeToString([]byte(param))
+	hexParamBytes, err := hex.DecodeString(hexParam)
+	if err != nil {
+		panic(fmt.Sprintf("Failed to encode string param %v: %v", param, err)) // should never happen
+	}
+
 	lenHexStr := uint(len(hexParam) / 2)
 
 	// first pack the length of the string
@@ -67,7 +81,10 @@ func packStringParam(param string) ([]byte, uint) {
 	for i := uint(0); i*wordSizeInBytes < lenHexStr; i++ {
 		start := i * wordSizeInBytes
 		end := (i + 1) * wordSizeInBytes
-		paramBytes = append(paramBytes, common.RightPadBytes([]byte(hexParam[start:end]), int(wordSizeInBytes))...)
+		if end > lenHexStr {
+			end = lenHexStr
+		}
+		paramBytes = append(paramBytes, common.RightPadBytes(hexParamBytes[start:end], int(wordSizeInBytes))...)
 	}
 
 	worldSize := uint(len(paramBytes)) / wordSizeInBytes
@@ -75,5 +92,5 @@ func packStringParam(param string) ([]byte, uint) {
 		worldSize++
 	}
 
-	return paramBytes, uint(worldSize)
+	return paramBytes, uint(worldSize * wordSizeInBytes)
 }

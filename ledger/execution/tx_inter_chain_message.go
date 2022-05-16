@@ -113,7 +113,6 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 	}
 
 	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, proxySctx, view, svm.PreviledgedAccess)
-
 	// TODO: Do we need to increase the sequence number of the proposer?
 
 	// TODO: Add tx receipt: status and events

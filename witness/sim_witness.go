@@ -135,6 +135,7 @@ func (mw *SimulatedMainchainWitness) update() {
 		logger.Infof("updated the witnessed dynasty to %v", dynasty)
 	}
 
+	// TFuel cross-chain transfers
 	for i := 0; i < 3; i++ {
 		amount, ok := big.NewInt(0).SetString("88000000000000000000", 10) // 88 TFuel
 		if !ok {
@@ -145,6 +146,27 @@ func (mw *SimulatedMainchainWitness) update() {
 		// logger.Infof("Inserted Event %v", event)
 		mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
 	}
+
+	// TNT20 cross-chain transfers
+	amount, ok := big.NewInt(0).SetString("66000000000000000000", 10) // 66 TDROP
+	if !ok {
+		logger.Panicf("failed to set amount %v", err)
+	}
+	event := mw.generateInterChainEventForTNT20Transfer(
+		common.HexToAddress("0x1336739B05C7Ab8a526D40DCC0d04a826b5f8B03"), "TDrop", "TDROP", 18, amount,
+		mw.lastSimEventNonce, mainchainBlockNumber)
+	mw.crossChainEventCache.Insert(event)
+	mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
+
+	amount, ok = big.NewInt(0).SetString("9999999", 10)
+	if !ok {
+		logger.Panicf("failed to set amount %v", err)
+	}
+	event = mw.generateInterChainEventForTNT20Transfer(
+		common.HexToAddress("0x15cc4c3f21417c392119054c8fe5895146e1a493"), "Random Token", "RTK", 6, amount,
+		mw.lastSimEventNonce, mainchainBlockNumber)
+	mw.crossChainEventCache.Insert(event)
+	mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
 }
 
 func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -182,6 +204,32 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 
 	event := &score.InterChainMessageEvent{
 		Type:        score.IMCEventTypeCrossChainTFuelTransfer,
+		Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Data:        data,
+		Nonce:       nonce,
+		BlockNumber: mainchainBlockNumber,
+	}
+
+	return event
+}
+
+func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tokenSourceAddress common.Address,
+	tokenName string, tokenSymbol string, tokenDecimals uint8, tokenAmount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
+	tnt20Denom := score.TNT20Denom("mainnet", tokenSourceAddress)
+	data, err := rlp.EncodeToBytes(score.TNT20TransferMetaData{
+		Denom:    tnt20Denom,
+		Name:     tokenName,
+		Symbol:   tokenSymbol,
+		Decimals: tokenDecimals,
+		Amount:   tokenAmount,
+	})
+	if err != nil {
+		logger.Panicf("failed to get encode inter-chain message event data for TNT20 token transfer: %v", err)
+	}
+
+	event := &score.InterChainMessageEvent{
+		Type:        score.IMCEventTypeCrossChainTNT20Transfer,
 		Sender:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		Receiver:    common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		Data:        data,

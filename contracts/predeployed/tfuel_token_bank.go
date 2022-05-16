@@ -52,8 +52,11 @@ func (tb *TFuelTokenBank) GenerateMintVouchersProxySctx(blockProposer common.Add
 // 000000000000000000000000000000000000000000000004c53ecdc18a600000 // mintAmount, left padded to 32 bytes with zeros, 0x13c9647e25a9940000 = 88000000000000000000L TFuelWei = 99 TFuel
 func (tb *TFuelTokenBank) encodeCalldata(voucherReceiver common.Address, amount *big.Int) []byte {
 	calldata := append([]byte{}, mintTFuelVouchersFuncSelector...)
-	calldata = append(calldata, common.LeftPadBytes(voucherReceiver.Bytes(), int(wordSizeInBytes))...)
-	calldata = append(calldata, common.LeftPadBytes(packBigIntParam(amount), int(wordSizeInBytes))...)
+	calldata = append(calldata, packAddressParam(voucherReceiver)...)
+	calldata = append(calldata, packBigIntParam(amount)...)
+
+	// calldata = append(calldata, common.LeftPadBytes(voucherReceiver.Bytes(), int(wordSizeInBytes))...)
+	// calldata = append(calldata, common.LeftPadBytes(packBigIntParam(amount), int(wordSizeInBytes))...)
 
 	logger.Debugf("mint TFuel voucher sctx calldata: %v", hex.EncodeToString(calldata))
 

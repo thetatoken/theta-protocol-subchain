@@ -76,7 +76,6 @@ func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Add
 // 0000000000000000000000000000000000000000000000000000000000000005 // length of the third parameter (i.e. symbol), 0x05 = 5 = len("5444524f50") / 2
 // 5444524f50000000000000000000000000000000000000000000000000000000 // symbol, right padded to 64 bytes with zeros, where "5444524f50" is the UTF8-Hex encoding of "TDROP"
 //
-// TODO: maybe we can call eth.abi.Pack() to encode the calldata instead of manually doing it?
 func (tb *TNT20TokenBank) encodeCalldata(denom string, name string, symbol string, decimals uint8, voucherReceiver common.Address, mintAmount *big.Int) []byte {
 	denomData, denomWordSize := packStringParam(denom)
 	nameData, nameWordSize := packStringParam(name)
@@ -96,8 +95,8 @@ func (tb *TNT20TokenBank) encodeCalldata(denom string, name string, symbol strin
 
 	// the params that can fit into one word
 	calldata = append(calldata, packUintParam(uint(decimals))...)
-	calldata = append(calldata, common.LeftPadBytes(voucherReceiver.Bytes(), int(wordSizeInBytes))...)
-	calldata = append(calldata, common.LeftPadBytes(packBigIntParam(mintAmount), int(wordSizeInBytes))...)
+	calldata = append(calldata, packAddressParam(voucherReceiver)...)
+	calldata = append(calldata, packBigIntParam(mintAmount)...)
 
 	// rest of the params
 	calldata = append(calldata, denomData...)
