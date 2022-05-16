@@ -321,26 +321,30 @@ type CrossChainTokenType int
 const (
 	CrossChainTokenTypeInvalid CrossChainTokenType = -1
 	CrossChainTokenTypeTFuel   CrossChainTokenType = 0
-	CrossChainTokenTypeTNT20   CrossChainTokenType = 1
-	CrossChainTokenTypeTNT721  CrossChainTokenType = 2
+	CrossChainTokenTypeTNT20   CrossChainTokenType = 20
+	CrossChainTokenTypeTNT721  CrossChainTokenType = 721
 )
 
 const tfuelAddressPlaceholder = "0x0000000000000000000000000000000000000000"
 
 // sourceChainID: the chainID of the chain that the token was originated
 func TFuelDenom(sourceChainID string) string {
-	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTFuel, tfuelAddressPlaceholder)
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTFuel, tfuelAddressPlaceholder)) // normalize to lower case to prevent duplication
 }
 
 func TNT20Denom(sourceChainID string, contractAddress common.Address) string {
-	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT20, strings.ToLower(contractAddress.Hex())) // normalize the address to lower case to prevent duplication
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT20, contractAddress.Hex())) // normalize to lower case to prevent duplication
 }
 
 func TNT721Denom(sourceChainID string, contractAddress common.Address) string {
-	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT721, strings.ToLower(contractAddress.Hex())) // normalize the address to lower case to prevent duplication
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT721, contractAddress.Hex())) // normalize to lower case to prevent duplication
 }
 
 func ValidateDenom(denom string) error {
+	if !isLowerCase(denom) {
+		return fmt.Errorf("invalid denom (must be lower case): %v", denom)
+	}
+
 	parts := strings.Split(denom, "/")
 	if len(parts) != 3 {
 		return fmt.Errorf("invalid denom (incorrect format): %v", denom)
@@ -395,4 +399,8 @@ func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, err
 	}
 
 	return CrossChainTokenType(tokenType), nil
+}
+
+func isLowerCase(str string) bool {
+	return str == strings.ToLower(str)
 }
