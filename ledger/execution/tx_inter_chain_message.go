@@ -113,7 +113,19 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 	}
 
 	evmRet, contractAddr, gasUsed, evmErr := svm.Execute(parentBlockInfo, proxySctx, view, svm.PreviledgedAccess)
+
 	// TODO: Do we need to increase the sequence number of the proposer?
+	proposerAddress := tx.Proposer.Address
+	proposerAccount, success := getInput(view, tx.Proposer)
+	if success.IsError() {
+		logger.Fatalf("Failed to get proposer account: %v", success) // should never happen, since the proposer account must exist
+	}
+
+	createContract := (proxySctx.To.Address == common.Address{})
+	if !createContract { // svm.create() increments the sequence of the from account
+		proposerAccount.Sequence++
+	}
+	view.SetAccount(proposerAddress, proposerAccount)
 
 	// TODO: Add tx receipt: status and events
 	logs := view.PopLogs()

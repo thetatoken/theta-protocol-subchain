@@ -333,11 +333,11 @@ func TFuelDenom(sourceChainID string) string {
 }
 
 func TNT20Denom(sourceChainID string, contractAddress common.Address) string {
-	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT20, contractAddress.Hex())
+	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT20, strings.ToLower(contractAddress.Hex())) // normalize the address to lower case to prevent duplication
 }
 
 func TNT721Denom(sourceChainID string, contractAddress common.Address) string {
-	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT721, contractAddress.Hex())
+	return fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT721, strings.ToLower(contractAddress.Hex())) // normalize the address to lower case to prevent duplication
 }
 
 func ValidateDenom(denom string) error {

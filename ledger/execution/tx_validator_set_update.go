@@ -93,6 +93,12 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	for _, v := range tx.Validators {
 		// AddValidator() sorts the validator set, which ensures the order of the validators is determinstic
 		newValidatorSet.AddValidator(v)
+		validatorAccount := view.GetAccount(v.Address)
+		if validatorAccount == nil {
+			valAcc := types.NewAccount(v.Address)
+			valAcc.LastUpdatedBlockHeight = view.Height()
+			view.SetAccount(v.Address, valAcc)
+		}
 	}
 
 	currentDynasty := view.GetDynasty()

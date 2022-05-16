@@ -760,9 +760,16 @@ func (ledger *Ledger) addCoinbaseTx(view *slst.StoreView, proposer *score.Valida
 // addSubchainValidatorSetUpdateTx adds a validator update transaction
 func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, proposer *score.Validator,
 	newDynasty *big.Int, newValidatorSet *score.ValidatorSet, rawTxs *[]common.Bytes) {
+	proposerAccount := view.GetAccount(proposer.Address)
+	if proposerAccount == nil {
+		// should not happen, since the the validator set update tx shouuld create the propser account if it does not exist
+		logger.Fatalf("Failed to get proposer account: %v", proposer.Address)
+	}
+
 	proposerAddress := proposer.Address
 	proposerTxIn := types.TxInput{
-		Address: proposerAddress,
+		Address:  proposerAddress,
+		Sequence: proposerAccount.Sequence + 1,
 	}
 
 	subchainValidatorSetUpdateTx := &stypes.SubchainValidatorSetUpdateTx{
@@ -790,9 +797,16 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 
 // addInterChainMessageTx adds a cross-chain transaction
 func (ledger *Ledger) addInterChainMessageTx(view *slst.StoreView, proposer *score.Validator, nextInterChainMessageEvent *score.InterChainMessageEvent, rawTxs *[]common.Bytes) {
+	proposerAccount := view.GetAccount(proposer.Address)
+	if proposerAccount == nil {
+		// should not happen, since the the validator set update tx shouuld create the propser account if it does not exist
+		logger.Fatalf("Failed to get proposer account: %v", proposer.Address)
+	}
+
 	proposerAddress := proposer.Address
 	proposerTxIn := types.TxInput{
-		Address: proposerAddress,
+		Address:  proposerAddress,
+		Sequence: proposerAccount.Sequence + 1,
 	}
 
 	crossChainTransferTx := &stypes.InterChainMessageTx{

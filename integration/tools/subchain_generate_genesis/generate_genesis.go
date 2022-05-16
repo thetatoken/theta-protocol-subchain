@@ -136,6 +136,8 @@ func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint6
 		}
 		validator := score.NewValidator(v.Address, stake)
 		validatorSet.AddValidator(validator)
+
+		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
 	}
 
 	sv.UpdateValidatorSet(validatorSet)
@@ -146,6 +148,19 @@ func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint6
 	sv.Save()
 
 	return validatorSet
+}
+
+func setInitialBalance(sv *slst.StoreView, address common.Address, tfuelBalance *big.Int) {
+	acc := &types.Account{
+		Address:  address,
+		Root:     common.Hash{},
+		CodeHash: types.EmptyCodeHash,
+		Balance: types.Coins{
+			ThetaWei: big.NewInt(0),
+			TFuelWei: tfuelBalance,
+		},
+	}
+	sv.SetAccount(acc.Address, acc)
 }
 
 func setInitalEventNonce(sv *slst.StoreView) *big.Int {
