@@ -182,10 +182,12 @@ func deployInitialSmartContracts(chainID string, sv *slst.StoreView) {
 	contractBytecodes := []string{
 		predeployed.TFuelTokenBankContractBytecode,
 		predeployed.TNT20TokenBankContractBytecode,
+		predeployed.TNT721TokenBankContractBytecode,
 	}
 	contractAddressKeys := []common.Bytes{
 		slst.TFuelTokenBankContractAddressKey(),
 		slst.TNT20TokenBankContractAddressKey(),
+		slst.TNT721TokenBankContractAddressKey(),
 	}
 
 	for sequence, contractBytecode := range contractBytecodes {
@@ -306,6 +308,12 @@ func sanityChecks(sv *slst.StoreView) error {
 		panic("TNT20 token bank contract is not set")
 	}
 	logger.Infof("TNT20 Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
+
+	tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
+	if tnt721TokenBankContractAddr == nil {
+		panic("TNT721 token bank contract is not set")
+	}
+	logger.Infof("TNT721 Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
 
 	logger.Infof("------------------------------------------------------------------------------")
 

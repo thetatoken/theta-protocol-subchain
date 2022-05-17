@@ -417,7 +417,7 @@ func (c *mintTFuel) Run(evm *EVM, input []byte, callerAddr common.Address) ([]by
 // burnTFuel burns TFuel for a given smart contract account. Note that this precomplied contract does NOT
 // need a current execution context with previledge access. A smart contract method that calls burnTFuel
 // will deduct the specificed amount of TFuel from the contract's TFuel balance. The access control model
-// is similar to TFuel transfer. It is up to the smart contract logic ensure that the caller has the previledge
+// is similar to TFuel transfer. It is up to the smart contract logic ensure that the caller has the right
 // to burn the TFuel balance.
 type burnTFuel struct {
 }

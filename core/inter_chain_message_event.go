@@ -314,6 +314,50 @@ func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	return ccatEvent, nil
 }
 
+// Cross-Chain TNT721 Transfer
+
+type TNT721TransferMetaData struct {
+	Denom    string
+	Name     string
+	Symbol   string
+	TokenID  *big.Int
+	TokenURI string
+}
+
+type CrossChainTNT721TransferEvent struct {
+	Sender      common.Address
+	Receiver    common.Address
+	Denom       string
+	Name        string
+	Symbol      string
+	TokenID     *big.Int
+	TokenURI    string
+	Nonce       *big.Int
+	BlockNumber *big.Int
+}
+
+func NewCrossChainTNT721TransferEvent(sender common.Address, receiver common.Address, denom string,
+	name string, symbol string, tokenID *big.Int, tokenURI string, nonce *big.Int, blockNumber *big.Int) *CrossChainTNT721TransferEvent {
+	return &CrossChainTNT721TransferEvent{sender, receiver, denom, name, symbol, tokenID, tokenURI, nonce, blockNumber}
+}
+
+func ParseToCrossChainTNT721TransferEvent(icme *InterChainMessageEvent) (*CrossChainTNT721TransferEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainTNT721Transfer {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var tma TNT721TransferMetaData
+	if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
+		return nil, err
+	}
+	if err := ValidateDenom(tma.Denom); err != nil {
+		return nil, err
+	}
+
+	ccatEvent := NewCrossChainTNT721TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.TokenID, tma.TokenURI, icme.Nonce, icme.BlockNumber)
+	return ccatEvent, nil
+}
+
 // ------------------------------------ Denom Utils ----------------------------------------------
 
 type CrossChainTokenType int

@@ -27,7 +27,7 @@ func NewTNT20TokenBank() *TNT20TokenBank {
 
 // Mint vouchers for the token transferred cross-chain. If the voucher contract for the token does not yet exist, the
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
-// Note: if a user calls the the TFuelTokenBank.mintVouchers() function (e.g. with the following command), the transaction should fail with the "evm revert" error.
+// Note: if a user calls the the TNT20TokenBank.mintVouchers() function (e.g. with the following command), the transaction should fail with the "evm revert" error.
 //       This is because mintVouchers() is only allowed in the privileged execution context
 //       thetasubcli tx smart_contract --chain="private_subchain" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=0x5a443704dd4B594B382c22a083e2BD3090A6feF3 --gas_price=4000000000000wei --gas_limit=5000000 --data=ba2c329c00000000000000000000000000000000000000000000000000000000000000c00000000000000000000000000000000000000000000000000000000000000120000000000000000000000000000000000000000000000000000000000000016000000000000000000000000000000000000000000000000000000000000000120000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000013c9647e25a994000000000000000000000000000000000000000000000000000000000000000000346d61696e6e65742f312f30783133333637333942303543374162386135323644343044434330643034613832366235663842303300000000000000000000000000000000000000000000000000000000000000000000000000000000000000055444726f7000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000055444524f50000000000000000000000000000000000000000000000000000000 --password=qwertyuiop --seq=2
 func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT20TransferEvent) (*types.SmartContractTx, error) {
@@ -77,13 +77,13 @@ func (tb *TNT20TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Add
 // 5444524f50000000000000000000000000000000000000000000000000000000 // symbol, right padded to 64 bytes with zeros, where "5444524f50" is the UTF8-Hex encoding of "TDROP"
 //
 func (tb *TNT20TokenBank) encodeCalldata(denom string, name string, symbol string, decimals uint8, voucherReceiver common.Address, mintAmount *big.Int) []byte {
-	denomData, denomWordSize := packStringParam(denom)
-	nameData, nameWordSize := packStringParam(name)
+	denomData, denomSize := packStringParam(denom)
+	nameData, nameSize := packStringParam(name)
 	symbolData, _ := packStringParam(symbol)
 
 	denomParamOffset := 6 * wordSizeInBytes // 6: the offsets of the three string params, plus decimals, voucherReceiver, and mintAmount that fit into one word
-	nameParamOffset := denomParamOffset + denomWordSize
-	symbolParamOffset := nameParamOffset + nameWordSize
+	nameParamOffset := denomParamOffset + denomSize
+	symbolParamOffset := nameParamOffset + nameSize
 
 	// the function selector
 	calldata := append([]byte{}, mintTNT20VouchersFuncSelector...)
