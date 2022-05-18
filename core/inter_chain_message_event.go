@@ -97,6 +97,7 @@ func (c *InterChainMessageEvent) EncodeRLP(w io.Writer) error {
 	}
 	return rlp.Encode(w, []interface{}{
 		c.Type,
+		c.SourceChainID,
 		c.Sender,
 		c.Receiver,
 		c.Data,
@@ -118,6 +119,13 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 		return err
 	}
 	c.Type = eventType
+
+	sourceChainID := ""
+	err = stream.Decode(&sourceChainID)
+	if err != nil {
+		return err
+	}
+	c.SourceChainID = sourceChainID
 
 	sender := &common.Address{}
 	err = stream.Decode(sender)

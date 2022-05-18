@@ -276,7 +276,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(to
 	}
 
 	event := &score.InterChainMessageEvent{
-		Type:          score.IMCEventTypeCrossChainTNT20Transfer,
+		Type:          score.IMCEventTypeCrossChainTNT721Transfer,
 		SourceChainID: core.MainnetChainID,
 		Sender:        common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		Receiver:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),

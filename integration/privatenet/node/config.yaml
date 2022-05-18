@@ -1,7 +1,7 @@
 # Theta configuration
 # chainID: private_subchain
 genesis:
-  hash: "0xe47f76873fb2ce5af484edf5404eb4200376a13bdf44b44f78c5918d188bade1"
+  hash: "0xb233b8888f0aef568b4cc009c2f26a792ab3d642227ec910b362eabd267ab505"
 p2p:
   port: 12100
 rpc:

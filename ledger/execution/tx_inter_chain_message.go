@@ -150,6 +150,8 @@ func (exec *InterChainMessageTxExecutor) constructProxySctx(view *slst.StoreView
 		proxySctx, err = interchain.ConstructMintTFuelVoucherProxySctx(tx.Proposer.Address, view, &tx.Event)
 	case score.IMCEventTypeCrossChainTNT20Transfer:
 		proxySctx, err = interchain.ConstructMintTNT20VoucherProxySctx(tx.Proposer.Address, view, &tx.Event)
+	case score.IMCEventTypeCrossChainTNT721Transfer:
+		proxySctx, err = interchain.ConstructMintTNT721VoucherProxySctx(tx.Proposer.Address, view, &tx.Event)
 	default:
 		return nil, fmt.Errorf("unsupported event type: %v", eventType)
 	}
