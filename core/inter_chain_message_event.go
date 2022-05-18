@@ -35,18 +35,19 @@ const (
 
 // InterChainMessageEvent contains the public information of a crosschain transfer event.
 type InterChainMessageEvent struct {
-	Type        InterChainMessageEventType
-	Sender      common.Address
-	Receiver    common.Address
-	Data        common.Bytes // generic data field that can be used to encode arbitrary data for inter-chain messaging
-	Nonce       *big.Int
-	BlockNumber *big.Int
+	Type          InterChainMessageEventType
+	SourceChainID string
+	Sender        common.Address
+	Receiver      common.Address
+	Data          common.Bytes // generic data field that can be used to encode arbitrary data for inter-chain messaging
+	Nonce         *big.Int
+	BlockNumber   *big.Int
 }
 
 // NewInterChainMessageEvent creates a new crosschain transfer event instance.
-func NewInterChainMessageEvent(eventType InterChainMessageEventType, sender common.Address, receiver common.Address,
+func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChainID string, sender common.Address, receiver common.Address,
 	data common.Bytes, amount *big.Int, nonce *big.Int, blockNumber *big.Int) InterChainMessageEvent {
-	return InterChainMessageEvent{eventType, sender, receiver, data, nonce, blockNumber}
+	return InterChainMessageEvent{eventType, sourceChainID, sender, receiver, data, nonce, blockNumber}
 }
 
 // ID returns the ID of the crosschain transfer event, which is the string representation of its address.
@@ -76,8 +77,8 @@ func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 
 // String represents the string representation of the validator
 func (c *InterChainMessageEvent) String() string {
-	return fmt.Sprintf("{ID: %v, Type: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockNumber: %v}",
-		c.ID(), c.Type, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockNumber.String())
+	return fmt.Sprintf("{ID: %v, Type: %v, SourceChainID: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockNumber: %v}",
+		c.ID(), c.Type, c.SourceChainID, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockNumber.String())
 }
 
 // ByID implements sort.Interface for InterChainMessageEvent based on ID (Nonce).
@@ -265,6 +266,13 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	if err := ValidateDenom(tma.Denom); err != nil {
 		return nil, err
 	}
+	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(tma.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID != extractedSourceChainID {
+		return nil, fmt.Errorf("source chain ID mismatch for TFuel transfer: %v vs %v", icme.SourceChainID, extractedSourceChainID)
+	}
 
 	ccatEvent := NewCrossChainTFuelTransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Amount, icme.Nonce, icme.BlockNumber)
 	return ccatEvent, nil
@@ -309,6 +317,13 @@ func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	if err := ValidateDenom(tma.Denom); err != nil {
 		return nil, err
 	}
+	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(tma.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID != extractedSourceChainID {
+		return nil, fmt.Errorf("source chain ID mismatch for TNT20 transfer: %v vs %v", icme.SourceChainID, extractedSourceChainID)
+	}
 
 	ccatEvent := NewCrossChainTNT20TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.Decimals, tma.Amount, icme.Nonce, icme.BlockNumber)
 	return ccatEvent, nil
@@ -352,6 +367,13 @@ func ParseToCrossChainTNT721TransferEvent(icme *InterChainMessageEvent) (*CrossC
 	}
 	if err := ValidateDenom(tma.Denom); err != nil {
 		return nil, err
+	}
+	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(tma.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID != extractedSourceChainID {
+		return nil, fmt.Errorf("source chain ID mismatch for TNT721 transfer: %v vs %v", icme.SourceChainID, extractedSourceChainID)
 	}
 
 	ccatEvent := NewCrossChainTNT721TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.TokenID, tma.TokenURI, icme.Nonce, icme.BlockNumber)

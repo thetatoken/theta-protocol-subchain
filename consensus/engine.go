@@ -1084,15 +1084,15 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 		}).Panic("Failed to get last processed event nonce :")
 	}
 
-	nextEventNonce := big.NewInt(0)
+	var nextEventNonce *big.Int
 	if lastEventNonce == nil {
 		nextEventNonce = big.NewInt(1)
 	} else {
 		nextEventNonce = new(big.Int).Add(lastEventNonce, big.NewInt(1))
 	}
 
-	// next event is not existed yet
-	if isExisted, _ := interChainEventCache.Exists(nextEventNonce); !isExisted {
+	// next event does not exist yet
+	if exists, _ := interChainEventCache.Exists(nextEventNonce); !exists {
 		return big.NewInt(0)
 	}
 

@@ -674,7 +674,9 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 		eventCache := ledger.mainchainWitness.GetInterChainEventCache()
 		for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
 			nextEvent, err := eventCache.Get(nextEventNonce)
-
+			if nextEvent.Nonce.Cmp(nextEventNonce) != 0 { // these two nonces should match
+				logger.Panicf("nonce mismatch for event %v: %v vs %v", nextEvent, nextEvent.Nonce, nextEventNonce) // should not happen
+			}
 			if err != nil {
 				break
 			}
