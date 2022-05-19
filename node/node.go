@@ -54,7 +54,6 @@ type Node struct {
 
 type Params struct {
 	ChainID             string
-	SubchainID          *big.Int
 	GasPriceLimit       *big.Int
 	PrivateKey          *crypto.PrivateKey
 	Root                *score.Block
@@ -80,7 +79,7 @@ func NewNode(params *Params) *Node {
 	// For testing...
 	mainchainWitness := witness.NewSimulatedMainchainWitness(
 		viper.GetString(scom.CfgMainchainAdaptorURL),
-		big.NewInt(viper.GetInt64(scom.CfgSubchainID)),
+		params.ChainID,
 		common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
 		common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
 		interChainEventCache)

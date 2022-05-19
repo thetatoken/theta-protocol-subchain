@@ -18,7 +18,7 @@ const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
 
 // SimulatedMainchainWitness is a simulated mainchain witness for end-to-end testing
 type SimulatedMainchainWitness struct {
-	subchainID        *big.Int
+	subchainID        string
 	witnessedDynasty  *big.Int
 	validatorSetCache map[string]*score.ValidatorSet
 	updateTicker      *time.Ticker
@@ -37,7 +37,7 @@ type SimulatedMainchainWitness struct {
 // NewSimulatedMainchainWitness creates a new SimulatedMainchainWitness
 func NewSimulatedMainchainWitness(
 	ethClientAddress string,
-	subchainID *big.Int,
+	subchainID string,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
 	crossChainEventCache *score.InterChainEventCache,
@@ -221,15 +221,15 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 		logger.Panicf("failed to get encode inter-chain message event data for TFuel transfer: %v", err)
 	}
 
-	event := &score.InterChainMessageEvent{
-		Type:          score.IMCEventTypeCrossChainTFuelTransfer,
-		SourceChainID: core.MainnetChainID,
-		Sender:        common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Receiver:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Data:          data,
-		Nonce:         nonce,
-		BlockNumber:   mainchainBlockNumber,
-	}
+	event := score.NewInterChainMessageEvent(
+		score.IMCEventTypeCrossChainTFuelTransfer,
+		core.MainnetChainID,
+		mw.subchainID,
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		data,
+		nonce,
+		mainchainBlockNumber)
 
 	return event
 }
@@ -248,15 +248,15 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tok
 		logger.Panicf("failed to get encode inter-chain message event data for TNT20 token transfer: %v", err)
 	}
 
-	event := &score.InterChainMessageEvent{
-		Type:          score.IMCEventTypeCrossChainTNT20Transfer,
-		SourceChainID: core.MainnetChainID,
-		Sender:        common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Receiver:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Data:          data,
-		Nonce:         nonce,
-		BlockNumber:   mainchainBlockNumber,
-	}
+	event := score.NewInterChainMessageEvent(
+		score.IMCEventTypeCrossChainTNT20Transfer,
+		core.MainnetChainID,
+		mw.subchainID,
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		data,
+		nonce,
+		mainchainBlockNumber)
 
 	return event
 }
@@ -275,15 +275,15 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(to
 		logger.Panicf("failed to get encode inter-chain message event data for TNT721 token transfer: %v", err)
 	}
 
-	event := &score.InterChainMessageEvent{
-		Type:          score.IMCEventTypeCrossChainTNT721Transfer,
-		SourceChainID: core.MainnetChainID,
-		Sender:        common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Receiver:      common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Data:          data,
-		Nonce:         nonce,
-		BlockNumber:   mainchainBlockNumber,
-	}
+	event := score.NewInterChainMessageEvent(
+		score.IMCEventTypeCrossChainTNT721Transfer,
+		core.MainnetChainID,
+		mw.subchainID,
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		data,
+		nonce,
+		mainchainBlockNumber)
 
 	return event
 }

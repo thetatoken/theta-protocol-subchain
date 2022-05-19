@@ -37,6 +37,7 @@ const (
 type InterChainMessageEvent struct {
 	Type          InterChainMessageEventType
 	SourceChainID string
+	TargetChainID string
 	Sender        common.Address
 	Receiver      common.Address
 	Data          common.Bytes // generic data field that can be used to encode arbitrary data for inter-chain messaging
@@ -45,9 +46,9 @@ type InterChainMessageEvent struct {
 }
 
 // NewInterChainMessageEvent creates a new crosschain transfer event instance.
-func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChainID string, sender common.Address, receiver common.Address,
-	data common.Bytes, amount *big.Int, nonce *big.Int, blockNumber *big.Int) InterChainMessageEvent {
-	return InterChainMessageEvent{eventType, sourceChainID, sender, receiver, data, nonce, blockNumber}
+func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChainID string, targetChainID string, sender common.Address, receiver common.Address,
+	data common.Bytes, nonce *big.Int, blockNumber *big.Int) *InterChainMessageEvent {
+	return &InterChainMessageEvent{eventType, sourceChainID, targetChainID, sender, receiver, data, nonce, blockNumber}
 }
 
 // ID returns the ID of the crosschain transfer event, which is the string representation of its address.
@@ -57,6 +58,15 @@ func (c *InterChainMessageEvent) ID() *big.Int {
 
 // Equals checks whether the crosschain transfer event is the same as another crosschain transfer event
 func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
+	if c.Type != x.Type {
+		return false
+	}
+	if c.SourceChainID != x.SourceChainID {
+		return false
+	}
+	if c.TargetChainID != x.TargetChainID {
+		return false
+	}
 	if c.Nonce.Cmp(x.Nonce) != 0 {
 		return false
 	}
@@ -77,8 +87,8 @@ func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 
 // String represents the string representation of the validator
 func (c *InterChainMessageEvent) String() string {
-	return fmt.Sprintf("{ID: %v, Type: %v, SourceChainID: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockNumber: %v}",
-		c.ID(), c.Type, c.SourceChainID, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockNumber.String())
+	return fmt.Sprintf("{ID: %v, Type: %v, SourceChainID: %v, TargetChainID: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockNumber: %v}",
+		c.ID(), c.Type, c.SourceChainID, c.TargetChainID, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockNumber.String())
 }
 
 // ByID implements sort.Interface for InterChainMessageEvent based on ID (Nonce).
@@ -98,6 +108,7 @@ func (c *InterChainMessageEvent) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		c.Type,
 		c.SourceChainID,
+		c.TargetChainID,
 		c.Sender,
 		c.Receiver,
 		c.Data,
@@ -126,6 +137,12 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 		return err
 	}
 	c.SourceChainID = sourceChainID
+
+	targetChainID := ""
+	err = stream.Decode(&targetChainID)
+	if err != nil {
+		return err
+	}
 
 	sender := &common.Address{}
 	err = stream.Decode(sender)
@@ -286,6 +303,11 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	return ccatEvent, nil
 }
 
+func (cct *CrossChainTFuelTransferEvent) IsVoucherBurn(selfChainID string) (bool, error) {
+	isVoucherBurn, err := isVoucherBurn(selfChainID, cct.Denom)
+	return isVoucherBurn, err
+}
+
 // Cross-Chain TNT20 Transfer
 
 type TNT20TransferMetaData struct {
@@ -337,6 +359,11 @@ func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	return ccatEvent, nil
 }
 
+func (cct *CrossChainTNT20TransferEvent) IsVoucherBurn(selfChainID string) (bool, error) {
+	isVoucherBurn, err := isVoucherBurn(selfChainID, cct.Denom)
+	return isVoucherBurn, err
+}
+
 // Cross-Chain TNT721 Transfer
 
 type TNT721TransferMetaData struct {
@@ -386,6 +413,11 @@ func ParseToCrossChainTNT721TransferEvent(icme *InterChainMessageEvent) (*CrossC
 
 	ccatEvent := NewCrossChainTNT721TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.TokenID, tma.TokenURI, icme.Nonce, icme.BlockNumber)
 	return ccatEvent, nil
+}
+
+func (cct *CrossChainTNT721TransferEvent) IsVoucherBurn(selfChainID string) (bool, error) {
+	isVoucherBurn, err := isVoucherBurn(selfChainID, cct.Denom)
+	return isVoucherBurn, err
 }
 
 // ------------------------------------ Denom Utils ----------------------------------------------
@@ -477,4 +509,13 @@ func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, err
 
 func isLowerCase(str string) bool {
 	return str == strings.ToLower(str)
+}
+
+func isVoucherBurn(selfChainID string, denom string) (bool, error) {
+	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(denom)
+	if err != nil {
+		return false, err
+	}
+	isVoucherBurn := (extractedSourceChainID != selfChainID)
+	return isVoucherBurn, nil
 }
