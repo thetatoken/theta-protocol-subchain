@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/thetatoken/theta/crypto"
+	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 
 	scom "github.com/thetatoken/thetasubchain/common"
 	"github.com/thetatoken/thetasubchain/consensus"
@@ -148,26 +149,26 @@ func (oc *SimulatedOrchestrator) mainloop(ctx context.Context) {
 	}
 }
 
-// func (oc *SimulatedOrchestrator) buildTxOpts() *bind.TransactOpts {
-// 	gasPrice, err := oc.client.SuggestGasPrice(context.Background())
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	nonce, err := oc.client.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, oc.mainChainID)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	txOpts.Nonce = big.NewInt(int64(nonce))
-// 	txOpts.Value = big.NewInt(0)       // in wei
-// 	txOpts.GasLimit = uint64(10000000) // in units
-// 	txOpts.GasPrice = gasPrice
+func (oc *SimulatedOrchestrator) buildTxOpts() *bind.TransactOpts {
+	gasPrice, err := oc.client.SuggestGasPrice(context.Background())
+	if err != nil {
+		logger.Fatal(err)
+	}
+	nonce, err := oc.client.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
+	if err != nil {
+		logger.Fatal(err)
+	}
+	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, oc.mainChainID)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	txOpts.Nonce = big.NewInt(int64(nonce))
+	txOpts.Value = big.NewInt(0)       // in wei
+	txOpts.GasLimit = uint64(10000000) // in units
+	txOpts.GasPrice = gasPrice
 
-// 	return txOpts
-// }
+	return txOpts
+}
 
 func (oc *SimulatedOrchestrator) GetMainchainBlockNumber() (*big.Int, error) {
 	blockNumber := int64((time.Since(oc.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
