@@ -28,9 +28,15 @@ type InterChainMessageEventType uint64
 
 const (
 	IMCEventTypeUnknown                  InterChainMessageEventType = 0
+	IMCEventTypeCrossChainTransfer       InterChainMessageEventType = 1
 	IMCEventTypeCrossChainTFuelTransfer  InterChainMessageEventType = 10001
 	IMCEventTypeCrossChainTNT20Transfer  InterChainMessageEventType = 10002
 	IMCEventTypeCrossChainTNT721Transfer InterChainMessageEventType = 10003
+
+	IMCEventTypeVoucherBurn       InterChainMessageEventType = 2
+	IMCEventTypeVoucherBurnTFuel  InterChainMessageEventType = 20001
+	IMCEventTypeVoucherBurnTNT20  InterChainMessageEventType = 20002
+	IMCEventTypeVoucherBurnTNT721 InterChainMessageEventType = 20003
 )
 
 // InterChainMessageEvent contains the public information of a crosschain transfer event.
@@ -54,6 +60,10 @@ func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChain
 // ID returns the ID of the crosschain transfer event, which is the string representation of its address.
 func (c *InterChainMessageEvent) ID() *big.Int {
 	return c.Nonce
+}
+
+func (c *InterChainMessageEvent) NewID() string {
+	return strconv.FormatUint(uint64(c.Type), 10) + "/" + c.Nonce.String()
 }
 
 // Equals checks whether the crosschain transfer event is the same as another crosschain transfer event
@@ -196,6 +206,30 @@ func InterChainEventIndexKey(nonce *big.Int) common.Bytes {
 	return common.Bytes("ice/" + nonce.String())
 }
 
+// InterChainEventIndexKey constructs the DB key for the given block hash.
+func InterChainEventIndexKeyNew(ICMEtype InterChainMessageEventType, nonce *big.Int) common.Bytes {
+	return common.Bytes("ice/" + strconv.FormatUint(uint64(ICMEtype), 10) + "/" + nonce.String())
+}
+
+func LastQueryedHeightKey(ICMEtype InterChainMessageEventType) common.Bytes {
+	switch ICMEtype {
+	case IMCEventTypeCrossChainTransfer:
+		return common.Bytes("tlq")
+	case IMCEventTypeVoucherBurn:
+		return common.Bytes("vblq")
+	default:
+		return nil
+	}
+}
+
+func LastProcessedUnfinalizedVoucherBurnNonceKey(ICMEtype InterChainMessageEventType) common.Bytes {
+	return common.Bytes("vblp" + strconv.FormatUint(uint64(ICMEtype), 10))
+}
+
+func VoucherBurnStatusInfoKey(ICMEtype InterChainMessageEventType, nonce *big.Int) common.Bytes {
+	return common.Bytes("vbsi" + strconv.FormatUint(uint64(ICMEtype), 10) + "/" + nonce.String())
+}
+
 type InterChainEventCache struct {
 	mutex *sync.Mutex // mutex to for concurrency protection, e.g., the witness thread and consensus thread may access it concurrently
 	db    database.Database
@@ -254,6 +288,173 @@ func (c *InterChainEventCache) Exists(nonce *big.Int) (bool, error) {
 	}
 
 	return false, err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) InsertNew(event *InterChainMessageEvent) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	store := kvstore.NewKVStore(c.db)
+	err := store.Put(InterChainEventIndexKeyNew(event.Type, event.Nonce), event)
+	return err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) DeleteNew(IMCEtype InterChainMessageEventType, nonce *big.Int) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	store := kvstore.NewKVStore(c.db)
+	err := store.Delete(InterChainEventIndexKeyNew(IMCEtype, nonce))
+	return err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) GetNew(IMCEtype InterChainMessageEventType, nonce *big.Int) (*InterChainMessageEvent, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	event := InterChainMessageEvent{}
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(InterChainEventIndexKeyNew(IMCEtype, nonce), &event)
+	return &event, err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) ExistsNew(IMCEtype InterChainMessageEventType, nonce *big.Int) (bool, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	event := InterChainMessageEvent{}
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(InterChainEventIndexKeyNew(IMCEtype, nonce), &event)
+	if err == nil {
+		return true, nil
+	}
+
+	if err == ts.ErrKeyNotFound {
+		return false, nil
+	}
+
+	return false, err // the caller should handle the error
+}
+
+// ------------------------------------ Getters and Setters for utility values --------------------------------------------
+
+func (c *InterChainEventCache) GetLastQueryedHeightForType(ICMEtype InterChainMessageEventType) (*big.Int, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	height := big.NewInt(0)
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(LastQueryedHeightKey(ICMEtype), &height)
+	if err == nil {
+		return height, nil
+	}
+	return big.NewInt(0), err
+}
+
+func (c *InterChainEventCache) SetLastQueryedHeightForType(height *big.Int, ICMEtype InterChainMessageEventType) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	store := kvstore.NewKVStore(c.db)
+	err := store.Put(LastQueryedHeightKey(ICMEtype), height)
+	return err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) GetLastProcessedUnfinalizedVoucherBurnNonce(ICMEtype InterChainMessageEventType) (*big.Int, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	nonce := big.NewInt(0)
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(LastProcessedUnfinalizedVoucherBurnNonceKey(ICMEtype), &nonce)
+	return nonce, err
+}
+
+func (c *InterChainEventCache) SetLastProcessedUnfinalizedVoucherBurnNonce(nonce *big.Int, ICMEtype InterChainMessageEventType) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	store := kvstore.NewKVStore(c.db)
+	err := store.Put(LastProcessedUnfinalizedVoucherBurnNonceKey(ICMEtype), nonce)
+	return err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) GetVoucherBurnNonceStatus(ICMEtype InterChainMessageEventType, nonce *big.Int) (*VoucherBurnEventStatusInfo, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	statusInfo := VoucherBurnEventStatusInfo{}
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(VoucherBurnStatusInfoKey(ICMEtype, nonce), &statusInfo)
+	return &statusInfo, err
+}
+
+func (c *InterChainEventCache) SetVoucherBurnNonceStatus(statusInfo *VoucherBurnEventStatusInfo) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	store := kvstore.NewKVStore(c.db)
+	err := store.Put(VoucherBurnStatusInfoKey(statusInfo.Type, statusInfo.Nonce), statusInfo)
+	return err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) VoucherBurnNonceStatusExists(IMCEtype InterChainMessageEventType, nonce *big.Int) (bool, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	event := InterChainMessageEvent{}
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(VoucherBurnStatusInfoKey(IMCEtype, nonce), &event)
+	if err == nil {
+		return true, nil
+	}
+
+	if err == ts.ErrKeyNotFound {
+		return false, nil
+	}
+
+	return false, err // the caller should handle the error
+}
+
+// ------------------------------------ Cross-Chain Voucher Burn --------------------------------------------
+type VoucherBurnEventStatus byte
+
+const (
+	VoucherBurnEventStatusPending VoucherBurnEventStatus = VoucherBurnEventStatus(iota)
+	VoucherBurnEventStatusProcessed
+	VoucherBurnEventStatusFinalized
+	VoucherBurnEventStatusFailed
+)
+
+type VoucherBurnEventStatusInfo struct {
+	Type                     InterChainMessageEventType
+	Nonce                    *big.Int
+	Status                   VoucherBurnEventStatus
+	LastProcessedBlockHeight *big.Int
+	RetriedTime              uint
+}
+
+type VoucherBurnData struct {
+	SubchainID  *big.Int
+	Dynasty     *big.Int
+	TxHash      common.Hash
+	Denom       string
+	Receiver    common.Address
+	Amount      *big.Int
+	TFuelAmount *big.Int
+}
+
+type TfuelVoucherBurnMetaData struct {
+	TxHash common.Hash
+	Denom  string
+	Amount *big.Int
+}
+
+type TNT20VoucherBurnMetaData struct {
+	TxHash  common.Hash
+	Denom   string
+	Amount  *big.Int
+	TokenId *big.Int
 }
 
 // ------------------------------------ Cross-Chain Asset Transfer --------------------------------------------
