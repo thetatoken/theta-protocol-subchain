@@ -91,7 +91,7 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 	}
 
 	eventCache := exec.mainchainWitness.GetInterChainEventCache()
-	witnessedEvent, err := eventCache.Get(icmNonce)
+	witnessedEvent, err := eventCache.Get(tx.Event.Type, icmNonce)
 	if err != nil || witnessedEvent == nil {
 		return common.Hash{}, result.UndecidedWith(result.Info{"event not seen yet": tx.Event, "err": err}) // not seen on mainchain yet
 	}

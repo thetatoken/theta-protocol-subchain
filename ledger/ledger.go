@@ -262,7 +262,7 @@ func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res re
 
 // ProposeBlockTxs collects and executes a list of transactions, which will be used to assemble the next blockl
 // It also clears these transactions from the mempool.
-func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
+func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonceMap map[score.InterChainMessageEventType]*big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
 	// Must always acquire locks in following order to avoid deadlock: mempool, ledger.
 	// Otherwise, could cause deadlock since mempool.InsertTransaction() also first acquires the mempool, and then the ledger lock
 	logger.Debugf("ProposeBlockTxs: Propose block transactions, block.height = %v", block.Height)
@@ -285,7 +285,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 
 	// Add special transactions
 	rawTxCandidates := []common.Bytes{}
-	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonce)
+	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonceMap)
 
 	// Add regular transactions submitted by the clients
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
@@ -640,7 +640,7 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block
-func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) {
+func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonceMap map[score.InterChainMessageEventType]*big.Int) {
 	if block == nil {
 		logger.Warnf("addSpecialTransactions: block is nil")
 		return
@@ -665,26 +665,31 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	}
 
 	// ------- Add inter-chain message transactions ------- //
-	if includeInterChainMessageTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
-		lastEventNonce := view.GetLastProcessedEventNonce()
-		if lastEventNonce == nil {
-			logger.Panic("nil last event nonce")
-		}
-		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
-		eventCache := ledger.mainchainWitness.GetInterChainEventCache()
-		for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
-			nextEvent, err := eventCache.Get(nextEventNonce)
-			if nextEvent.Nonce.Cmp(nextEventNonce) != 0 { // these two nonces should match
-				logger.Panicf("nonce mismatch for event %v: %v vs %v", nextEvent, nextEvent.Nonce, nextEventNonce) // should not happen
+	for IMCEType, includeInterChainMessageTxsTillNonce := range includeInterChainMessageTxsTillNonceMap {
+		IMCEType := IMCEType
+		includeInterChainMessageTxsTillNonce := includeInterChainMessageTxsTillNonce
+		if includeInterChainMessageTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
+			lastEventNonce := view.GetLastProcessedEventNonce()
+			if lastEventNonce == nil {
+				logger.Panic("nil last event nonce")
 			}
-			if err != nil {
-				break
+			nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
+			eventCache := ledger.mainchainWitness.GetInterChainEventCache()
+			for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
+				nextEvent, err := eventCache.Get(IMCEType, nextEventNonce)
+				if nextEvent.Nonce.Cmp(nextEventNonce) != 0 { // these two nonces should match
+					logger.Panicf("nonce mismatch for event %v: %v vs %v", nextEvent, nextEvent.Nonce, nextEventNonce) // should not happen
+				}
+				if err != nil {
+					break
+				}
+				ledger.addInterChainMessageTx(view, &proposer, nextEvent, rawTxs)
+				logger.Debugf("Add special transactions cross-chain event Tx %v", nextEvent)
+				nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 			}
-			ledger.addInterChainMessageTx(view, &proposer, nextEvent, rawTxs)
-			logger.Debugf("Add special transactions cross-chain event Tx %v", nextEvent)
-			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 		}
 	}
+
 }
 
 func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) {

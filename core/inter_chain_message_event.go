@@ -202,13 +202,12 @@ var (
 )
 
 // InterChainEventIndexKey constructs the DB key for the given block hash.
-func InterChainEventIndexKey(nonce *big.Int) common.Bytes {
-	return common.Bytes("ice/" + nonce.String())
+func InterChainEventIndexKey(ICMEtype InterChainMessageEventType, nonce *big.Int) common.Bytes {
+	return common.Bytes("ice/" + strconv.FormatUint(uint64(ICMEtype), 10) + "/" + nonce.String())
 }
 
-// InterChainEventIndexKey constructs the DB key for the given block hash.
-func InterChainEventIndexKeyNew(ICMEtype InterChainMessageEventType, nonce *big.Int) common.Bytes {
-	return common.Bytes("ice/" + strconv.FormatUint(uint64(ICMEtype), 10) + "/" + nonce.String())
+func InterChainTransferEventNextNonceKey(ICMEtype InterChainMessageEventType) common.Bytes {
+	return common.Bytes("ictenn/" + strconv.FormatUint(uint64(ICMEtype), 10))
 }
 
 func LastQueryedHeightKey(ICMEtype InterChainMessageEventType) common.Bytes {
@@ -249,82 +248,36 @@ func (c *InterChainEventCache) Insert(event *InterChainMessageEvent) error {
 	defer c.mutex.Unlock()
 
 	store := kvstore.NewKVStore(c.db)
-	err := store.Put(InterChainEventIndexKey(event.Nonce), event)
+	err := store.Put(InterChainEventIndexKey(event.Type, event.Nonce), event)
 	return err // the caller should handle the error
 }
 
-func (c *InterChainEventCache) Delete(nonce *big.Int) error {
+func (c *InterChainEventCache) Delete(IMCEtype InterChainMessageEventType, nonce *big.Int) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	store := kvstore.NewKVStore(c.db)
-	err := store.Delete(InterChainEventIndexKey(nonce))
+	err := store.Delete(InterChainEventIndexKey(IMCEtype, nonce))
 	return err // the caller should handle the error
 }
 
-func (c *InterChainEventCache) Get(nonce *big.Int) (*InterChainMessageEvent, error) {
+func (c *InterChainEventCache) Get(IMCEtype InterChainMessageEventType, nonce *big.Int) (*InterChainMessageEvent, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	event := InterChainMessageEvent{}
 	store := kvstore.NewKVStore(c.db)
-	err := store.Get(InterChainEventIndexKey(nonce), &event)
+	err := store.Get(InterChainEventIndexKey(IMCEtype, nonce), &event)
 	return &event, err // the caller should handle the error
 }
 
-func (c *InterChainEventCache) Exists(nonce *big.Int) (bool, error) {
+func (c *InterChainEventCache) Exists(IMCEtype InterChainMessageEventType, nonce *big.Int) (bool, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	event := InterChainMessageEvent{}
 	store := kvstore.NewKVStore(c.db)
-	err := store.Get(InterChainEventIndexKey(nonce), &event)
-	if err == nil {
-		return true, nil
-	}
-
-	if err == ts.ErrKeyNotFound {
-		return false, nil
-	}
-
-	return false, err // the caller should handle the error
-}
-
-func (c *InterChainEventCache) InsertNew(event *InterChainMessageEvent) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	store := kvstore.NewKVStore(c.db)
-	err := store.Put(InterChainEventIndexKeyNew(event.Type, event.Nonce), event)
-	return err // the caller should handle the error
-}
-
-func (c *InterChainEventCache) DeleteNew(IMCEtype InterChainMessageEventType, nonce *big.Int) error {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	store := kvstore.NewKVStore(c.db)
-	err := store.Delete(InterChainEventIndexKeyNew(IMCEtype, nonce))
-	return err // the caller should handle the error
-}
-
-func (c *InterChainEventCache) GetNew(IMCEtype InterChainMessageEventType, nonce *big.Int) (*InterChainMessageEvent, error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	event := InterChainMessageEvent{}
-	store := kvstore.NewKVStore(c.db)
-	err := store.Get(InterChainEventIndexKeyNew(IMCEtype, nonce), &event)
-	return &event, err // the caller should handle the error
-}
-
-func (c *InterChainEventCache) ExistsNew(IMCEtype InterChainMessageEventType, nonce *big.Int) (bool, error) {
-	c.mutex.Lock()
-	defer c.mutex.Unlock()
-
-	event := InterChainMessageEvent{}
-	store := kvstore.NewKVStore(c.db)
-	err := store.Get(InterChainEventIndexKeyNew(IMCEtype, nonce), &event)
+	err := store.Get(InterChainEventIndexKey(IMCEtype, nonce), &event)
 	if err == nil {
 		return true, nil
 	}
@@ -351,7 +304,7 @@ func (c *InterChainEventCache) GetLastQueryedHeightForType(ICMEtype InterChainMe
 	return big.NewInt(0), err
 }
 
-func (c *InterChainEventCache) SetLastQueryedHeightForType(height *big.Int, ICMEtype InterChainMessageEventType) error {
+func (c *InterChainEventCache) SetLastQueryedHeightForType(ICMEtype InterChainMessageEventType, height *big.Int) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -370,7 +323,7 @@ func (c *InterChainEventCache) GetLastProcessedUnfinalizedVoucherBurnNonce(ICMEt
 	return nonce, err
 }
 
-func (c *InterChainEventCache) SetLastProcessedUnfinalizedVoucherBurnNonce(nonce *big.Int, ICMEtype InterChainMessageEventType) error {
+func (c *InterChainEventCache) SetLastProcessedUnfinalizedVoucherBurnNonce(ICMEtype InterChainMessageEventType, nonce *big.Int) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
@@ -414,6 +367,25 @@ func (c *InterChainEventCache) VoucherBurnNonceStatusExists(IMCEtype InterChainM
 	}
 
 	return false, err // the caller should handle the error
+}
+
+func (c *InterChainEventCache) GetNextTransferNonceForType(ICMEtype InterChainMessageEventType) (*big.Int, error) {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	nonce := big.NewInt(0)
+	store := kvstore.NewKVStore(c.db)
+	err := store.Get(InterChainTransferEventNextNonceKey(ICMEtype), &nonce)
+	return nonce, err
+}
+
+func (c *InterChainEventCache) SetNextTransferNonceForType(ICMEtype InterChainMessageEventType, nonce *big.Int) error {
+	c.mutex.Lock()
+	defer c.mutex.Unlock()
+
+	store := kvstore.NewKVStore(c.db)
+	err := store.Put(InterChainTransferEventNextNonceKey(ICMEtype), nonce)
+	return err // the caller should handle the error
 }
 
 // ------------------------------------ Cross-Chain Voucher Burn --------------------------------------------

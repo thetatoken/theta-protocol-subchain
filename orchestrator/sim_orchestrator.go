@@ -205,7 +205,7 @@ func (oc *SimulatedOrchestrator) collect() {
 			RetriedTime:              0,
 		}
 		oc.interChainEventCache.SetVoucherBurnNonceStatus(eventStatus)
-		oc.interChainEventCache.InsertNew(&event)
+		oc.interChainEventCache.Insert(&event)
 	}
 	// collect TNT20 Voucher Burn
 	tnt20Events := oc.rpcEventLogQuery(fromBlock, toBlock, oc.tnt20TokenBankContractAddr, oc.interChainEventCache)
@@ -221,13 +221,13 @@ func (oc *SimulatedOrchestrator) collect() {
 			RetriedTime:              0,
 		}
 		oc.interChainEventCache.SetVoucherBurnNonceStatus(eventStatus)
-		oc.interChainEventCache.InsertNew(&event)
+		oc.interChainEventCache.Insert(&event)
 	}
-	oc.interChainEventCache.SetLastQueryedHeightForType(toBlock, score.IMCEventTypeVoucherBurn)
+	oc.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeVoucherBurn, toBlock)
 }
 
 func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
-	voucherBurnTypes := [3]score.InterChainMessageEventType{score.IMCEventTypeVoucherBurnTFuel, score.IMCEventTypeVoucherBurnTNT20, score.IMCEventTypeCrossChainTNT721Transfer}
+	voucherBurnTypes := [3]score.InterChainMessageEventType{score.IMCEventTypeVoucherBurnTFuel, score.IMCEventTypeVoucherBurnTNT20, score.IMCEventTypeVoucherBurnTNT721}
 	for _, IMCEtype := range voucherBurnTypes {
 		IMCEtype := IMCEtype
 		lastNonce, err := oc.interChainEventCache.GetLastProcessedUnfinalizedVoucherBurnNonce(IMCEtype)
@@ -272,7 +272,7 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 					eventStatus.RetriedTime += 1
 					oc.interChainEventCache.SetVoucherBurnNonceStatus(eventStatus)
 					// 获得event
-					event, err := oc.interChainEventCache.GetNew(IMCEtype, indexNonce)
+					event, err := oc.interChainEventCache.Get(IMCEtype, indexNonce)
 					if err != nil {
 						// Should not happen, since we are retrying.
 						logger.Fatal(err)
@@ -281,20 +281,21 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 				}
 			} else if eventStatus.Status == score.VoucherBurnEventStatusPending {
 				// 获得event
-				event, err := oc.interChainEventCache.GetNew(IMCEtype, indexNonce)
+				event, err := oc.interChainEventCache.Get(IMCEtype, indexNonce)
 				if err != nil {
 					// Should not happen, since there is a status.
 					logger.Fatal(err)
 				}
 				eventStatus.LastProcessedBlockHeight = mainchainBlockNumber
 				eventStatus.RetriedTime += 1
+				eventStatus.Status = score.VoucherBurnEventStatusProcessed
 				oc.interChainEventCache.SetVoucherBurnNonceStatus(eventStatus)
 				oc.CallVourcherBurnOnMainchain(event)
 			}
 			indexNonce = new(big.Int).Add(indexNonce, common.Big1)
 		}
 		if lastNonceChanged {
-			oc.interChainEventCache.SetLastProcessedUnfinalizedVoucherBurnNonce(lastNonce, IMCEtype)
+			oc.interChainEventCache.SetLastProcessedUnfinalizedVoucherBurnNonce(IMCEtype, lastNonce)
 		}
 	}
 }
