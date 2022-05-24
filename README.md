@@ -53,7 +53,7 @@ If you need to generate a new genesis snapshot for the single node testnet, plea
 
 ```shell
 cd $SUBCHAIN_HOME/integration/privatenet/node
-subchain_generate_genesis -chainID=private_subchain -initValidatorSet=./data/init_validator_set.json -genesis=./snapshot
+subchain_generate_genesis -chainID=tsub_360777 -initValidatorSet=./data/init_validator_set.json -genesis=./snapshot
 ```
 
 The above commands should print the genesis block hash (see below). Please replace the `genesis.hash` parameter in your `config.yaml` file with the genesis block hash printed.

@@ -40,7 +40,7 @@ type Validator struct {
 //
 // Example:
 // cd $SUBCHAIN_HOME/integration/privatenet/node
-// subchain_generate_genesis -chainID=private_subchain -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
+// subchain_generate_genesis -chainID=tsub_360777 -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
 //
 func main() {
 	chainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
@@ -73,7 +73,7 @@ func main() {
 }
 
 func parseArguments() (chainID, initValidatorSetPath, genesisSnapshotFilePath string) {
-	chainIDPtr := flag.String("chainID", "private_subchain", "the ID of the chain")
+	chainIDPtr := flag.String("chainID", "tsub_360777", "the ID of the chain")
 	initValidatorSetPathPtr := flag.String("initValidatorSet", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
 	flag.Parse()

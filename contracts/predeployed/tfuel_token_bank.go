@@ -29,7 +29,7 @@ func NewTFuelTokenBank() *TFuelTokenBank {
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
 // Note: mintVouchers() is only allowed in the privileged execution context. Hence, if a user calls the the TFuelTokenBank.mintVouchers() function (e.g. with the following command),
 // the transaction should fail with the "evm revert" error:
-//       thetasubcli tx smart_contract --chain="private_subchain" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=0xBd770416a3345F91E4B34576cb804a576fa48EB1 --gas_price=4000000000000wei --gas_limit=5000000 --data=da837d5a0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000004c53ecdc18a600000 --password=qwertyuiop --seq=2
+//       thetasubcli tx smart_contract --chain="tsub_360777" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=0xBd770416a3345F91E4B34576cb804a576fa48EB1 --gas_price=4000000000000wei --gas_limit=5000000 --data=da837d5a0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000004c53ecdc18a600000 --password=qwertyuiop --seq=2
 func (tb *TFuelTokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTFuelTransferEvent) (*types.SmartContractTx, error) {
 	voucherReceiver := ccte.Receiver
 	amount := ccte.Amount
