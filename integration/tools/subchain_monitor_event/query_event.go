@@ -90,12 +90,12 @@ func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 		case score.IMCEventTypeCrossChainTFuelTransfer:
 			var tma score.TfuelTransferMetaData
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
-			contractAbi.UnpackIntoInterface(&tma, "TFeulTokenLocked", h)
+			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 			fmt.Println(tma)
 		case score.IMCEventTypeCrossChainTNT20Transfer:
 			var tma score.TNT20TransferMetaData
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
-			contractAbi.UnpackIntoInterface(&tma, "TFeulTokenLocked", h)
+			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 			fmt.Println(tma)
 		case score.IMCEventTypeCrossChainTNT721Transfer:
 		default:
@@ -121,7 +121,7 @@ func main() {
 	// var tma score.TfuelTransferMetaData
 	// fmt.Println(logData.Data[2:])
 	// contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
-	// contractAbi.UnpackIntoInterface(&tma, "TFeulTokenLocked", h)
+	// contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 	// fmt.Println(tma)
 
 	fbk := flag.Int("fbk", 0, "from block")
