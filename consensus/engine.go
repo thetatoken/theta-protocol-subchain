@@ -1084,11 +1084,15 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 			"tip":           tip,
 		}).Panic("Failed to get last processed event nonce :")
 	}
-	transferTypes := [3]score.InterChainMessageEventType{score.IMCEventTypeCrossChainTFuelTransfer, score.IMCEventTypeCrossChainTNT20Transfer, score.IMCEventTypeCrossChainTNT721Transfer}
 
-	for _, IMCEType := range transferTypes {
-		IMCEType := IMCEType
-		nextEventNonce, _ := interChainEventCache.GetNextTransferNonceForType(IMCEType)
+	transferTypes := [3]score.InterChainMessageEventType{
+		score.IMCEventTypeCrossChainTFuelTransfer,
+		score.IMCEventTypeCrossChainTNT20Transfer,
+		score.IMCEventTypeCrossChainTNT721Transfer,
+	}
+
+	for _, imceType := range transferTypes {
+		nextEventNonce, _ := interChainEventCache.GetNextTransferNonceForType(imceType)
 		if lastEventNonce.Cmp(common.Big0) == 0 {
 			nextEventNonce = big.NewInt(1)
 		} else {
@@ -1096,13 +1100,13 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 		}
 
 		// next event does not exist yet
-		if exists, _ := interChainEventCache.Exists(IMCEType, nextEventNonce); !exists {
+		if exists, _ := interChainEventCache.Exists(imceType, nextEventNonce); !exists {
 			break
 		}
 
 		processTillNonce := big.NewInt(0)
 		for {
-			nextEventToProcess, ok := interChainEventCache.Get(IMCEType, nextEventNonce)
+			nextEventToProcess, ok := interChainEventCache.Get(imceType, nextEventNonce)
 			if ok != nil {
 				e.logger.WithFields(log.Fields{
 					"tip":        tip.Hash().Hex(),
@@ -1127,7 +1131,7 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 			processTillNonce = nextEventNonce
 			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
 		}
-		m[IMCEType] = processTillNonce
+		m[imceType] = processTillNonce
 		e.logger.WithFields(log.Fields{
 			"processTillNonce": processTillNonce,
 		}).Info("Process Till Nonce is : ")
