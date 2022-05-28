@@ -181,25 +181,25 @@ func (mw *MainchainWitness) update() {
 	}
 }
 
-func (mw *MainchainWitness) collectInterChainMessageEvent() {
+func (mw *MainchainWitness) collectInterChainMessageEvents() {
 	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer)
 	if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
 	toBlock, _ := mw.GetMainchainBlockNumber()
-	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(5000)) >= 0 {
-		// the rpc call can only query over 5000 blocks
-		toBlock = new(big.Int).Add(fromBlock, big.NewInt(5000))
+	maxBlockRange := int64(100) // block range query allows at most 5000 blocks, here we intentionally use a smaller range
+	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) >= 0 {
+		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
 	}
 	for _, imceType := range score.TransferTypes {
+		var events []*score.InterChainMessageEvent
 		switch imceType {
 		case score.IMCEventTypeCrossChainTFuelTransfer:
-			events := score.QueryEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType)
-			err = mw.interChainEventCache.InsertList(events)
+			events = score.QueryEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType)
 		case score.IMCEventTypeCrossChainTNT20Transfer:
-			events := score.QueryEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType)
-			err = mw.interChainEventCache.InsertList(events)
+			events = score.QueryEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType)
 		}
+		err = mw.interChainEventCache.InsertList(events)
 		if err != nil { // should not happen
 			logger.Panicf("failed to insert events into cache")
 		}
