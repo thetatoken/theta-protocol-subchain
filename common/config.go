@@ -143,8 +143,11 @@ const (
 	CfgRegisterContractAddress = "subchain.register"
 	// CfgERC20ContractAddress defines the erc20 contract address
 	CfgERC20ContractAddress = "subchain.erc20"
-	// CfgMainchainAdaptorURL defines the URL of the mainchain adaptor
-	CfgMainchainAdaptorURL = "subchain.clientURL"
+	// CfgMainchainEthRpcURL defines the URL of the mainchain ETH RPC adaptor
+	CfgMainchainEthRpcURL = "subchain.mainchainEthRpcURL"
+	// CfgSubchainEthRpcURL defines the URL of the subchain ETH RPC adaptor
+	CfgSubchainEthRpcURL = "subchain.subchainEthRpcURL"
+
 	// CfgSubchainID defines the subchainID
 	CfgSubchainID = "subchain.ID"
 	// CfgSubchainUpdateInterval defines the time interval in millisecond for the subchain to obtain the status update from the main chain
@@ -215,10 +218,11 @@ func init() {
 
 	viper.SetDefault(CfgSubchainUpdateInterval, 1000)
 
+	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
+	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:18889")
 }
 
 // WriteInitialConfig writes initial config file to file system.
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
-

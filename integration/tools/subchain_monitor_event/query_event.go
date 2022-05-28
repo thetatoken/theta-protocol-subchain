@@ -12,6 +12,9 @@ import (
 	"os"
 	"strings"
 
+	scomm "github.com/thetatoken/thetasubchain/common"
+
+	"github.com/spf13/viper"
 	"github.com/thetatoken/theta/common"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
@@ -43,14 +46,14 @@ type TransferEvent struct {
 	Nonce  *big.Int
 }
 
-func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, IMCEType score.InterChainMessageEventType, interChainEveneCache *score.InterChainEventCache) {
-	url := "http://127.0.0.1:18888/rpc"
+func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType score.InterChainMessageEventType, interChainEveneCache *score.InterChainEventCache) {
+	url := viper.GetString(scomm.CfgSubchainEthRpcURL)
 	queryStr := fmt.Sprintf(`{
 		"jsonrpc":"2.0",
 		"method":"eth_getLogs",
 		"params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],
 		"id":74
-	}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), interChainEveneCache.EventSelectors[IMCEType])
+	}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), score.EventSelectors[imceType])
 	fmt.Println(queryStr)
 	var jsonData = []byte(queryStr)
 
@@ -80,10 +83,10 @@ func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.
 	for _, logData := range rpcres.Result {
 		logData := logData
 		h, _ := hex.DecodeString(logData.Data[2:])
-		// if ok, _ := interChainEveneCache.Exists(IMCEType, event.Nonce); ok {
+		// if ok, _ := interChainEveneCache.Exists(imceType, event.Nonce); ok {
 		// 	continue
 		// }
-		switch IMCEType {
+		switch imceType {
 		case score.IMCEventTypeCrossChainTFuelTransfer:
 			var tma score.TfuelTransferMetaData
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
@@ -127,7 +130,7 @@ func main() {
 	flag.Parse()
 	s := score.NewInterChainEventCache(nil)
 	// fmt.Println(s.EventSelectors)
-	rpcEventLogQuery(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0x6BAa295f674339814C6Ed63f7B7bb3a00ee241f8"), score.IMCEventTypeCrossChainTFuelTransfer, s)
+	queryEventLog(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0x6BAa295f674339814C6Ed63f7B7bb3a00ee241f8"), score.IMCEventTypeCrossChainTFuelTransfer, s)
 	// fromBlock := oct(*fbk)
 	// toBlock := oct(*tbk)
 	// contractAddr :=

@@ -192,7 +192,7 @@ func (oc *SimulatedOrchestrator) collect() {
 	toBlock := big.NewInt(int64(oc.engine.GetLastFinalizedBlock().Height))
 	// collect TFuel Voucher Burn
 
-	tfuelEvents := oc.rpcEventLogQuery(fromBlock, toBlock, oc.tfuelTokenBankContractAddr, oc.interChainEventCache)
+	tfuelEvents := oc.queryEventLog(fromBlock, toBlock, oc.tfuelTokenBankContractAddr, oc.interChainEventCache)
 
 	for _, event := range tfuelEvents {
 		event := event
@@ -208,7 +208,7 @@ func (oc *SimulatedOrchestrator) collect() {
 		oc.interChainEventCache.Insert(&event)
 	}
 	// collect TNT20 Voucher Burn
-	tnt20Events := oc.rpcEventLogQuery(fromBlock, toBlock, oc.tnt20TokenBankContractAddr, oc.interChainEventCache)
+	tnt20Events := oc.queryEventLog(fromBlock, toBlock, oc.tnt20TokenBankContractAddr, oc.interChainEventCache)
 
 	for _, event := range tnt20Events {
 		event := event
@@ -299,7 +299,7 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 	}
 }
 
-func (oc *SimulatedOrchestrator) rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
+func (oc *SimulatedOrchestrator) queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
 	return make([]score.InterChainMessageEvent, 1)
 }
 

@@ -191,17 +191,20 @@ func (mw *MainchainWitness) collectInterChainMessageEvent() {
 		// the rpc call can only query over 5000 blocks
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(5000))
 	}
-	for _, IMCEType := range mw.interChainEventCache.TransferTypes {
-		IMCEType := IMCEType
-		switch IMCEType {
+	for _, imceType := range score.TransferTypes {
+		switch imceType {
 		case score.IMCEventTypeCrossChainTFuelTransfer:
-			mw.interChainEventCache.RpcEventLogQuery(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, IMCEType)
+			events := score.QueryEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType)
+			err = mw.interChainEventCache.InsertList(events)
 		case score.IMCEventTypeCrossChainTNT20Transfer:
-			mw.interChainEventCache.RpcEventLogQuery(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, IMCEType)
+			events := score.QueryEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType)
+			err = mw.interChainEventCache.InsertList(events)
+		}
+		if err != nil { // should not happen
+			logger.Panicf("failed to insert events into cache")
 		}
 	}
 	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, toBlock)
-
 }
 
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
