@@ -27,14 +27,16 @@ type MainchainWitness struct {
 	subchainID           *big.Int
 	witnessedDynasty     *big.Int
 	validatorSetCache    map[string]*score.ValidatorSet
-	crossChainEventCache *score.InterChainEventCache
+	interChainEventCache *score.InterChainEventCache
 	client               *ec.Client
 	updateTicker         *time.Ticker
 
-	registerContractAddr common.Address
-	ercContractAddr      common.Address
-	registerContract     *scta.SubchainRegister
-	ercContract          *scta.SubchainERC
+	registerContractAddr        common.Address
+	ercContractAddr             common.Address
+	mainchainTFuelTokenBankAddr common.Address
+	mainchainTNT20TokenBankAddr common.Address
+	registerContract            *scta.SubchainRegister
+	ercContract                 *scta.SubchainERC
 
 	updateInterval int
 
@@ -52,8 +54,10 @@ func NewMainchainWitness(
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
+	mainchainTFuelTokenBankAddr common.Address,
+	mainchainTNT20TokenBankAddr common.Address,
 	updateInterval int,
-	crossChainEventCache *score.InterChainEventCache,
+	interChainEventCache *score.InterChainEventCache,
 ) *MainchainWitness {
 	client, err := ec.Dial(ethClientAddress)
 	if err != nil {
@@ -80,14 +84,16 @@ func NewMainchainWitness(
 		validatorSetCache: make(map[string]*score.ValidatorSet),
 		client:            client,
 
-		registerContractAddr: registerContractAddr,
-		ercContractAddr:      ercContractAddr,
-		registerContract:     subchainRegisterContract,
-		ercContract:          subchainERCContract,
+		registerContractAddr:        registerContractAddr,
+		ercContractAddr:             ercContractAddr,
+		mainchainTFuelTokenBankAddr: mainchainTFuelTokenBankAddr,
+		mainchainTNT20TokenBankAddr: mainchainTNT20TokenBankAddr,
+		registerContract:            subchainRegisterContract,
+		ercContract:                 subchainERCContract,
 
 		updateInterval: updateInterval,
 
-		crossChainEventCache: crossChainEventCache,
+		interChainEventCache: interChainEventCache,
 
 		lastQueryedMainChainHeight: big.NewInt(0),
 
@@ -175,14 +181,27 @@ func (mw *MainchainWitness) update() {
 	}
 }
 
-func (mw *MainchainWitness) collectInterChainMessageEvent() []score.InterChainMessageEvent {
-	fromBlock := mw.lastQueryedMainChainHeight
-	toBlock, err := mw.GetMainchainBlockNumber()
+func (mw *MainchainWitness) collectInterChainMessageEvent() {
+	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer)
 	if err != nil {
-		logger.Warnf("failed to get the mainchain block number %v\n", err)
-		return make([]score.InterChainMessageEvent, 1)
+		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
-	return rpcEventLogQuery(fromBlock, toBlock, mw.registerContractAddr, mw.crossChainEventCache)
+	toBlock, _ := mw.GetMainchainBlockNumber()
+	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(5000)) >= 0 {
+		// the rpc call can only query over 5000 blocks
+		toBlock = new(big.Int).Add(fromBlock, big.NewInt(5000))
+	}
+	for _, IMCEType := range mw.interChainEventCache.TransferTypes {
+		IMCEType := IMCEType
+		switch IMCEType {
+		case score.IMCEventTypeCrossChainTFuelTransfer:
+			mw.interChainEventCache.RpcEventLogQuery(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, IMCEType)
+		case score.IMCEventTypeCrossChainTNT20Transfer:
+			mw.interChainEventCache.RpcEventLogQuery(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, IMCEType)
+		}
+	}
+	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, toBlock)
+
 }
 
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -207,93 +226,5 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 }
 
 func (mw *MainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
-	return mw.crossChainEventCache
-}
-
-type LogData struct {
-	LogIndex         string   `json:"logIndex"`
-	TransactionIndex string   `json:"transactionIndex"`
-	TransactionHash  string   `json:"transactionHash"`
-	BlockHash        string   `json:"blockHash"`
-	BlockNumber      string   `json:"blockNumber"`
-	Address          string   `json:"address"`
-	Data             string   `json:"data"`
-	Topics           []string `json:"topics"`
-	Type             string   `json:"type"`
-}
-
-type RPCResult struct {
-	Jsonrpc string    `json:"jsonrpc"`
-	Id      int64     `json:"id"`
-	Result  []LogData `json:"result"`
-}
-
-type TransferEvent struct {
-	Denom  string
-	Amount *big.Int
-	Nonce  *big.Int
-}
-
-func rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
-	// url := "http://127.0.0.1:18888/rpc"
-	// queryStr := fmt.Sprintf(`{
-	// 	"jsonrpc":"2.0",
-	// 	"method":"eth_getLogs",
-	// 	"params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["0xfcaf9544852e1f0902dbcf8a118d2ae8235ed282692bbb5dc2aff212e4888a41"]}],
-	// 	"id":74
-	// }`, fromBlock, toBlock, mw.RegisterContractAddr.Hex())
-	// var jsonData = []byte(queryStr)
-
-	// request, error := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-	// request.Header.Set("Content-Type", "application/json")
-
-	// client := &http.Client{}
-	// response, error := client.Do(request)
-	// if error != nil {
-	// 	panic(error)
-	// }
-	// defer response.Body.Close()
-
-	// body, _ := ioutil.ReadAll(response.Body)
-	// fmt.Println("response Body:", string(body))
-
-	// var rpcres RPCResult
-	// err := json.Unmarshal(body, &rpcres)
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-	// fmt.Println(rpcres.Result[0].Data)
-
-	// contractAbi, err := abi.JSON(strings.NewReader(string(ct.SubchainRegisterABI)))
-	// if err != nil {
-	// 	fmt.Println(err)
-	// }
-
-	// InterChainMessageEventArr := make([]score.InterChainMessageEvent, len(rpcres.Result))
-
-	// for _, logData := range rpcres.Result {
-	// 	logData := logData
-	// 	var event TransferEvent
-	// 	h, _ := hex.DecodeString(logData.Data[2:])
-	// 	err := contractAbi.UnpackIntoInterface(&event, "SendToSubchainEvent", h)
-	// 	if _, ok := witnessXTransferCache.Get(event.Nonce); ok {
-	// 		continue
-	// 	}
-	// 	resEventArr = append(resEventArr, event)
-	// 	if err != nil {
-	// 		fmt.Println(err)
-	// 	}
-	// 	BlockNumberDec, _ := strconv.ParseUint(logData.BlockNumber[2:], 16, 32)
-	// 	InterChainMessageEvent := &score.InterChainMessageEvent{
-	// 		Sender:      scom.HexToAddress(logData.Topics[1]),
-	// 		Denom:       event.Denom,
-	// 		Amount:      event.Amount,
-	// 		EventNonce:  event.Nonce,
-	// 		BlockNumber: big.NewInt(BlockNumberDec),
-	// 	}
-	// 	InterChainMessageEventArr = append(InterChainMessageEventArr, InterChainMessageEvent)
-	// }
-
-	// return InterChainMessageEventArr
-	return make([]score.InterChainMessageEvent, 1)
+	return mw.interChainEventCache
 }
