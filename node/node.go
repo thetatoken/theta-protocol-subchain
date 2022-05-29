@@ -78,13 +78,13 @@ func NewNode(params *Params) *Node {
 
 	// For testing...
 	mainchainWitness := witness.NewSimulatedMainchainWitness(
-		viper.GetString(scom.CfgMainchainAdaptorURL),
+		viper.GetString(scom.CfgMainchainEthRpcURL),
 		params.ChainID,
 		common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
 		common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
 		interChainEventCache)
 	// mainchainWitness := witness.NewMainchainWitness(
-	// 	viper.GetString(scom.CfgMainchainAdaptorURL),
+	// 	viper.GetString(scom.CfgMainchainEthRpcURL),
 	// 	big.NewInt(viper.GetInt64(scom.CfgSubchainID)),
 	// 	common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
 	// 	common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),

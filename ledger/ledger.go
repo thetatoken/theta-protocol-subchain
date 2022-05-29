@@ -665,8 +665,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	}
 
 	// ------- Add inter-chain message transactions ------- //
-	for IMCEType, includeInterChainMessageTxsTillNonce := range includeInterChainMessageTxsTillNonceMap {
-		IMCEType := IMCEType
+	for imceType, includeInterChainMessageTxsTillNonce := range includeInterChainMessageTxsTillNonceMap {
 		includeInterChainMessageTxsTillNonce := includeInterChainMessageTxsTillNonce
 		if includeInterChainMessageTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
 			lastEventNonce := view.GetLastProcessedEventNonce(IMCEType)
@@ -676,7 +675,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 			nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
 			eventCache := ledger.mainchainWitness.GetInterChainEventCache()
 			for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
-				nextEvent, err := eventCache.Get(IMCEType, nextEventNonce)
+				nextEvent, err := eventCache.Get(imceType, nextEventNonce)
 				if nextEvent.Nonce.Cmp(nextEventNonce) != 0 { // these two nonces should match
 					logger.Panicf("nonce mismatch for event %v: %v vs %v", nextEvent, nextEvent.Nonce, nextEventNonce) // should not happen
 				}

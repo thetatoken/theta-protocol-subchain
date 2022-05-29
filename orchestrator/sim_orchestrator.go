@@ -192,7 +192,7 @@ func (oc *SimulatedOrchestrator) collect() {
 	toBlock := big.NewInt(int64(oc.engine.GetLastFinalizedBlock().Height))
 	// collect TFuel Voucher Burn
 
-	tfuelEvents := oc.rpcEventLogQuery(fromBlock, toBlock, oc.tfuelTokenBankContractAddr, oc.interChainEventCache)
+	tfuelEvents := oc.queryEventLog(fromBlock, toBlock, oc.tfuelTokenBankContractAddr, oc.interChainEventCache)
 
 	for _, event := range tfuelEvents {
 		event := event
@@ -208,7 +208,7 @@ func (oc *SimulatedOrchestrator) collect() {
 		oc.interChainEventCache.Insert(&event)
 	}
 	// collect TNT20 Voucher Burn
-	tnt20Events := oc.rpcEventLogQuery(fromBlock, toBlock, oc.tnt20TokenBankContractAddr, oc.interChainEventCache)
+	tnt20Events := oc.queryEventLog(fromBlock, toBlock, oc.tnt20TokenBankContractAddr, oc.interChainEventCache)
 
 	for _, event := range tnt20Events {
 		event := event
@@ -228,9 +228,8 @@ func (oc *SimulatedOrchestrator) collect() {
 
 func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 	voucherBurnTypes := [3]score.InterChainMessageEventType{score.IMCEventTypeVoucherBurnTFuel, score.IMCEventTypeVoucherBurnTNT20, score.IMCEventTypeVoucherBurnTNT721}
-	for _, IMCEtype := range voucherBurnTypes {
-		IMCEtype := IMCEtype
-		lastNonce, err := oc.interChainEventCache.GetLastProcessedUnfinalizedVoucherBurnNonce(IMCEtype)
+	for _, imceType := range voucherBurnTypes {
+		lastNonce, err := oc.interChainEventCache.GetLastProcessedUnfinalizedVoucherBurnNonce(imceType)
 		lastNonceChanged := false
 		indexNonce := lastNonce
 		if err != nil {
@@ -239,14 +238,14 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 		}
 
 		for {
-			statusExists, err := oc.interChainEventCache.VoucherBurnNonceExists(IMCEtype, indexNonce)
+			statusExists, err := oc.interChainEventCache.VoucherBurnNonceExists(imceType, indexNonce)
 			if !statusExists && err == nil {
 				break
 			} else {
 				// Should not happen. Since if there is a last processed nonce, there has to be a status with it
 				logger.Panic(err)
 			}
-			eventStatus, err := oc.interChainEventCache.GetVoucherBurnStatus(IMCEtype, indexNonce)
+			eventStatus, err := oc.interChainEventCache.GetVoucherBurnStatus(imceType, indexNonce)
 			if err == nil {
 				// Should not happen. Since if there is a last processed nonce, there has to be a status with it
 				logger.Panic(err)
@@ -272,7 +271,7 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 					eventStatus.RetriedTime += 1
 					oc.interChainEventCache.SetVoucherBurnStatus(eventStatus)
 					// 获得event
-					event, err := oc.interChainEventCache.Get(IMCEtype, indexNonce)
+					event, err := oc.interChainEventCache.Get(imceType, indexNonce)
 					if err != nil {
 						// Should not happen, since we are retrying.
 						logger.Fatal(err)
@@ -281,7 +280,7 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 				}
 			} else if eventStatus.Status == score.VoucherBurnEventStatusPending {
 				// 获得event
-				event, err := oc.interChainEventCache.Get(IMCEtype, indexNonce)
+				event, err := oc.interChainEventCache.Get(imceType, indexNonce)
 				if err != nil {
 					// Should not happen, since there is a status.
 					logger.Fatal(err)
@@ -295,12 +294,12 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 			indexNonce = new(big.Int).Add(indexNonce, common.Big1)
 		}
 		if lastNonceChanged {
-			oc.interChainEventCache.SetLastProcessedUnfinalizedVoucherBurnNonce(IMCEtype, lastNonce)
+			oc.interChainEventCache.SetLastProcessedUnfinalizedVoucherBurnNonce(imceType, lastNonce)
 		}
 	}
 }
 
-func (oc *SimulatedOrchestrator) rpcEventLogQuery(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
+func (oc *SimulatedOrchestrator) queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
 	return make([]score.InterChainMessageEvent, 1)
 }
 
