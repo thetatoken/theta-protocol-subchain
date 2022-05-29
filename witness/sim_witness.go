@@ -30,7 +30,7 @@ type SimulatedMainchainWitness struct {
 	cancel               context.CancelFunc
 	crossChainEventCache *score.InterChainEventCache
 
-	lastSimEventNonce    *big.Int
+	lastSimEventNonce    map[score.InterChainMessageEventType]*big.Int
 	hasTransferredTNT721 bool
 }
 
@@ -49,19 +49,23 @@ func NewSimulatedMainchainWitness(
 		startingTime:         time.Now(),
 		crossChainEventCache: crossChainEventCache,
 		wg:                   &sync.WaitGroup{},
-		lastSimEventNonce:    big.NewInt(2),
+		// lastSimEventNonce:    big.NewInt(2),
+		lastSimEventNonce:    make(map[score.InterChainMessageEventType]*big.Int),
 		hasTransferredTNT721: false,
 	}
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTFuelTransfer] = common.Big1
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer] = common.Big1
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT721Transfer] = common.Big1
 
-	amount := big.NewInt(88888)
-	nonce := big.NewInt(1)
-	mainchainBlockNumber := big.NewInt(0)
-	event := mw.generateInterChainEventForTFuelTransfer(amount, nonce, mainchainBlockNumber)
+	// amount := big.NewInt(88888)
+	// nonce := big.NewInt(1)
+	// mainchainBlockNumber := big.NewInt(0)
+	// event := mw.generateInterChainEventForTFuelTransfer(amount, nonce, mainchainBlockNumber)
 
-	err := mw.crossChainEventCache.Insert(event)
-	if err != nil {
-		logger.Panicf("Insert Fail!! %v", err)
-	}
+	// err := mw.crossChainEventCache.Insert(event)
+	// if err != nil {
+	// 	logger.Panicf("Insert Fail!! %v", err)
+	// }
 	return mw
 }
 
@@ -144,10 +148,10 @@ func (mw *SimulatedMainchainWitness) update() {
 		if !ok {
 			logger.Panicf("failed to set amount %v", err)
 		}
-		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce, mainchainBlockNumber)
+		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce[score.IMCEventTypeCrossChainTFuelTransfer], mainchainBlockNumber)
 		mw.crossChainEventCache.Insert(event)
 		// logger.Infof("Inserted Event %v", event)
-		mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTFuelTransfer] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTFuelTransfer], big.NewInt(1))
 	}
 
 	// TNT20 cross-chain transfers
@@ -157,9 +161,9 @@ func (mw *SimulatedMainchainWitness) update() {
 	}
 	event := mw.generateInterChainEventForTNT20Transfer(
 		common.HexToAddress("0x1336739B05C7Ab8a526D40DCC0d04a826b5f8B03"), "TDrop", "TDROP", 18, amount,
-		mw.lastSimEventNonce, mainchainBlockNumber)
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer], mainchainBlockNumber)
 	mw.crossChainEventCache.Insert(event)
-	mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer], big.NewInt(1))
 
 	amount, ok = big.NewInt(0).SetString("9999999", 10)
 	if !ok {
@@ -167,9 +171,9 @@ func (mw *SimulatedMainchainWitness) update() {
 	}
 	event = mw.generateInterChainEventForTNT20Transfer(
 		common.HexToAddress("0x15cc4c3f21417c392119054c8fe5895146e1a493"), "Random Token", "RTK", 6, amount,
-		mw.lastSimEventNonce, mainchainBlockNumber)
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer], mainchainBlockNumber)
 	mw.crossChainEventCache.Insert(event)
-	mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer], big.NewInt(1))
 
 	// TNT721 cross-chain transfers
 	if !mw.hasTransferredTNT721 {
@@ -179,11 +183,11 @@ func (mw *SimulatedMainchainWitness) update() {
 			"AI20",
 			big.NewInt(2076),
 			"https://api.thetadrop.com/type/type_qyh516vms3hz4b24n8x8wcq3pgf.json?nft_id=nft_n5gr1291uge56ydf1cv0kvguaxzw",
-			mw.lastSimEventNonce,
+			mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT721Transfer],
 			mainchainBlockNumber,
 		)
 		mw.crossChainEventCache.Insert(event)
-		mw.lastSimEventNonce = new(big.Int).Add(mw.lastSimEventNonce, big.NewInt(1))
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT721Transfer] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT721Transfer], big.NewInt(1))
 		mw.hasTransferredTNT721 = true
 	}
 }

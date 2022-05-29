@@ -39,5 +39,5 @@ type Ledger interface {
 	FinalizeState(height uint64, rootHash common.Hash) result.Result
 	GetFinalizedValidatorSet(blockHash common.Hash, isNext bool) (*ValidatorSet, error)
 	PruneState(endHeight uint64) error
-	GetLastProcessedEventNonce(IMCEType InterChainMessageEventType, blockHash common.Hash) (*big.Int, error)
+	GetLastProcessedEventNonce(imceType InterChainMessageEventType, blockHash common.Hash) (*big.Int, error)
 }

@@ -166,9 +166,9 @@ func setInitialBalance(sv *slst.StoreView, address common.Address, tfuelBalance 
 func setInitalEventNonce(sv *slst.StoreView) *big.Int {
 	transferTypes := [3]score.InterChainMessageEventType{score.IMCEventTypeCrossChainTFuelTransfer, score.IMCEventTypeCrossChainTNT20Transfer, score.IMCEventTypeCrossChainTNT721Transfer}
 
-	for _, IMCEType := range transferTypes {
-		IMCEType := IMCEType
-		sv.UpdateLastProcessedEventNonce(IMCEType, big.NewInt(0))
+	for _, imceType := range transferTypes {
+		imceType := imceType
+		sv.UpdateLastProcessedEventNonce(imceType, big.NewInt(0))
 	}
 
 	sv.Save()
