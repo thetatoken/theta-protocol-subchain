@@ -152,6 +152,8 @@ const (
 	CfgSubchainID = "subchain.ID"
 	// CfgSubchainUpdateInterval defines the time interval in millisecond for the subchain to obtain the status update from the main chain
 	CfgSubchainUpdateInterval = "subchain.updateInterval"
+	// CfgSubchainTestID defines the ID of this node in a test case
+	CfgSubchainTestID = "subchain.testID"
 )
 
 // InitialConfig is the default configuration produced by init command.

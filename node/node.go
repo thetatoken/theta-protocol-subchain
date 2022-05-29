@@ -82,7 +82,8 @@ func NewNode(params *Params) *Node {
 		params.ChainID,
 		common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
 		common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
-		interChainEventCache)
+		interChainEventCache,
+		viper.GetInt(scom.CfgSubchainTestID))
 	// mainchainWitness := witness.NewMainchainWitness(
 	// 	viper.GetString(scom.CfgMainchainEthRpcURL),
 	// 	big.NewInt(viper.GetInt64(scom.CfgSubchainID)),

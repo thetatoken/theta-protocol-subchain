@@ -32,6 +32,7 @@ type SimulatedMainchainWitness struct {
 
 	lastSimEventNonce    map[score.InterChainMessageEventType]*big.Int
 	hasTransferredTNT721 bool
+	testId               int
 }
 
 // NewSimulatedMainchainWitness creates a new SimulatedMainchainWitness
@@ -41,6 +42,7 @@ func NewSimulatedMainchainWitness(
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
 	crossChainEventCache *score.InterChainEventCache,
+	testId int,
 ) *SimulatedMainchainWitness {
 	mw := &SimulatedMainchainWitness{
 		subchainID:           subchainID,
@@ -52,6 +54,7 @@ func NewSimulatedMainchainWitness(
 		// lastSimEventNonce:    big.NewInt(2),
 		lastSimEventNonce:    make(map[score.InterChainMessageEventType]*big.Int),
 		hasTransferredTNT721: false,
+		testId:               testId,
 	}
 	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTFuelTransfer] = common.Big1
 	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTNT20Transfer] = common.Big1
@@ -141,6 +144,19 @@ func (mw *SimulatedMainchainWitness) update() {
 		mw.witnessedDynasty = dynasty
 		logger.Infof("updated the witnessed dynasty to %v", dynasty)
 	}
+	if mw.testId == 0 {
+		// TFuel cross-chain transfers
+		for i := 0; i < 1; i++ {
+			amount, ok := big.NewInt(0).SetString("82000000000000000000", 10) // 82 TFuel
+			if !ok {
+				logger.Panicf("failed to set amount %v", err)
+			}
+			event := mw.generateInterChainEventForTFuelTransfer(amount, big.NewInt(10), mainchainBlockNumber)
+			mw.crossChainEventCache.Insert(event)
+			// logger.Infof("Inserted Event %v", event)
+		}
+		return
+	}
 
 	// TFuel cross-chain transfers
 	for i := 0; i < 3; i++ {
@@ -194,13 +210,33 @@ func (mw *SimulatedMainchainWitness) update() {
 
 func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	// Simulate validator set updates
+	// validatorAddrList := []string{
+	// 	"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
+	// }
+	// validatorSet := score.NewValidatorSet(dynasty)
+	// stake := big.NewInt(100000000)
+	// v := score.NewValidator(validatorAddrList[0], stake)
+	// validatorSet.AddValidator(v)
 	validatorAddrList := []string{
+		"0x9F1233798E905E173560071255140b4A8aBd3Ec6",
 		"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
+		"0xC15E24083152dD76Ae6FC2aEb5269FF23d70330B",
+		"0x7631958d57Cf6a5605635a5F06Aa2ae2e000820e",
 	}
 	validatorSet := score.NewValidatorSet(dynasty)
-	stake := big.NewInt(100000000)
-	v := score.NewValidator(validatorAddrList[0], stake)
-	validatorSet.AddValidator(v)
+	stake1 := big.NewInt(100000000)
+	stake2 := big.NewInt(100000000)
+	stake3 := big.NewInt(100000000)
+	stake4 := big.NewInt(100000000)
+	v1 := score.NewValidator(validatorAddrList[0], stake1)
+	v2 := score.NewValidator(validatorAddrList[1], stake2)
+	v3 := score.NewValidator(validatorAddrList[2], stake3)
+	v4 := score.NewValidator(validatorAddrList[3], stake4)
+	validatorSet.AddValidator(v1)
+	validatorSet.AddValidator(v2)
+	validatorSet.AddValidator(v3)
+	validatorSet.AddValidator(v4)
+
 	mw.validatorSetCache[dynasty.String()] = validatorSet
 
 	logger.Infof("Witnessed validator set for dynasty %v", dynasty)
@@ -301,3 +337,4 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(to
 
 	return event
 }
+
