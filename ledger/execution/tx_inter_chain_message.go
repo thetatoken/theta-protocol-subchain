@@ -64,7 +64,7 @@ func (exec *InterChainMessageTxExecutor) sanityCheck(chainID string, view *slst.
 	}
 
 	icmNonce := tx.Event.Nonce
-	if view.InterChainMessageTransactionProcessed(icmNonce) {
+	if view.InterChainMessageTransactionProcessed(tx.Event.Type, icmNonce) {
 		return result.Error("inter-chain message %v has already been processed", icmNonce)
 	}
 
@@ -86,8 +86,8 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 	tx := transaction.(*stypes.InterChainMessageTx)
 	icmNonce := tx.Event.Nonce
 
-	if !view.ShouldProcessThisInterChainMessageEvent(icmNonce) {
-		return common.Hash{}, result.Error("inter-chain message nonce %v mismatches with the expected nonce %v", icmNonce, view.GetLastProcessedEventNonce())
+	if !view.ShouldProcessThisInterChainMessageEvent(tx.Event.Type, icmNonce) {
+		return common.Hash{}, result.Error("inter-chain message nonce %v mismatches with the expected nonce %v", icmNonce, view.GetLastProcessedEventNonce(tx.Event.Type))
 	}
 
 	eventCache := exec.mainchainWitness.GetInterChainEventCache()
@@ -96,7 +96,7 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 		return common.Hash{}, result.UndecidedWith(result.Info{"event not seen yet": tx.Event, "err": err}) // not seen on mainchain yet
 	}
 
-	if view.InterChainMessageTransactionProcessed(icmNonce) {
+	if view.InterChainMessageTransactionProcessed(tx.Event.Type, icmNonce) {
 		return common.Hash{}, result.Error("inter-chain message with nonce %v has already been processed", icmNonce)
 	}
 
@@ -135,7 +135,7 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 	}
 	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
 
-	view.SetInterChainMessageTransactionProcessed(icmNonce)
+	view.SetInterChainMessageTransactionProcessed(tx.Event.Type, icmNonce)
 	txHash := types.TxID(chainID, tx)
 	return txHash, result.OK
 }

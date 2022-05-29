@@ -1048,7 +1048,7 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 
 // process the inter-chain event tx from the last processed event to the event that has the nonce in the return value
 func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.ExtendedBlock) map[score.InterChainMessageEventType]*big.Int {
-	var m map[score.InterChainMessageEventType]*big.Int
+	m := make(map[score.InterChainMessageEventType]*big.Int)
 	// Check if majority has greater block height.
 	epochVotes, err := e.state.GetEpochVotes()
 	if err != nil {
@@ -1076,18 +1076,19 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 		return m
 	}
 	interChainEventCache := e.mainchainWitness.GetInterChainEventCache()
-	lastEventNonce, err := e.ledger.GetLastProcessedEventNonce(tip.Hash())
-	if err != nil {
-		e.logger.WithFields(log.Fields{
-			"error":         err,
-			"tip.StateHash": tip.StateHash.Hex(),
-			"tip":           tip,
-		}).Panic("Failed to get last processed event nonce :")
-	}
+
 	transferTypes := [3]score.InterChainMessageEventType{score.IMCEventTypeCrossChainTFuelTransfer, score.IMCEventTypeCrossChainTNT20Transfer, score.IMCEventTypeCrossChainTNT721Transfer}
 
 	for _, IMCEType := range transferTypes {
 		IMCEType := IMCEType
+		lastEventNonce, err := e.ledger.GetLastProcessedEventNonce(IMCEType, tip.Hash())
+		if err != nil {
+			e.logger.WithFields(log.Fields{
+				"error":         err,
+				"tip.StateHash": tip.StateHash.Hex(),
+				"tip":           tip,
+			}).Panic("Failed to get last processed event nonce :")
+		}
 		nextEventNonce, _ := interChainEventCache.GetNextTransferNonceForType(IMCEType)
 		if lastEventNonce.Cmp(common.Big0) == 0 {
 			nextEventNonce = big.NewInt(1)

@@ -1,7 +1,10 @@
 package state
 
 import (
+	"strconv"
+
 	"github.com/thetatoken/theta/common"
+	score "github.com/thetatoken/thetasubchain/core"
 )
 
 //
@@ -40,8 +43,8 @@ func ValidatorSetKey() common.Bytes {
 }
 
 // EventNonceKey returns the state key for the last processed event nonce
-func EventNonceKey() common.Bytes {
-	return common.Bytes("ls/evn")
+func EventNonceKey(eventType score.InterChainMessageEventType) common.Bytes {
+	return common.Bytes("ls/evn/" + strconv.FormatUint(uint64(eventType), 10))
 }
 
 // ValidatorSetUpdateTxHeightListKey returns the state key the heights of blocks

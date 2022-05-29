@@ -181,7 +181,7 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 // 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
 // }
 
-func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
+func (ledger *Ledger) GetLastProcessedEventNonce(IMCEType score.InterChainMessageEventType, blockHash common.Hash) (*big.Int, error) {
 	db := ledger.state.DB()
 	store := kvstore.NewKVStore(db)
 
@@ -205,7 +205,7 @@ func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.In
 			"block.Status.IsTrusted()":    block.Status.IsTrusted(),
 		}).Panic("Failed to load state for last processed event nonce")
 	}
-	lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
+	lastProcessedEventNonce := storeView.GetLastProcessedEventNonce(IMCEType)
 	return lastProcessedEventNonce, nil
 
 }
@@ -669,7 +669,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 		IMCEType := IMCEType
 		includeInterChainMessageTxsTillNonce := includeInterChainMessageTxsTillNonce
 		if includeInterChainMessageTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
-			lastEventNonce := view.GetLastProcessedEventNonce()
+			lastEventNonce := view.GetLastProcessedEventNonce(IMCEType)
 			if lastEventNonce == nil {
 				logger.Panic("nil last event nonce")
 			}

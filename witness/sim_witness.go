@@ -212,38 +212,47 @@ func (mw *SimulatedMainchainWitness) GetInterChainEventCache() *score.InterChain
 }
 
 func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	// tfuelDenom := score.TFuelDenom(core.MainnetChainID)
-	// data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
-	// 	Denom:  tfuelDenom,
-	// 	Amount: amount,
-	// })
-	// if err != nil {
-	// 	logger.Panicf("failed to get encode inter-chain message event data for TFuel transfer: %v", err)
-	// }
+	tfuelDenom := score.TFuelDenom(core.MainnetChainID)
+	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
+		TargetChainID:         big.NewInt(3610001),
+		MainchainTokenSender:  common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		SubchainTokenReceiver: common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		Denom:                 tfuelDenom,
+		LockedAmount:          amount,
+		Nonce:                 nonce,
+	})
+	if err != nil {
+		logger.Panicf("failed to get encode inter-chain message event data for TFuel transfer: %v", err)
+	}
 
-	// event := score.NewInterChainMessageEvent(
-	// 	score.IMCEventTypeCrossChainTFuelTransfer,
-	// 	core.MainnetChainID,
-	// 	mw.subchainID,
-	// 	common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-	// 	common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-	// 	data,
-	// 	nonce,
-	// 	mainchainBlockNumber)
+	event := score.NewInterChainMessageEvent(
+		score.IMCEventTypeCrossChainTFuelTransfer,
+		core.MainnetChainID,
+		mw.subchainID,
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		data,
+		nonce,
+		mainchainBlockNumber)
 
-	// return event
-	return nil
+	return event
 }
 
 func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tokenSourceAddress common.Address,
 	tokenName string, tokenSymbol string, tokenDecimals uint8, tokenAmount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
 	tnt20Denom := score.TNT20Denom(core.MainnetChainID, tokenSourceAddress)
+	targetChainId, _ := new(big.Int).SetString(mw.subchainID, 10)
 	data, err := rlp.EncodeToBytes(score.TNT20TransferMetaData{
-		Denom:        tnt20Denom,
-		Name:         tokenName,
-		Symbol:       tokenSymbol,
-		Decimal:      tokenDecimals,
-		LockedAmount: tokenAmount,
+		TargetChainID:         targetChainId,
+		MainchainTokenSender:  common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		SubchainTokenReceiver: common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		TNT20Contract:         tokenSourceAddress,
+		Denom:                 tnt20Denom,
+		Name:                  tokenName,
+		Symbol:                tokenSymbol,
+		Decimal:               tokenDecimals,
+		Nonce:                 nonce,
+		LockedAmount:          tokenAmount,
 	})
 	if err != nil {
 		logger.Panicf("failed to get encode inter-chain message event data for TNT20 token transfer: %v", err)
