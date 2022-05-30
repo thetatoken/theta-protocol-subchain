@@ -16,6 +16,7 @@ import (
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/theta/store"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
@@ -179,18 +180,22 @@ func (mw *MainchainWitness) update() {
 		mw.updateValidatorSetCache(dynasty)
 		mw.witnessedDynasty = dynasty
 	}
+	mw.collectInterChainMessageEvents()
 }
 
 func (mw *MainchainWitness) collectInterChainMessageEvents() {
 	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer)
-	if err != nil {
+	if err == store.ErrKeyNotFound {
+		mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, common.Big0)
+	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
 	toBlock, _ := mw.GetMainchainBlockNumber()
-	maxBlockRange := int64(100) // block range query allows at most 5000 blocks, here we intentionally use a smaller range
+	maxBlockRange := int64(3000) // block range query allows at most 5000 blocks, here we intentionally use a smaller range
 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) >= 0 {
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
 	}
+	logger.Warnf("query from %v to %v\n", fromBlock.String(), toBlock.String())
 	for _, imceType := range score.TransferTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
@@ -198,6 +203,9 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 			events = score.QueryEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType)
 		case score.IMCEventTypeCrossChainTNT20Transfer:
 			events = score.QueryEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType)
+		}
+		if len(events) == 0 {
+			continue
 		}
 		err = mw.interChainEventCache.InsertList(events)
 		if err != nil { // should not happen
@@ -231,3 +239,4 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 func (mw *MainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
 	return mw.interChainEventCache
 }
+

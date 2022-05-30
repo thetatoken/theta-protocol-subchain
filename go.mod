@@ -7,6 +7,7 @@ require (
 	github.com/dgraph-io/badger v1.6.0-rc1
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/fd/go-nat v1.0.0
+	github.com/fsnotify/fsnotify v1.5.4 // indirect
 	github.com/golang/protobuf v1.4.3
 	github.com/golang/snappy v0.0.4
 	github.com/gorilla/context v1.1.1 // indirect
@@ -33,6 +34,7 @@ require (
 	github.com/libp2p/go-stream-muxer v0.1.0
 	github.com/mattn/go-isatty v0.0.12
 	github.com/mitchellh/go-homedir v1.1.0
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/mongodb/mongo-go-driver v0.0.17
 	github.com/multiformats/go-multiaddr v0.0.4
 	github.com/pborman/uuid v0.0.0-20180906182336-adf5a7427709
@@ -62,7 +64,7 @@ require (
 	go.opencensus.io v0.22.2
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
 	golang.org/x/net v0.0.0-20210805182204-aaa1db679c0d
-	golang.org/x/sys v0.0.0-20220412071739-889880a91fd5
+	golang.org/x/sys v0.0.0-20220520151302-bc2c85ada10a
 	gopkg.in/karalabe/cookiejar.v2 v2.0.0-20150724131613-8dcd6a7f4951
 	gopkg.in/mgo.v2 v2.0.0-20180705113604-9856a29383ce
 )

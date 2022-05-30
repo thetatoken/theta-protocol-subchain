@@ -2,7 +2,9 @@ package main
 
 import (
 	"bytes"
-	"encoding/hex"
+	"log"
+
+	// "encoding/hex"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -10,15 +12,17 @@ import (
 	"math/big"
 	"net/http"
 	"os"
-	"strings"
+
+	// "strings"
 
 	scomm "github.com/thetatoken/thetasubchain/common"
 
 	"github.com/spf13/viper"
 	"github.com/thetatoken/theta/common"
-	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
+
+	// scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
-	"github.com/thetatoken/thetasubchain/eth/abi"
+	// "github.com/thetatoken/thetasubchain/eth/abi"
 	// "github.com/thetatoken/theta/crypto"
 )
 
@@ -64,9 +68,9 @@ func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 	request.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
-	response, error := client.Do(request)
-	if error != nil {
-		panic(error)
+	response, err := client.Do(request)
+	if err != nil {
+		log.Panic(err)
 	}
 	defer response.Body.Close()
 
@@ -80,27 +84,27 @@ func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 	}
 	fmt.Println(rpcres.Result[0].Data)
 
-	for _, logData := range rpcres.Result {
-		logData := logData
-		h, _ := hex.DecodeString(logData.Data[2:])
-		// if ok, _ := interChainEveneCache.Exists(imceType, event.Nonce); ok {
-		// 	continue
-		// }
-		switch imceType {
-		case score.IMCEventTypeCrossChainTFuelTransfer:
-			var tma score.TfuelTransferMetaData
-			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
-			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
-			fmt.Println(tma)
-		case score.IMCEventTypeCrossChainTNT20Transfer:
-			var tma score.TNT20TransferMetaData
-			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
-			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
-			fmt.Println(tma)
-		case score.IMCEventTypeCrossChainTNT721Transfer:
-		default:
-		}
-	}
+	// for _, logData := range rpcres.Result {
+	// 	logData := logData
+	// 	h, _ := hex.DecodeString(logData.Data[2:])
+	// 	// if ok, _ := interChainEveneCache.Exists(imceType, event.Nonce); ok {
+	// 	// 	continue
+	// 	// }
+	// 	switch imceType {
+	// 	case score.IMCEventTypeCrossChainTFuelTransfer:
+	// 		var tma score.TfuelTransferMetaData
+	// 		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	// 		contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
+	// 		fmt.Println(tma)
+	// 	case score.IMCEventTypeCrossChainTNT20Transfer:
+	// 		var tma score.TNT20TransferMetaData
+	// 		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	// 		contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
+	// 		fmt.Println(tma)
+	// 	case score.IMCEventTypeCrossChainTNT721Transfer:
+	// 	default:
+	// 	}
+	// }
 }
 
 // func hex(i int) string {
@@ -130,10 +134,11 @@ func main() {
 	flag.Parse()
 	s := score.NewInterChainEventCache(nil)
 	// fmt.Println(s.EventSelectors)
-	queryEventLog(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0x6BAa295f674339814C6Ed63f7B7bb3a00ee241f8"), score.IMCEventTypeCrossChainTFuelTransfer, s)
+	queryEventLog(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0xde9f866B980C3c1197b316d482D50F70b2854C95"), score.IMCEventTypeCrossChainTFuelTransfer, s)
 	// fromBlock := oct(*fbk)
 	// toBlock := oct(*tbk)
 	// contractAddr :=
 
 	os.Exit(0)
 }
+

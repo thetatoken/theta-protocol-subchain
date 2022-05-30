@@ -13,10 +13,9 @@ import (
 	"github.com/spf13/viper"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
-	"github.com/thetatoken/thetasubchain/eth/abi"
-
 	scom "github.com/thetatoken/thetasubchain/common"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 )
 
 // RPC related
@@ -67,13 +66,13 @@ var EventSelectors = map[InterChainMessageEventType]string{
 }
 
 func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType) []*InterChainMessageEvent {
-	url := viper.GetString(scom.CfgSubchainEthRpcURL)
-	queryStr := fmt.Sprintf(`{
-		"jsonrpc":"2.0",
-		"method":"eth_getLogs",
-		"params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],
-		"id":74
-	}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
+	var url string
+	if imceType/10000 == 1 { // Transfer
+		url = viper.GetString(scom.CfgMainchainEthRpcURL)
+	} else {
+		url = viper.GetString(scom.CfgSubchainEthRpcURL)
+	}
+	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
 	var jsonData = []byte(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
@@ -85,16 +84,20 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatalf("response error : %v", err)
 	}
 	defer response.Body.Close()
 
 	body, _ := ioutil.ReadAll(response.Body)
-
 	var rpcres RPCResult
+
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
-		logger.Fatal(err)
+		fmt.Printf("error decoding response: %v\n", err)
+		if e, ok := err.(*json.SyntaxError); ok {
+			fmt.Printf("syntax error at byte offset %d\n", e.Offset)
+		}
+		fmt.Printf("response: %q\n", body)
 	}
 
 	var events []*InterChainMessageEvent
@@ -107,7 +110,7 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", data)
 			sourceChainID, _ := ExtractSourceChainIDFromDenom(tma.Denom)
-			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber, 10)
+			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 			event := &InterChainMessageEvent{
 				Type:          IMCEventTypeCrossChainTFuelTransfer,
 				SourceChainID: sourceChainID,
@@ -118,6 +121,7 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 				Nonce:         tma.Nonce,
 				BlockNumber:   blockNumber,
 			}
+			logger.Infof("got tfuel event : %v, logdata : %v", event, logData)
 			events = append(events, event)
 		case IMCEventTypeCrossChainTNT20Transfer:
 			var tma TNT20TransferMetaData
@@ -143,3 +147,4 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 
 	return events
 }
+

@@ -20,6 +20,8 @@ import (
 	ts "github.com/thetatoken/theta/store"
 	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/theta/store/kvstore"
+	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 )
 
 // var logger *log.Entry = log.WithFields(log.Fields{"prefix": "core"})
@@ -475,9 +477,14 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	}
 
 	var tma TfuelTransferMetaData
-	if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
+	// if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
+	// 	return nil, err
+	// }
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	if err != nil {
 		return nil, err
 	}
+	contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", icme.Data)
 	if err := ValidateDenom(tma.Denom); err != nil {
 		return nil, err
 	}
@@ -713,3 +720,4 @@ func isVoucherBurn(selfChainID string, denom string) (bool, error) {
 	isVoucherBurn := (extractedSourceChainID != selfChainID)
 	return isVoucherBurn, nil
 }
+
