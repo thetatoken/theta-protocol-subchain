@@ -10,12 +10,13 @@ log:
   #levels: "*:info"
   levels: "*:debug"
 subchain:
-  register: "0x4924e88FB900f90a5ED5525718Cd04dc4cfEC17A"
-  erc20: "0x32f17507e64753F1CE921EECf2E86469Ed7C511b"
+  register: "0xbD24833ace144eFc04eD2b39f0021D1910f054ad"
+  erc20: "0xBf0b860BdBf712fa88DFB81Efe1BD8353437435B"
   mainchainEthRpcURL: "http://localhost:18888/rpc"
   subchainEthRpcURL: "http://localhost:18889/rpc"
-  tfuelTB: "0xde9f866B980C3c1197b316d482D50F70b2854C95"
-  tnt20TB: "0xABb83C85F1bf11B3F23fDFE3E1899ab547378689"
+  tfuelTB: "0xE30f12cDBb6d57D6Ab5Be685FdeF0BE19942aC29"
+  tnt20TB: "0x031375c16fc20ECEd29fA21642701EE48A5b9090"
   updateInterval: 1000
+
 
 

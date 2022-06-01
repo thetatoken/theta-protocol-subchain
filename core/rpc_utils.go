@@ -67,10 +67,13 @@ var EventSelectors = map[InterChainMessageEventType]string{
 
 func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType) []*InterChainMessageEvent {
 	var url string
-	if imceType/10000 == 1 { // Transfer
+	var events []*InterChainMessageEvent
+	if imceType == IMCEventTypeCrossChainTFuelTransfer || imceType == IMCEventTypeCrossChainTNT20Transfer || imceType == IMCEventTypeCrossChainTNT721Transfer { // Transfer
 		url = viper.GetString(scom.CfgMainchainEthRpcURL)
-	} else {
+	} else if imceType == IMCEventTypeVoucherBurnTFuel || imceType == IMCEventTypeVoucherBurnTNT20 || imceType == IMCEventTypeVoucherBurnTNT721 {
 		url = viper.GetString(scom.CfgSubchainEthRpcURL)
+	} else {
+		return events
 	}
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
 	var jsonData = []byte(queryStr)
@@ -100,7 +103,6 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 		fmt.Printf("response: %q\n", body)
 	}
 
-	var events []*InterChainMessageEvent
 	for _, logData := range rpcres.Result {
 		logData := logData
 		data, _ := hex.DecodeString(logData.Data[2:])
@@ -128,9 +130,9 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
 			contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", data)
 			sourceChainID, _ := ExtractSourceChainIDFromDenom(tma.Denom)
-			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber, 10)
+			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 			event := &InterChainMessageEvent{
-				Type:          IMCEventTypeCrossChainTFuelTransfer,
+				Type:          IMCEventTypeCrossChainTNT20Transfer,
 				SourceChainID: sourceChainID,
 				TargetChainID: tma.TargetChainID.String(),
 				Sender:        tma.MainchainTokenSender,
@@ -139,6 +141,7 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 				Nonce:         tma.Nonce,
 				BlockNumber:   blockNumber,
 			}
+			logger.Infof("got tnt20 event : %v, logdata : %v", event, logData)
 			events = append(events, event)
 		case IMCEventTypeCrossChainTNT721Transfer:
 		default:

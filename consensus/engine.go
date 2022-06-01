@@ -1093,7 +1093,8 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 			}).Panic("Failed to get last processed event nonce :")
 		}
 
-		nextEventNonce, _ := interChainEventCache.GetNextTransferNonceForType(imceType)
+		// nextEventNonce, _ := interChainEventCache.GetNextTransferNonceForType(imceType)
+		var nextEventNonce *big.Int
 		if lastEventNonce.Cmp(common.Big0) == 0 {
 			nextEventNonce = big.NewInt(1)
 		} else {
@@ -1110,8 +1111,8 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 			nextEventToProcess, ok := interChainEventCache.Get(imceType, nextEventNonce)
 			if ok != nil {
 				e.logger.WithFields(log.Fields{
-					"tip":        tip.Hash().Hex(),
-					"tip.Height": tip.Height,
+					"imce type":        imceType,
+					"next event nonce": nextEventNonce,
 				}).Debug("cannot find the next event to process")
 				break
 			}
@@ -1306,3 +1307,4 @@ func isSyncing(lastestFinalizedBlock *score.ExtendedBlock, currentHeight uint64)
 
 	return isSyncing
 }
+

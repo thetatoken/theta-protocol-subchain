@@ -190,11 +190,7 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
-	toBlock, _ := mw.GetMainchainBlockNumber()
-	maxBlockRange := int64(3000) // block range query allows at most 5000 blocks, here we intentionally use a smaller range
-	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) >= 0 {
-		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
-	}
+	toBlock := mw.calculateToBlock(fromBlock)
 	logger.Warnf("query from %v to %v\n", fromBlock.String(), toBlock.String())
 	for _, imceType := range score.TransferTypes {
 		var events []*score.InterChainMessageEvent
@@ -213,6 +209,20 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 		}
 	}
 	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, toBlock)
+}
+
+func (mw *MainchainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
+	toBlock, _ := mw.GetMainchainBlockNumber()
+	// block range query allows at most 5000 blocks, here we intentionally use a smaller range
+	maxBlockRange := int64(4000)
+	// tentative, to ensure the chain has enough time to finalize the event
+	minBlockGap := int64(10)
+	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 { // catch-up phase, gap is over maxBlockRange， catch-up at full speed
+		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
+	} else { // steady phase, gap is between minBlockGap and maxBlockRange
+		toBlock = new(big.Int).Sub(toBlock, big.NewInt(minBlockGap))
+	}
+	return toBlock
 }
 
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {

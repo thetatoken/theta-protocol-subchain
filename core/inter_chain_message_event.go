@@ -477,9 +477,6 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	}
 
 	var tma TfuelTransferMetaData
-	// if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
-	// 	return nil, err
-	// }
 	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 	if err != nil {
 		return nil, err
@@ -543,9 +540,12 @@ func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	}
 
 	var tma TNT20TransferMetaData
-	if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	if err != nil {
 		return nil, err
 	}
+	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", icme.Data)
+	tma.Denom = strings.ToLower(tma.Denom)
 	if err := ValidateDenom(tma.Denom); err != nil {
 		return nil, err
 	}
