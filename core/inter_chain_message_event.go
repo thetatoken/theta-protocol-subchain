@@ -29,19 +29,21 @@ import (
 type InterChainMessageEventType uint64
 
 const (
-	IMCEventTypeUnknown                  InterChainMessageEventType = 0
-	IMCEventTypeCrossChainTransfer       InterChainMessageEventType = 1
+	IMCEventTypeUnknown InterChainMessageEventType = 0
+	// 1 - 9999 reserved for future use
+
+	IMCEventTypeCrossChainTransfer       InterChainMessageEventType = 10000
 	IMCEventTypeCrossChainTFuelTransfer  InterChainMessageEventType = 10001
 	IMCEventTypeCrossChainTNT20Transfer  InterChainMessageEventType = 10002
 	IMCEventTypeCrossChainTNT721Transfer InterChainMessageEventType = 10003
 
-	IMCEventTypeVoucherBurn       InterChainMessageEventType = 2
+	IMCEventTypeVoucherBurn       InterChainMessageEventType = 20000
 	IMCEventTypeVoucherBurnTFuel  InterChainMessageEventType = 20001
 	IMCEventTypeVoucherBurnTNT20  InterChainMessageEventType = 20002
 	IMCEventTypeVoucherBurnTNT721 InterChainMessageEventType = 20003
 
-	IMCEventLock   InterChainMessageEventType = 3
-	IMCEventUnLock InterChainMessageEventType = 4
+	IMCEventLock   InterChainMessageEventType = 30000
+	IMCEventUnLock InterChainMessageEventType = 40000
 )
 
 // InterChainMessageEvent contains the public information of a crosschain transfer event.
@@ -720,4 +722,3 @@ func isVoucherBurn(selfChainID string, denom string) (bool, error) {
 	isVoucherBurn := (extractedSourceChainID != selfChainID)
 	return isVoucherBurn, nil
 }
-

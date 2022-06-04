@@ -213,13 +213,13 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 
 func (mw *MainchainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 	toBlock, _ := mw.GetMainchainBlockNumber()
-	// block range query allows at most 5000 blocks, here we intentionally use a smaller range
-	maxBlockRange := int64(4000)
-	// tentative, to ensure the chain has enough time to finalize the event
-	minBlockGap := int64(10)
-	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 { // catch-up phase, gap is over maxBlockRange， catch-up at full speed
+	maxBlockRange := int64(4000) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
+	minBlockGap := int64(10)     // tentative, to ensure the chain has enough time to finalize the event
+	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
+		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
-	} else { // steady phase, gap is between minBlockGap and maxBlockRange
+	} else {
+		// steady phase, gap is between minBlockGap and maxBlockRange
 		toBlock = new(big.Int).Sub(toBlock, big.NewInt(minBlockGap))
 	}
 	return toBlock
@@ -249,4 +249,3 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 func (mw *MainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
 	return mw.interChainEventCache
 }
-
