@@ -10,10 +10,8 @@ import (
 	"net/http"
 	"strings"
 
-	"github.com/spf13/viper"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
-	scom "github.com/thetatoken/thetasubchain/common"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	"github.com/thetatoken/thetasubchain/eth/abi"
 )
@@ -65,16 +63,8 @@ var EventSelectors = map[InterChainMessageEventType]string{
 	IMCEventTypeVoucherBurnTNT721: crypto.Keccak256Hash([]byte("BurnTNT721Vouchers(string,address,address,uint256,uint256)")).Hex(),
 }
 
-func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType) []*InterChainMessageEvent {
-	var url string
+func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string) []*InterChainMessageEvent {
 	var events []*InterChainMessageEvent
-	if imceType == IMCEventTypeCrossChainTFuelTransfer || imceType == IMCEventTypeCrossChainTNT20Transfer || imceType == IMCEventTypeCrossChainTNT721Transfer { // Transfer
-		url = viper.GetString(scom.CfgMainchainEthRpcURL)
-	} else if imceType == IMCEventTypeVoucherBurnTFuel || imceType == IMCEventTypeVoucherBurnTNT20 || imceType == IMCEventTypeVoucherBurnTNT721 {
-		url = viper.GetString(scom.CfgSubchainEthRpcURL)
-	} else {
-		return events
-	}
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
 	var jsonData = []byte(queryStr)
 
@@ -150,4 +140,3 @@ func QueryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 
 	return events
 }
-

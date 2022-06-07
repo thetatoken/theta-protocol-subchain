@@ -24,6 +24,7 @@ import (
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
 type MainchainWitness struct {
+	ethRpcURL            string
 	mainChainID          *big.Int
 	subchainID           *big.Int
 	witnessedDynasty     *big.Int
@@ -51,7 +52,7 @@ type MainchainWitness struct {
 
 // NewMainchainWitness creates a new MainchainWitness
 func NewMainchainWitness(
-	ethClientAddress string,
+	ethRpcURL string,
 	subchainID *big.Int,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
@@ -60,7 +61,7 @@ func NewMainchainWitness(
 	updateInterval int,
 	interChainEventCache *score.InterChainEventCache,
 ) *MainchainWitness {
-	client, err := ec.Dial(ethClientAddress)
+	client, err := ec.Dial(ethRpcURL)
 	if err != nil {
 		logger.Fatalf("the eth client failed to connect %v\n", err)
 	}
@@ -79,6 +80,7 @@ func NewMainchainWitness(
 	logger.Printf("Create transfer validator for chain %d\n", mainChainID)
 
 	mw := &MainchainWitness{
+		ethRpcURL:         ethRpcURL,
 		mainChainID:       mainChainID,
 		subchainID:        subchainID,
 		witnessedDynasty:  nil, // will be updated in the first update() call
@@ -196,9 +198,9 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
 		case score.IMCEventTypeCrossChainTFuelTransfer:
-			events = score.QueryEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType)
+			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType, mw.ethRpcURL)
 		case score.IMCEventTypeCrossChainTNT20Transfer:
-			events = score.QueryEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType)
+			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType, mw.ethRpcURL)
 		}
 		if len(events) == 0 {
 			continue
