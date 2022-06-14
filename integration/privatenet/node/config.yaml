@@ -13,7 +13,7 @@ subchain:
   register: "0xbD24833ace144eFc04eD2b39f0021D1910f054ad"
   erc20: "0xBf0b860BdBf712fa88DFB81Efe1BD8353437435B"
   mainchainEthRpcURL: "http://localhost:18888/rpc"
-  subchainEthRpcURL: "http://localhost:18889/rpc"
+  subchainEthRpcURL: "http://localhost:19888/rpc"
   tfuelTB: "0xE30f12cDBb6d57D6Ab5Be685FdeF0BE19942aC29"
   tnt20TB: "0x031375c16fc20ECEd29fA21642701EE48A5b9090"
   updateInterval: 1000

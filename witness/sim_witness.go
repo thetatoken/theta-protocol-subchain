@@ -8,7 +8,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/rlp"
 	scom "github.com/thetatoken/thetasubchain/common"
-	"github.com/thetatoken/thetasubchain/core"
 	score "github.com/thetatoken/thetasubchain/core"
 
 	"github.com/thetatoken/theta/common"
@@ -252,7 +251,7 @@ func (mw *SimulatedMainchainWitness) GetInterChainEventCache() *score.InterChain
 }
 
 func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	tfuelDenom := score.TFuelDenom(core.MainnetChainID)
+	tfuelDenom := score.TFuelDenom(score.MainnetChainID)
 	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
 		TargetChainID:         big.NewInt(3610001),
 		MainchainTokenSender:  common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -267,7 +266,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 
 	event := score.NewInterChainMessageEvent(
 		score.IMCEventTypeCrossChainTFuelTransfer,
-		core.MainnetChainID,
+		score.MainnetChainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -280,7 +279,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 
 func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tokenSourceAddress common.Address,
 	tokenName string, tokenSymbol string, tokenDecimals uint8, tokenAmount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	tnt20Denom := score.TNT20Denom(core.MainnetChainID, tokenSourceAddress)
+	tnt20Denom := score.TNT20Denom(score.MainnetChainID, tokenSourceAddress)
 	targetChainId, _ := new(big.Int).SetString(mw.subchainID, 10)
 	data, err := rlp.EncodeToBytes(score.TNT20TransferMetaData{
 		TargetChainID:         targetChainId,
@@ -300,7 +299,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tok
 
 	event := score.NewInterChainMessageEvent(
 		score.IMCEventTypeCrossChainTNT20Transfer,
-		core.MainnetChainID,
+		score.MainnetChainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -313,7 +312,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tok
 
 func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(tokenSourceAddress common.Address,
 	tokenName string, tokenSymbol string, tokenID *big.Int, tokenURI string, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	tnt721Denom := score.TNT721Denom(core.MainnetChainID, tokenSourceAddress)
+	tnt721Denom := score.TNT721Denom(score.MainnetChainID, tokenSourceAddress)
 	data, err := rlp.EncodeToBytes(score.TNT721TransferMetaData{
 		Denom:    tnt721Denom,
 		Name:     tokenName,
@@ -327,7 +326,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(to
 
 	event := score.NewInterChainMessageEvent(
 		score.IMCEventTypeCrossChainTNT721Transfer,
-		core.MainnetChainID,
+		score.MainnetChainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -337,4 +336,3 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(to
 
 	return event
 }
-

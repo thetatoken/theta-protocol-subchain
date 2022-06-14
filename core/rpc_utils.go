@@ -54,6 +54,12 @@ var VoucherBurnTypes = []InterChainMessageEventType{
 	IMCEventTypeVoucherBurnTNT721,
 }
 
+var UnlockTypes = []InterChainMessageEventType{
+	IMCEventTypeUnLockTFuel,
+	IMCEventTypeUnLockTNT20,
+	IMCEventTypeUnLockTNT721,
+}
+
 var EventSelectors = map[InterChainMessageEventType]string{
 	IMCEventTypeCrossChainTFuelTransfer: crypto.Keccak256Hash([]byte("TFuelTokenLocked(uint256,address,address,uint256,uint256,string)")).Hex(),
 	IMCEventTypeCrossChainTNT20Transfer: crypto.Keccak256Hash([]byte("TNT20TokenLocked(uint256,address,address,uint256,address,string,string,uint8,uint256,string)")).Hex(),
@@ -61,6 +67,9 @@ var EventSelectors = map[InterChainMessageEventType]string{
 	IMCEventTypeVoucherBurnTFuel:  crypto.Keccak256Hash([]byte("BurnTFuelVouchers(address,address,uint256,uint256)")).Hex(),
 	IMCEventTypeVoucherBurnTNT20:  crypto.Keccak256Hash([]byte("BurnTNT20Vouchers(string,address,address,uint256,uint256)")).Hex(),
 	IMCEventTypeVoucherBurnTNT721: crypto.Keccak256Hash([]byte("BurnTNT721Vouchers(string,address,address,uint256,uint256)")).Hex(),
+	IMCEventTypeUnLockTFuel:       crypto.Keccak256Hash([]byte("TFuelTokenUnlocked(uint256,address,uint256,uint256)")).Hex(),
+	IMCEventTypeUnLockTNT20:       crypto.Keccak256Hash([]byte("")).Hex(),
+	IMCEventTypeUnLockTNT721:      crypto.Keccak256Hash([]byte("")).Hex(),
 }
 
 func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string) []*InterChainMessageEvent {
@@ -134,6 +143,81 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 			logger.Infof("got tnt20 event : %v, logdata : %v", event, logData)
 			events = append(events, event)
 		case IMCEventTypeCrossChainTNT721Transfer:
+		case IMCEventTypeUnLockTFuel:
+			var tma TFuelVoucherUnlockMetaData
+			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenUnlocked", data)
+			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+			event := &InterChainMessageEvent{
+				Type:          IMCEventTypeCrossChainTFuelTransfer,
+				SourceChainID: tma.SourceChainID.String(),
+				TargetChainID: MainnetChainID,
+				Sender:        tma.SubchainTokenSender,
+				Receiver:      tma.MainchainTokenReceiver,
+				Data:          data,
+				Nonce:         tma.Nonce,
+				BlockNumber:   blockNumber,
+			}
+			logger.Infof("got tfuel event : %v, logdata : %v", event, logData)
+			events = append(events, event)
+		default:
+		}
+	}
+	return events
+}
+
+func QueryVoucherBurnEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string, sourceChainID string, targetChainID string) []*InterChainMessageEvent {
+	var events []*InterChainMessageEvent
+	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
+	var jsonData = []byte(queryStr)
+
+	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		logger.Fatal(err)
+	}
+	request.Header.Set("Content-Type", "application/json")
+
+	client := &http.Client{}
+	response, err := client.Do(request)
+	if err != nil {
+		logger.Fatalf("response error : %v", err)
+	}
+	defer response.Body.Close()
+
+	body, _ := ioutil.ReadAll(response.Body)
+	var rpcres RPCResult
+
+	err = json.Unmarshal(body, &rpcres)
+	if err != nil {
+		fmt.Printf("error decoding response: %v\n", err)
+		if e, ok := err.(*json.SyntaxError); ok {
+			fmt.Printf("syntax error at byte offset %d\n", e.Offset)
+		}
+		fmt.Printf("response: %q\n", body)
+	}
+
+	for _, logData := range rpcres.Result {
+		logData := logData
+		data, _ := hex.DecodeString(logData.Data[2:])
+		switch imceType {
+		case IMCEventTypeVoucherBurnTFuel:
+			var vma TFuelVoucherBurnMetaData
+			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.SubchainTFuelTokenBankABI)))
+			contractAbi.UnpackIntoInterface(&vma, "BurnTFuelVouchers", data)
+			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+			event := &InterChainMessageEvent{
+				Type:          IMCEventTypeVoucherBurnTFuel,
+				SourceChainID: sourceChainID,
+				TargetChainID: targetChainID,
+				Sender:        vma.VoucherOwner,
+				Receiver:      vma.MainchainTokenReceiver,
+				Data:          data,
+				Nonce:         vma.Nonce,
+				BlockNumber:   blockNumber,
+			}
+			logger.Infof("got tfuel voucher burn event : %v, logdata : %v", event, logData)
+			events = append(events, event)
+		case IMCEventTypeVoucherBurnTNT20:
 		default:
 		}
 	}

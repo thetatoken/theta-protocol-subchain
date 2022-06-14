@@ -24,6 +24,7 @@ import (
 	sld "github.com/thetatoken/thetasubchain/ledger"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	snsync "github.com/thetatoken/thetasubchain/netsync"
+	"github.com/thetatoken/thetasubchain/orchestrator"
 	srp "github.com/thetatoken/thetasubchain/report"
 	srpc "github.com/thetatoken/thetasubchain/rpc"
 	ssnst "github.com/thetatoken/thetasubchain/snapshot"
@@ -43,6 +44,7 @@ type Node struct {
 	RPC              *srpc.ThetaRPCServer
 	reporter         *srp.Reporter
 	MainchainWitness witness.ChainWitness
+	Orchestrator     orchestrator.ChainOrchestrator
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -132,6 +134,17 @@ func NewNode(params *Params) *Node {
 		}
 	}
 
+	orchestrator := orchestrator.NewSimulatedOrchestrator(viper.GetString(scom.CfgSubchainEthRpcURL),
+		viper.GetString(scom.CfgMainchainEthRpcURL),
+		big.NewInt(viper.GetInt64(scom.CfgSubchainID)),
+		common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress)),
+		common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress)),
+		interChainEventCache,
+		consensus,
+		mainchainWitness,
+		viper.GetInt(scom.CfgSubchainUpdateInterval),
+	)
+
 	node := &Node{
 		Store:            store,
 		Chain:            chain,
@@ -143,6 +156,7 @@ func NewNode(params *Params) *Node {
 		Mempool:          mempool,
 		reporter:         reporter,
 		MainchainWitness: mainchainWitness,
+		Orchestrator:     orchestrator,
 	}
 
 	if viper.GetBool(common.CfgRPCEnabled) {
@@ -163,6 +177,7 @@ func (n *Node) Start(ctx context.Context) {
 	n.Mempool.Start(n.ctx)
 	n.reporter.Start(n.ctx)
 	n.MainchainWitness.Start(n.ctx)
+	n.Orchestrator.Start(n.ctx)
 
 	if viper.GetBool(common.CfgRPCEnabled) {
 		n.RPC.Start(n.ctx)
@@ -184,4 +199,3 @@ func (n *Node) Wait() {
 		n.RPC.Wait()
 	}
 }
-

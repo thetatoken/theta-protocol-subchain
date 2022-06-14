@@ -40,4 +40,5 @@ type Ledger interface {
 	GetFinalizedValidatorSet(blockHash common.Hash, isNext bool) (*ValidatorSet, error)
 	PruneState(endHeight uint64) error
 	GetLastProcessedEventNonce(imceType InterChainMessageEventType, blockHash common.Hash) (*big.Int, error)
+	GetTokenBankContractAddress(tokenType CrossChainTokenType) (*common.Address, error)
 }

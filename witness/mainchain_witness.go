@@ -183,6 +183,7 @@ func (mw *MainchainWitness) update() {
 		mw.witnessedDynasty = dynasty
 	}
 	mw.collectInterChainMessageEvents()
+	mw.collectInterChainVoucherBurnEvents()
 }
 
 func (mw *MainchainWitness) collectInterChainMessageEvents() {
@@ -193,7 +194,7 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
 	toBlock := mw.calculateToBlock(fromBlock)
-	logger.Warnf("query from %v to %v\n", fromBlock.String(), toBlock.String())
+	logger.Warnf("query transfer from %v to %v\n", fromBlock.String(), toBlock.String())
 	for _, imceType := range score.TransferTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
@@ -211,6 +212,50 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 		}
 	}
 	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, toBlock)
+}
+
+func (mw *MainchainWitness) collectInterChainVoucherBurnEvents() {
+	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventUnLock)
+	if err == store.ErrKeyNotFound {
+		mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, common.Big0)
+	} else if err != nil {
+		logger.Warnf("failed to get the last queryed height %v\n", err)
+	}
+	toBlock := mw.calculateToBlock(fromBlock)
+	logger.Warnf("query unlock from %v to %v\n", fromBlock.String(), toBlock.String())
+	for _, imceType := range score.UnlockTypes {
+		var events []*score.InterChainMessageEvent
+		switch imceType {
+		case score.IMCEventTypeCrossChainTFuelTransfer:
+			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType, mw.ethRpcURL)
+		case score.IMCEventTypeCrossChainTNT20Transfer:
+			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType, mw.ethRpcURL)
+		}
+		if len(events) == 0 {
+			continue
+		}
+		mw.updateVoucherBurnStatus(events)
+	}
+	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, toBlock)
+}
+
+func (mw *MainchainWitness) updateVoucherBurnStatus(events []*score.InterChainMessageEvent) {
+	for _, e := range events {
+		statusExists, err := mw.interChainEventCache.VoucherBurnNonceExists(e.Type, e.Nonce)
+		if !statusExists && err == nil {
+			break
+		} else {
+			// Should not happen. Since statusExists
+			logger.Panic(err)
+		}
+		eventStatus, err := mw.interChainEventCache.GetVoucherBurnStatus(e.Type, e.Nonce)
+		if err == nil {
+			// Should not happen. Since statusExists
+			logger.Panic(err)
+		}
+		eventStatus.Status = score.VoucherBurnEventStatusFinalized
+		mw.interChainEventCache.SetVoucherBurnStatus(eventStatus)
+	}
 }
 
 func (mw *MainchainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {

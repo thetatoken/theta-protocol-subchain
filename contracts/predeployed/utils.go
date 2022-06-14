@@ -94,3 +94,23 @@ func packStringParam(param string) ([]byte, uint) {
 
 	return paramBytes, uint(worldSize * wordSizeInBytes)
 }
+
+func PrepareTFuelCalldata(subchainID *big.Int, dynasty *big.Int, voucherOwner common.Address, mainchainTokenReceiver common.Address, amount *big.Int, nonce *big.Int, denom string) []byte {
+	calldata := append([]byte{})
+	denomData, _ := packStringParam(denom)
+	denomParamOffset := 7 * wordSizeInBytes // 7: the offsets of seven parameters
+
+	// offset
+	calldata = append(calldata, packBigIntParam(subchainID)...)
+	calldata = append(calldata, packBigIntParam(dynasty)...)
+	calldata = append(calldata, packAddressParam(voucherOwner)...)
+	calldata = append(calldata, packAddressParam(mainchainTokenReceiver)...)
+	calldata = append(calldata, packBigIntParam(amount)...)
+	calldata = append(calldata, packBigIntParam(nonce)...)
+	calldata = append(calldata, packUintParam(denomParamOffset)...)
+	calldata = append(calldata, denomData...)
+
+	res := "0x" + hex.EncodeToString(calldata)
+	logger.Infof("calldata bytes to string : %v", res)
+	return calldata
+}

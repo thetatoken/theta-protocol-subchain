@@ -42,8 +42,11 @@ const (
 	IMCEventTypeVoucherBurnTNT20  InterChainMessageEventType = 20002
 	IMCEventTypeVoucherBurnTNT721 InterChainMessageEventType = 20003
 
-	IMCEventLock   InterChainMessageEventType = 30000
-	IMCEventUnLock InterChainMessageEventType = 40000
+	IMCEventLock             InterChainMessageEventType = 30000
+	IMCEventUnLock           InterChainMessageEventType = 40000
+	IMCEventTypeUnLockTFuel  InterChainMessageEventType = 40001
+	IMCEventTypeUnLockTNT20  InterChainMessageEventType = 40002
+	IMCEventTypeUnLockTNT721 InterChainMessageEventType = 40003
 )
 
 // InterChainMessageEvent contains the public information of a crosschain transfer event.
@@ -224,7 +227,7 @@ func LastQueryedHeightKey(icmeType InterChainMessageEventType) common.Bytes {
 	}
 }
 
-func LastProcessedUnfinalizedVoucherBurnNonceKey(icmeType InterChainMessageEventType) common.Bytes {
+func InterChainVoucherBurnEventNextNonceKey(icmeType InterChainMessageEventType) common.Bytes {
 	return common.Bytes("vblp" + strconv.FormatUint(uint64(icmeType), 10))
 }
 
@@ -330,22 +333,22 @@ func (c *InterChainEventCache) SetLastQueryedHeightForType(icmeType InterChainMe
 	return err // the caller should handle the error
 }
 
-func (c *InterChainEventCache) GetLastProcessedUnfinalizedVoucherBurnNonce(icmeType InterChainMessageEventType) (*big.Int, error) {
+func (c *InterChainEventCache) GetNextVoucherBurnNonceForType(icmeType InterChainMessageEventType) (*big.Int, error) {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	nonce := big.NewInt(0)
 	store := kvstore.NewKVStore(c.db)
-	err := store.Get(LastProcessedUnfinalizedVoucherBurnNonceKey(icmeType), &nonce)
+	err := store.Get(InterChainVoucherBurnEventNextNonceKey(icmeType), &nonce)
 	return nonce, err
 }
 
-func (c *InterChainEventCache) SetLastProcessedUnfinalizedVoucherBurnNonce(icmeType InterChainMessageEventType, nonce *big.Int) error {
+func (c *InterChainEventCache) SetNextVoucherBurnNonceForType(icmeType InterChainMessageEventType, nonce *big.Int) error {
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
 	store := kvstore.NewKVStore(c.db)
-	err := store.Put(LastProcessedUnfinalizedVoucherBurnNonceKey(icmeType), nonce)
+	err := store.Put(InterChainVoucherBurnEventNextNonceKey(icmeType), nonce)
 	return err // the caller should handle the error
 }
 
@@ -433,10 +436,11 @@ type VoucherBurnData struct {
 	TFuelAmount *big.Int
 }
 
-type TfuelVoucherBurnMetaData struct {
-	TxHash common.Hash
-	Denom  string
-	Amount *big.Int
+type TFuelVoucherBurnMetaData struct {
+	VoucherOwner           common.Address
+	MainchainTokenReceiver common.Address
+	Amount                 *big.Int
+	Nonce                  *big.Int
 }
 
 type TNT20VoucherBurnMetaData struct {
@@ -444,6 +448,14 @@ type TNT20VoucherBurnMetaData struct {
 	Denom   string
 	Amount  *big.Int
 	TokenId *big.Int
+}
+
+type TFuelVoucherUnlockMetaData struct {
+	SourceChainID          *big.Int
+	MainchainTokenReceiver common.Address
+	SubchainTokenSender    common.Address
+	UnlockedAmount         *big.Int
+	Nonce                  *big.Int
 }
 
 // ------------------------------------ Cross-Chain Asset Transfer --------------------------------------------
