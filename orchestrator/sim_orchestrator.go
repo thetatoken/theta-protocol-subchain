@@ -239,7 +239,7 @@ func (oc *SimulatedOrchestrator) setEventStatus(list []*score.InterChainMessageE
 func (oc *SimulatedOrchestrator) collect() {
 	fromBlock, err := oc.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeVoucherBurn)
 	if err == store.ErrKeyNotFound {
-		oc.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, common.Big0)
+		oc.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeVoucherBurn, common.Big0)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
@@ -285,7 +285,9 @@ func (oc *SimulatedOrchestrator) calculateToBlock(fromBlock *big.Int) *big.Int {
 func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 	for _, imceType := range score.VoucherBurnTypes {
 		nextEventNonce, err := oc.interChainEventCache.GetNextVoucherBurnNonceForType(imceType)
-		if err != nil {
+		if err == store.ErrKeyNotFound {
+			oc.interChainEventCache.SetNextVoucherBurnNonceForType(imceType, common.Big1)
+		} else if err != nil {
 			logger.Errorf("Failed to get the next event type for nonce %v, type %v", err, imceType)
 		}
 		var eventStatus *score.VoucherBurnEventStatusInfo
