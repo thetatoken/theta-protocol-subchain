@@ -200,14 +200,6 @@ func (oc *SimulatedOrchestrator) mainloop(ctx context.Context) {
 }
 
 func (oc *SimulatedOrchestrator) buildTxOpts() *bind.TransactOpts {
-	privateKey, err := crypto.HexToECDSA("93a90ea508331dfdf27fb79757d4250b4e84954927ba0073cd67454ac432c737")
-	// publicKey := privateKey.Public()
-	// publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	// if !ok {
-	// 	log.Fatal("error casting public key to ECDSA")
-	// }
-
-	// fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 	gasPrice, err := oc.clientOnMainchain.SuggestGasPrice(context.Background())
 	if err != nil {
 		logger.Fatal(err)
@@ -216,13 +208,13 @@ func (oc *SimulatedOrchestrator) buildTxOpts() *bind.TransactOpts {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	txOpts, err := bind.NewKeyedTransactorWithChainID(privateKey, oc.mainChainID)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, oc.mainChainID)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
-	txOpts.Value = big.NewInt(12312312) // in wei
-	txOpts.GasLimit = uint64(10000000)  // in units
+	txOpts.Value = big.NewInt(0)       // in wei
+	txOpts.GasLimit = uint64(10000000) // in units
 	txOpts.GasPrice = gasPrice
 	logger.Debugf("building tx opts with address %v", oc.privateKey.PublicKey().Address())
 	return txOpts
@@ -437,3 +429,4 @@ func (oc *SimulatedOrchestrator) signVoucherBurnData(data []byte) []byte {
 	}
 	return sig.ToBytes()
 }
+
