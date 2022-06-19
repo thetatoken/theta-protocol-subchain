@@ -122,7 +122,7 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 				Nonce:         tma.Nonce,
 				BlockNumber:   blockNumber,
 			}
-			logger.Infof("got tfuel event : %v, logdata : %v", event, logData)
+			logger.Infof("got tfuel event : %v, logdata : %v", tma, logData)
 			events = append(events, event)
 		case IMCEventTypeCrossChainTNT20Transfer:
 			var tma TNT20TransferMetaData
@@ -140,7 +140,7 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 				Nonce:         tma.Nonce,
 				BlockNumber:   blockNumber,
 			}
-			logger.Infof("got tnt20 event : %v, logdata : %v", event, logData)
+			logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
 			events = append(events, event)
 		case IMCEventTypeCrossChainTNT721Transfer:
 		case IMCEventTypeUnLockTFuel:
@@ -158,7 +158,7 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 				Nonce:         tma.Nonce,
 				BlockNumber:   blockNumber,
 			}
-			logger.Infof("got tfuel event : %v, logdata : %v", event, logData)
+			logger.Infof("got tfuel unlock event : %v, logdata : %v", tma, logData)
 			events = append(events, event)
 		default:
 		}
@@ -215,7 +215,7 @@ func QueryVoucherBurnEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr
 				Nonce:         vma.Nonce,
 				BlockNumber:   blockNumber,
 			}
-			logger.Infof("got tfuel voucher burn event : %v, logdata : %v", event, logData)
+			logger.Infof("got tfuel voucher burn event : %v, logdata : %v", vma, logData)
 			events = append(events, event)
 		case IMCEventTypeVoucherBurnTNT20:
 		default:

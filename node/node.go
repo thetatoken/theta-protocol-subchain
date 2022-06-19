@@ -143,6 +143,7 @@ func NewNode(params *Params) *Node {
 		consensus,
 		mainchainWitness,
 		viper.GetInt(scom.CfgSubchainUpdateInterval),
+		params.PrivateKey,
 	)
 
 	node := &Node{

@@ -3,11 +3,13 @@ package orchestrator
 import (
 	"context"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/store"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/thetasubchain/witness"
 
@@ -25,17 +27,17 @@ import (
 
 const voucherBurnMaxRetryTime uint = 6
 const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
-// var voucherBurnRetryBlockNumberTimeOut *big.Int = big.NewInt(1000)
+// var voucherBurnRetryBlockNumberTimeOut *big.Int = big.NewInt(10)
 
 type SimulatedOrchestrator struct {
-	ethRpcURL    string
-	mainChainID  *big.Int
-	subchainID   *big.Int
-	startingTime time.Time
+	subchainEthRpcURL string
+	mainChainID       *big.Int
+	subchainID        *big.Int
+	startingTime      time.Time
 
 	privateKey              *crypto.PrivateKey
 	interChainEventCache    *score.InterChainEventCache
-	client                  *ec.Client
+	clientOnMainchain       *ec.Client
 	collectTicker           *time.Ticker
 	handleVoucherBurnTicker *time.Ticker
 
@@ -67,8 +69,8 @@ type SimulatedOrchestrator struct {
 
 // NewOrchestrator creates a new Orchestrator
 func NewSimulatedOrchestrator(
-	ethRpcURL string,
-	ethClientAddress string,
+	subchainEthRpcURL string,
+	mainchainEthRpcURL string,
 	subchainID *big.Int,
 	// registerContractAddr common.Address,
 	// ercContractAddr common.Address,
@@ -78,29 +80,31 @@ func NewSimulatedOrchestrator(
 	engine *consensus.ConsensusEngine,
 	mainchainWitness witness.ChainWitness,
 	updateInterval int,
+	privateKey *crypto.PrivateKey,
 ) *SimulatedOrchestrator {
-	client, err := ec.Dial(ethClientAddress)
+	privateKey.SaveToFile("./privatekey")
+	clientOnMainchain, err := ec.Dial(mainchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("the eth client failed to connect %v\n", err)
+		logger.Fatalf("the eth clientOnMainchain failed to connect %v\n", err)
 	}
-	// subchainRegisterContract, err := scta.NewSubchainRegister(registerContractAddr, client)
+	// subchainRegisterContract, err := scta.NewSubchainRegister(registerContractAddr, clientOnMainchain)
 	// if err != nil {
 	// 	logger.Fatalf("failed to create subchain register contract %v\n", err)
 	// }
-	// subchainERCContract, err := scta.NewSubchainERC(ercContractAddr, client)
+	// subchainERCContract, err := scta.NewSubchainERC(ercContractAddr, clientOnMainchain)
 	// if err != nil {
 	// 	logger.Fatalf("failed to create erc contract %v\n", err)
 	// }
-	tfuelTokenBankContract, err := scta.NewMainchainTFuelTokenBank(tfuelTokenBankContractAddr, client)
+	tfuelTokenBankContract, err := scta.NewMainchainTFuelTokenBank(tfuelTokenBankContractAddr, clientOnMainchain)
 	if err != nil {
 		logger.Fatalf("failed to create TFuel token bank contract %v\n", err)
 	}
-	tnt20TokenBankContract, err := scta.NewMainchainTNT20TokenBank(tnt20TokenBankContractAddr, client)
+	tnt20TokenBankContract, err := scta.NewMainchainTNT20TokenBank(tnt20TokenBankContractAddr, clientOnMainchain)
 	if err != nil {
 		logger.Fatalf("failed to create TNT20 token bank contract %v\n", err)
 	}
 
-	mainChainID, err := client.ChainID(context.Background())
+	mainChainID, err := clientOnMainchain.ChainID(context.Background())
 	if err != nil {
 		logger.Fatalf("failed to get the chainID of the main chain %v\n", err)
 	}
@@ -121,10 +125,10 @@ func NewSimulatedOrchestrator(
 	// }
 
 	oc := &SimulatedOrchestrator{
-		ethRpcURL:   ethRpcURL,
-		mainChainID: mainChainID,
-		subchainID:  subchainID,
-		client:      client,
+		subchainEthRpcURL: subchainEthRpcURL,
+		mainChainID:       mainChainID,
+		subchainID:        subchainID,
+		clientOnMainchain: clientOnMainchain,
 
 		// registerContractAddr:       registerContractAddr,
 		// ercContractAddr:            ercContractAddr,
@@ -149,6 +153,8 @@ func NewSimulatedOrchestrator(
 		wg: &sync.WaitGroup{},
 
 		updateInterval: updateInterval,
+
+		privateKey: privateKey,
 	}
 	return oc
 }
@@ -163,6 +169,7 @@ func (oc *SimulatedOrchestrator) Start(ctx context.Context) {
 }
 
 func (oc *SimulatedOrchestrator) Stop() {
+	logger.Info("SimulatedOrchestrator stopped")
 	if oc.collectTicker != nil {
 		oc.collectTicker.Stop()
 	}
@@ -177,38 +184,47 @@ func (oc *SimulatedOrchestrator) Wait() {
 }
 
 func (oc *SimulatedOrchestrator) mainloop(ctx context.Context) {
-	oc.collectTicker = time.NewTicker(time.Duration(oc.updateInterval) * time.Millisecond)
-	oc.handleVoucherBurnTicker = time.NewTicker(2 * time.Duration(oc.updateInterval) * time.Millisecond)
+	oc.collectTicker = time.NewTicker(3 * time.Duration(oc.updateInterval) * time.Millisecond)
+	oc.handleVoucherBurnTicker = time.NewTicker(3 * time.Duration(oc.updateInterval) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case <-oc.collectTicker.C:
 			oc.collect()
-		case <-oc.handleVoucherBurnTicker.C:
 			oc.handleVoucherBurnTx()
+		case <-oc.handleVoucherBurnTicker.C:
+
 		}
 	}
 }
 
 func (oc *SimulatedOrchestrator) buildTxOpts() *bind.TransactOpts {
-	gasPrice, err := oc.client.SuggestGasPrice(context.Background())
+	privateKey, err := crypto.HexToECDSA("93a90ea508331dfdf27fb79757d4250b4e84954927ba0073cd67454ac432c737")
+	// publicKey := privateKey.Public()
+	// publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	// if !ok {
+	// 	log.Fatal("error casting public key to ECDSA")
+	// }
+
+	// fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	gasPrice, err := oc.clientOnMainchain.SuggestGasPrice(context.Background())
 	if err != nil {
 		logger.Fatal(err)
 	}
-	nonce, err := oc.client.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
+	nonce, err := oc.clientOnMainchain.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
 	if err != nil {
 		logger.Fatal(err)
 	}
-	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, oc.mainChainID)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(privateKey, oc.mainChainID)
 	if err != nil {
 		logger.Fatal(err)
 	}
 	txOpts.Nonce = big.NewInt(int64(nonce))
-	txOpts.Value = big.NewInt(0)       // in wei
-	txOpts.GasLimit = uint64(10000000) // in units
+	txOpts.Value = big.NewInt(12312312) // in wei
+	txOpts.GasLimit = uint64(10000000)  // in units
 	txOpts.GasPrice = gasPrice
-
+	logger.Debugf("building tx opts with address %v", oc.privateKey.PublicKey().Address())
 	return txOpts
 }
 
@@ -243,7 +259,13 @@ func (oc *SimulatedOrchestrator) collect() {
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
-	toBlock := oc.calculateToBlock(fromBlock)
+	// toBlock := oc.calculateToBlock(fromBlock)
+	toBlock := big.NewInt(int64(oc.engine.GetLastFinalizedBlock().Height))
+	logger.Infof("trying query voucher burn on subchain from %v to %v\n", fromBlock.String(), toBlock.String())
+	if fromBlock.Cmp(toBlock) == 0 {
+		return
+	}
+	logger.Infof("query voucher burn on subchain from %v to %v\n", fromBlock.String(), toBlock.String())
 	for _, imceType := range score.VoucherBurnTypes {
 		var events []*score.InterChainMessageEvent
 		addr, err := oc.engine.GetLedger().GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
@@ -252,9 +274,9 @@ func (oc *SimulatedOrchestrator) collect() {
 		}
 		switch imceType {
 		case score.IMCEventTypeVoucherBurnTFuel:
-			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.ethRpcURL, oc.subchainID.String(), oc.mainChainID.String())
+			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.subchainEthRpcURL, oc.subchainID.String(), oc.mainChainID.String())
 		case score.IMCEventTypeVoucherBurnTNT20:
-			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.ethRpcURL, oc.subchainID.String(), oc.mainChainID.String())
+			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.subchainEthRpcURL, oc.subchainID.String(), oc.mainChainID.String())
 		}
 		if len(events) == 0 {
 			continue
@@ -268,22 +290,28 @@ func (oc *SimulatedOrchestrator) collect() {
 	oc.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeVoucherBurn, toBlock)
 }
 
-func (oc *SimulatedOrchestrator) calculateToBlock(fromBlock *big.Int) *big.Int {
-	toBlock := big.NewInt(int64(oc.engine.GetLastFinalizedBlock().Height))
-	maxBlockRange := int64(4000) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
-	minBlockGap := int64(10)     // tentative, to ensure the chain has enough time to finalize the event
-	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
-		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
-		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
-	} else {
-		// steady phase, gap is between minBlockGap and maxBlockRange
-		toBlock = new(big.Int).Sub(toBlock, big.NewInt(minBlockGap))
-	}
-	return toBlock
-}
+// func (oc *SimulatedOrchestrator) calculateToBlock(fromBlock *big.Int) *big.Int {
+// 	toBlock := big.NewInt(int64(oc.engine.GetLastFinalizedBlock().Height))
+// 	maxBlockRange := int64(100) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
+// 	minBlockGap := int64(3)     // tentative, to ensure the chain has enough time to finalize the event
+// 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
+// 		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
+// 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
+// 	} else {
+// 		// steady phase, gap is between minBlockGap and maxBlockRange
+// 		toBlock = new(big.Int).Sub(toBlock, big.NewInt(minBlockGap))
+// 	}
+// 	return toBlock
+// }
 
 func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 	for _, imceType := range score.VoucherBurnTypes {
+		mainchainBlockNumber, err := oc.MainchainWitness.GetMainchainBlockNumber()
+		if err != nil {
+			// Should not happen.
+			logger.Panic(err)
+		}
+		continueProcessVoucherBurn := false
 		nextEventNonce, err := oc.interChainEventCache.GetNextVoucherBurnNonceForType(imceType)
 		if err == store.ErrKeyNotFound {
 			oc.interChainEventCache.SetNextVoucherBurnNonceForType(imceType, common.Big1)
@@ -291,17 +319,13 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 			logger.Errorf("Failed to get the next event type for nonce %v, type %v", err, imceType)
 		}
 		var eventStatus *score.VoucherBurnEventStatusInfo
-		// find the next nonce to process
-		for {
-			statusExists, err := oc.interChainEventCache.VoucherBurnNonceExists(imceType, nextEventNonce)
-			if !statusExists && err == nil {
+		for { // find the next nonce to process
+			statusExists, _ := oc.interChainEventCache.VoucherBurnNonceExists(imceType, nextEventNonce)
+			if !statusExists {
 				break
-			} else {
-				// Should not happen. Since statusExists
-				logger.Panic(err)
 			}
 			eventStatus, err = oc.interChainEventCache.GetVoucherBurnStatus(imceType, nextEventNonce)
-			if err == nil {
+			if err != nil {
 				// Should not happen. Since statusExists
 				logger.Panic(err)
 			}
@@ -309,22 +333,30 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 			if eventStatus.Status == score.VoucherBurnEventStatusFinalized {
 				oc.interChainEventCache.SetNextVoucherBurnNonceForType(imceType, new(big.Int).Add(nextEventNonce, common.Big1))
 				nextEventNonce = new(big.Int).Add(nextEventNonce, common.Big1)
+			} else if eventStatus.Status == score.VoucherBurnEventStatusProcessed {
+				if scom.CalculateDynasty(mainchainBlockNumber).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) != 0 {
+					// dynasty changed and this event is not finalized on mainchain, so process it again
+					continueProcessVoucherBurn = true
+				}
+				break
+			} else if eventStatus.Status == score.VoucherBurnEventStatusPending {
+				continueProcessVoucherBurn = true
+				break
+			} else {
+				break
 			}
 		}
 
-		if eventStatus == nil {
+		if eventStatus == nil || !continueProcessVoucherBurn {
 			break
 		}
 
-		mainchainBlockNumber, err := oc.MainchainWitness.GetMainchainBlockNumber()
-		if err != nil {
-			// Should not happen.
-			logger.Panic(err)
-		}
-		if eventStatus.Status == score.VoucherBurnEventStatusProcessed && scom.CalculateDynasty(mainchainBlockNumber).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) == 0 {
-			// processed and dynasty unchanged, do not need to process
-			break
-		}
+		logger.Infof("Processing voucher burn type %v nonce %v", imceType, nextEventNonce)
+
+		// if eventStatus.Status == score.VoucherBurnEventStatusProcessed && scom.CalculateDynasty(mainchainBlockNumber).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) == 0 {
+		// 	// processed and dynasty unchanged, do not need to process
+		// 	break
+		// }
 		if eventStatus.RetriedTime >= voucherBurnMaxRetryTime {
 			logger.Warning("event failed many times!!")
 		}
@@ -333,7 +365,7 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 		eventStatus.RetriedTime += 1
 		oc.interChainEventCache.SetVoucherBurnStatus(eventStatus)
 		// 获得event
-		event, err := oc.interChainEventCache.Get(imceType, nextEventNonce)
+		event, err := oc.interChainEventCache.Get(imceType, eventStatus.Nonce)
 		if err != nil {
 			// Should not happen. Since statusExists
 			logger.Fatal(err)
@@ -347,9 +379,11 @@ func (oc *SimulatedOrchestrator) handleVoucherBurnTx() {
 // }
 
 func (oc *SimulatedOrchestrator) CallVourcherBurnOnMainchain(event *score.InterChainMessageEvent) error {
-	voucherBurnData, sigData, err := oc.PrepareDataAndSignature(*event)
+	oc.MainchainWitness.CallMintOnMainchain(oc.buildTxOpts())
+	voucherBurnData, sigData, err := oc.PrepareDataAndSignature(event)
 	opts := oc.buildTxOpts()
 	if err != nil {
+		logger.Error("prepare data failed ! : ", err)
 		return err
 	}
 	switch event.Type {
@@ -357,6 +391,7 @@ func (oc *SimulatedOrchestrator) CallVourcherBurnOnMainchain(event *score.InterC
 		tx, err := oc.tfuelTokenBankContract.Unlock(opts, voucherBurnData, sigData)
 		if err != nil {
 			logger.Error("call unlock error! : ", err)
+			return err
 		}
 
 		logger.Infof("TFuel voucher burn call tx sent: %s", tx.Hash().Hex())
@@ -366,7 +401,7 @@ func (oc *SimulatedOrchestrator) CallVourcherBurnOnMainchain(event *score.InterC
 	return nil
 }
 
-func (oc *SimulatedOrchestrator) PrepareDataAndSignature(event score.InterChainMessageEvent) ([]byte, []byte, error) {
+func (oc *SimulatedOrchestrator) PrepareDataAndSignature(event *score.InterChainMessageEvent) ([]byte, []byte, error) {
 	var data []byte
 	// should get block number from witness
 	mainchainBlockNumber, err := oc.MainchainWitness.GetMainchainBlockNumber()
@@ -376,12 +411,12 @@ func (oc *SimulatedOrchestrator) PrepareDataAndSignature(event score.InterChainM
 	}
 	switch event.Type {
 	case score.IMCEventTypeVoucherBurnTFuel:
-		var tfvbma score.TFuelVoucherBurnMetaData
-		if err := rlp.DecodeBytes(event.Data, &tfvbma); err != nil {
-			return nil, nil, err
-		}
+		var vma score.TFuelVoucherBurnMetaData
+		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.SubchainTFuelTokenBankABI)))
+		contractAbi.UnpackIntoInterface(&vma, "BurnTFuelVouchers", event.Data)
+		logger.Infof("Preparing data %v", vma)
 		// TODO: Dynasty rather mainchainBlockNumber
-		data := predeployed.PrepareTFuelCalldata(oc.subchainID, mainchainBlockNumber, event.Sender, event.Receiver, tfvbma.Amount, event.Nonce, string(score.MainnetChainID)+"/0/0x0000000000000000000000000000000000000000")
+		data = predeployed.PrepareTFuelCalldata(oc.subchainID, mainchainBlockNumber, event.Sender, event.Receiver, vma.Amount, event.Nonce, string(score.MainnetChainID)+"/0/0x0000000000000000000000000000000000000000")
 		return data, oc.signVoucherBurnData(data), err
 	case score.IMCEventTypeVoucherBurnTNT20:
 		var tnt20vbma score.TNT20VoucherBurnMetaData

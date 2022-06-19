@@ -1,7 +1,7 @@
 # Theta configuration
-# chainID: tsub_360777
+# chainID: tsub_3610001
 genesis:
-  hash: "0xd3bd1c5332c951ea3ff074866ad0d79aa67f3d837b53d8084246ee1687eb8fd5"
+  hash: "0xede6301e2a8d0ec7903351f0df73c95d9719576da567d8cc22c3673959d1d089"
 p2p:
   port: 12100
 rpc:
@@ -9,14 +9,16 @@ rpc:
 log:
   #levels: "*:info"
   levels: "*:debug"
+consensus:
+  minBlockInterval: 3
 subchain:
-  register: "0xbD24833ace144eFc04eD2b39f0021D1910f054ad"
-  erc20: "0xBf0b860BdBf712fa88DFB81Efe1BD8353437435B"
+  register: "0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa"
+  erc20: "0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af"
   mainchainEthRpcURL: "http://localhost:18888/rpc"
   subchainEthRpcURL: "http://localhost:19888/rpc"
-  tfuelTB: "0xE30f12cDBb6d57D6Ab5Be685FdeF0BE19942aC29"
-  tnt20TB: "0x031375c16fc20ECEd29fA21642701EE48A5b9090"
-  updateInterval: 1000
+  tfuelTB: "0x59AF421cB35fc23aB6C8ee42743e6176040031f4"
+  tnt20TB: "0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9"
+  updateInterval: 3000
 
 
 

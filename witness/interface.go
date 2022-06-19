@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 )
 
 type ChainWitness interface {
@@ -15,4 +16,5 @@ type ChainWitness interface {
 	GetMainchainBlockNumberUint() (uint64, error)
 	GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error)
 	GetInterChainEventCache() *score.InterChainEventCache
+	CallMintOnMainchain(auth *bind.TransactOpts)
 }

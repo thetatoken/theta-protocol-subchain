@@ -19,7 +19,7 @@ import (
 	smp "github.com/thetatoken/thetasubchain/mempool"
 )
 
-const txTimeout = 60 * time.Second
+const txTimeout = 55 * time.Second
 
 type Callback struct {
 	txHash   string

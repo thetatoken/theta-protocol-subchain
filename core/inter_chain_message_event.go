@@ -287,6 +287,7 @@ func (c *InterChainEventCache) Get(imceType InterChainMessageEventType, nonce *b
 
 	event := InterChainMessageEvent{}
 	store := kvstore.NewKVStore(c.db)
+	logger.Debugf("Getting %v event %v", imceType, nonce)
 	err := store.Get(InterChainEventIndexKey(imceType, nonce), &event)
 	return &event, err // the caller should handle the error
 }
@@ -375,9 +376,9 @@ func (c *InterChainEventCache) VoucherBurnNonceExists(icmeType InterChainMessage
 	c.mutex.Lock()
 	defer c.mutex.Unlock()
 
-	event := InterChainMessageEvent{}
+	statusInfo := VoucherBurnEventStatusInfo{}
 	store := kvstore.NewKVStore(c.db)
-	err := store.Get(VoucherBurnStatusInfoKey(icmeType, nonce), &event)
+	err := store.Get(VoucherBurnStatusInfoKey(icmeType, nonce), &statusInfo)
 	if err == nil {
 		return true, nil
 	}

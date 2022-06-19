@@ -7,7 +7,7 @@ import (
 )
 
 // // SubchainRegisterSendToSubchainEvent
-var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
+var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 
 // type UnprocessedVoucherContractBurnTx struct {
 // 	blockHash common.Hash

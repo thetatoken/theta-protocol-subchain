@@ -322,6 +322,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
 	for _, regularRawTx := range regularRawTxs {
 		rawTxCandidates = append(rawTxCandidates, regularRawTx)
+		logger.Debugf("regular raw tx %v added to block", regularRawTx)
 	}
 
 	logger.Debugf("ProposeBlockTxs: block transactions added, block.height = %v", block.Height)
@@ -684,7 +685,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	proposer := ledger.valMgr.GetNextProposer(parentBlkHash, block.Epoch)
 	currentValidatorSet := ledger.valMgr.GetNextValidatorSet(parentBlkHash)
 
-	// ------- Add coinbase transaction ------- //
+	// ------- Add coinbase transaction ------- //x
 	ledger.addCoinbaseTx(view, &proposer, currentValidatorSet, rawTxs)
 
 	// ------- Add subchain validator set update transaction ------- //

@@ -209,32 +209,32 @@ func (mw *SimulatedMainchainWitness) update() {
 
 func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	// Simulate validator set updates
-	// validatorAddrList := []string{
-	// 	"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
-	// }
-	// validatorSet := score.NewValidatorSet(dynasty)
-	// stake := big.NewInt(100000000)
-	// v := score.NewValidator(validatorAddrList[0], stake)
-	// validatorSet.AddValidator(v)
 	validatorAddrList := []string{
-		"0x9F1233798E905E173560071255140b4A8aBd3Ec6",
 		"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
-		"0xC15E24083152dD76Ae6FC2aEb5269FF23d70330B",
-		"0x7631958d57Cf6a5605635a5F06Aa2ae2e000820e",
 	}
 	validatorSet := score.NewValidatorSet(dynasty)
-	stake1 := big.NewInt(100000000)
-	stake2 := big.NewInt(100000000)
-	stake3 := big.NewInt(100000000)
-	stake4 := big.NewInt(100000000)
-	v1 := score.NewValidator(validatorAddrList[0], stake1)
-	v2 := score.NewValidator(validatorAddrList[1], stake2)
-	v3 := score.NewValidator(validatorAddrList[2], stake3)
-	v4 := score.NewValidator(validatorAddrList[3], stake4)
-	validatorSet.AddValidator(v1)
-	validatorSet.AddValidator(v2)
-	validatorSet.AddValidator(v3)
-	validatorSet.AddValidator(v4)
+	stake := big.NewInt(100000000)
+	v := score.NewValidator(validatorAddrList[0], stake)
+	validatorSet.AddValidator(v)
+	// validatorAddrList := []string{
+	// 	"0x9F1233798E905E173560071255140b4A8aBd3Ec6",
+	// 	"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
+	// 	"0xC15E24083152dD76Ae6FC2aEb5269FF23d70330B",
+	// 	"0x7631958d57Cf6a5605635a5F06Aa2ae2e000820e",
+	// }
+	// validatorSet := score.NewValidatorSet(dynasty)
+	// stake1 := big.NewInt(100000000)
+	// stake2 := big.NewInt(100000000)
+	// stake3 := big.NewInt(100000000)
+	// stake4 := big.NewInt(100000000)
+	// v1 := score.NewValidator(validatorAddrList[0], stake1)
+	// v2 := score.NewValidator(validatorAddrList[1], stake2)
+	// v3 := score.NewValidator(validatorAddrList[2], stake3)
+	// v4 := score.NewValidator(validatorAddrList[3], stake4)
+	// validatorSet.AddValidator(v1)
+	// validatorSet.AddValidator(v2)
+	// validatorSet.AddValidator(v3)
+	// validatorSet.AddValidator(v4)
 
 	mw.validatorSetCache[dynasty.String()] = validatorSet
 

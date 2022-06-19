@@ -10,6 +10,7 @@ import (
 	log "github.com/sirupsen/logrus"
 
 	// "github.com/thetatoken/theta/crypto"
+
 	scom "github.com/thetatoken/thetasubchain/common"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
@@ -17,6 +18,7 @@ import (
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/store"
+	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
@@ -39,6 +41,9 @@ type MainchainWitness struct {
 	mainchainTNT20TokenBankAddr common.Address
 	registerContract            *scta.SubchainRegister
 	ercContract                 *scta.SubchainERC
+
+	mainchainBlockNumber    uint64
+	mainchainBlockNumberBig *big.Int
 
 	updateInterval int
 
@@ -94,6 +99,9 @@ func NewMainchainWitness(
 		registerContract:            subchainRegisterContract,
 		ercContract:                 subchainERCContract,
 
+		mainchainBlockNumber:    0,
+		mainchainBlockNumberBig: common.Big0,
+
 		updateInterval: updateInterval,
 
 		interChainEventCache: interChainEventCache,
@@ -127,20 +135,22 @@ func (mw *MainchainWitness) Wait() {
 
 // TODO: make sure the block number returned by the client.BlockNumber() call is the lastest *finalized* block number
 func (mw *MainchainWitness) GetMainchainBlockNumber() (*big.Int, error) {
-	blockNumber, err := mw.client.BlockNumber(context.Background())
-	if err != nil {
-		return nil, err
-	}
-	return big.NewInt(int64(blockNumber)), nil
+	// blockNumber, err := mw.client.BlockNumber(context.Background())
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// return big.NewInt(int64(blockNumber)), nil
+	return mw.mainchainBlockNumberBig, nil
 }
 
 // TODO: make sure the block number returned by the client.BlockNumber() call is the lastest *finalized* block number
 func (mw *MainchainWitness) GetMainchainBlockNumberUint() (uint64, error) {
-	blockNumber, err := mw.client.BlockNumber(context.Background())
-	if err != nil {
-		return 0, err
-	}
-	return blockNumber, nil
+	// blockNumber, err := mw.client.BlockNumber(context.Background())
+	// if err != nil {
+	// 	return 0, err
+	// }
+	// return blockNumber, nil
+	return mw.mainchainBlockNumber, nil
 }
 
 func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -158,6 +168,25 @@ func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 	return validatorSet, nil
 }
 
+func (mw *MainchainWitness) CallMintOnMainchain(auth *bind.TransactOpts) {
+	amount, suceess := new(big.Int).SetString("2000000000000000000000", 10)
+	if !suceess {
+		logger.Fatal("Failed string")
+	}
+	result, err := mw.ercContract.GetBalance(nil, auth.From)
+	if err != nil {
+		logger.Fatal(err)
+	}
+	logger.Debug("balance : ", result)
+
+	tx, err := mw.ercContract.Mint(auth, amount)
+	if err != nil {
+		logger.Fatal(err)
+	}
+
+	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
+}
+
 func (mw *MainchainWitness) mainloop(ctx context.Context) {
 	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
 	for {
@@ -170,14 +199,19 @@ func (mw *MainchainWitness) mainloop(ctx context.Context) {
 	}
 }
 
-func (mw *MainchainWitness) update() {
-	mainchainBlockNumber, err := mw.GetMainchainBlockNumber()
+func (mw *MainchainWitness) updateMainchainBlockNumber() {
+	mbn, err := mw.client.BlockNumber(context.Background())
 	if err != nil {
 		logger.Warnf("failed to get the mainchain block number %v\n", err)
 		return
 	}
+	mw.mainchainBlockNumber = mbn
+	mw.mainchainBlockNumberBig = big.NewInt(int64(mbn))
+}
 
-	dynasty := scom.CalculateDynasty(mainchainBlockNumber)
+func (mw *MainchainWitness) update() {
+	mw.updateMainchainBlockNumber()
+	dynasty := scom.CalculateDynasty(mw.mainchainBlockNumberBig)
 	if mw.witnessedDynasty == nil || dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
 		mw.updateValidatorSetCache(dynasty)
 		mw.witnessedDynasty = dynasty
@@ -193,7 +227,7 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
 	toBlock := mw.calculateToBlock(fromBlock)
-	logger.Warnf("query transfer from %v to %v\n", fromBlock.String(), toBlock.String())
+	logger.Infof("query transfer on mainchain from %v to %v\n", fromBlock.String(), toBlock.String())
 
 	queryTypes := append(score.TransferTypes, score.UnlockTypes...)
 	// interchain
@@ -265,8 +299,8 @@ func (mw *MainchainWitness) updateVoucherBurnStatus(events []*score.InterChainMe
 
 func (mw *MainchainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 	toBlock, _ := mw.GetMainchainBlockNumber()
-	maxBlockRange := int64(100) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
-	minBlockGap := int64(10)    // tentative, to ensure the chain has enough time to finalize the event
+	maxBlockRange := int64(1000) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
+	minBlockGap := int64(10)     // tentative, to ensure the chain has enough time to finalize the event
 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
 		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
@@ -278,22 +312,33 @@ func (mw *MainchainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 }
 
 func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
-	validatorAddrs, validatorStakes, err := mw.registerContract.GetValidatorAndStakeSetWithBlockHeight(nil, mw.subchainID, dynasty.Mul(dynasty, big.NewInt(100)))
-	if err != nil {
-		return nil, err
+	validatorAddrList := []string{
+		"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
 	}
-
-	if len(validatorAddrs) != len(validatorStakes) {
-		return nil, fmt.Errorf("the length of validatorAddrs and validatorStakes are not equal")
-	}
-
 	validatorSet := score.NewValidatorSet(dynasty)
-	for i := 0; i < len(validatorAddrs); i++ {
-		validator := score.NewValidator(validatorAddrs[i].Hex(), validatorStakes[i])
-		validatorSet.AddValidator(validator)
-	}
+	stake := big.NewInt(100000000)
+	v := score.NewValidator(validatorAddrList[0], stake)
+	validatorSet.AddValidator(v)
 
-	mw.validatorSetCache[dynasty.String()] = validatorSet
+	// old
+
+	// validatorAddrs, validatorStakes, err := mw.registerContract.GetValidatorAndStakeSetWithBlockHeight(nil, mw.subchainID, dynasty.Mul(dynasty, big.NewInt(100)))
+
+	// if err != nil {
+	// 	return nil, err
+	// }
+
+	// if len(validatorAddrs) != len(validatorStakes) {
+	// 	return nil, fmt.Errorf("the length of validatorAddrs and validatorStakes are not equal")
+	// }
+
+	// validatorSet := score.NewValidatorSet(dynasty)
+	// for i := 0; i < len(validatorAddrs); i++ {
+	// 	validator := score.NewValidator(validatorAddrs[i].Hex(), validatorStakes[i])
+	// 	validatorSet.AddValidator(validator)
+	// }
+
+	// mw.validatorSetCache[dynasty.String()] = validatorSet
 
 	return validatorSet, nil
 }

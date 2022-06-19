@@ -1307,4 +1307,3 @@ func isSyncing(lastestFinalizedBlock *score.ExtendedBlock, currentHeight uint64)
 
 	return isSyncing
 }
-
