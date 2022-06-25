@@ -12,12 +12,11 @@ log:
 consensus:
   minBlockInterval: 3
 subchain:
-  register: "0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa"
-  erc20: "0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af"
   mainchainEthRpcURL: "http://localhost:18888/rpc"
   subchainEthRpcURL: "http://localhost:19888/rpc"
-  tfuelTB: "0x59AF421cB35fc23aB6C8ee42743e6176040031f4"
-  tnt20TB: "0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9"
+  registrar: "0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa"
+  mainchainTFuelTB: "0x59AF421cB35fc23aB6C8ee42743e6176040031f4"
+  mainchainTNT20TB: "0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9"
   updateInterval: 3000
 
 

@@ -139,14 +139,12 @@ const (
 	// CfgDebugLogSelectedEENPs to enable logging of selected eenps
 	CfgDebugLogSelectedEENPs = "debug.logSelectedEENPs"
 
-	// CfgRegisterContractAddress defines the register contract address
-	CfgRegisterContractAddress = "subchain.register"
-	// CfgERC20ContractAddress defines the erc20 contract address
-	CfgERC20ContractAddress = "subchain.erc20"
+	// CfgRegistrarContractAddress defines the subchain registrar contract address
+	CfgRegistrarContractAddress = "subchain.registrar"
 	// CfgMainchainTFuelTokenBankContractAddress defines the mainchain TFuel token bank contract address
-	CfgMainchainTFuelTokenBankContractAddress = "subchain.tfuelTB"
+	CfgMainchainTFuelTokenBankContractAddress = "subchain.mainchainTFuelTB"
 	// CfgMainchainTNT20TokenBankContractAddress defines the mainchain TNT20 token bank contract address
-	CfgMainchainTNT20TokenBankContractAddress = "subchain.tnt20TB"
+	CfgMainchainTNT20TokenBankContractAddress = "subchain.mainchainTNT20TB"
 	// CfgMainchainEthRpcURL defines the URL of the mainchain ETH RPC adaptor
 	CfgMainchainEthRpcURL = "subchain.mainchainEthRpcURL"
 	// CfgSubchainEthRpcURL defines the URL of the subchain ETH RPC adaptor
@@ -232,4 +230,3 @@ func init() {
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
-

@@ -1078,9 +1078,9 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 	interChainEventCache := e.mainchainWitness.GetInterChainEventCache()
 
 	transferTypes := [3]score.InterChainMessageEventType{
-		score.IMCEventTypeCrossChainTFuelTransfer,
-		score.IMCEventTypeCrossChainTNT20Transfer,
-		score.IMCEventTypeCrossChainTNT721Transfer,
+		score.IMCEventTypeCrossChainLockTFuel,
+		score.IMCEventTypeCrossChainLockTNT20,
+		score.IMCEventTypeCrossChainLockTNT721,
 	}
 
 	for _, imceType := range transferTypes {

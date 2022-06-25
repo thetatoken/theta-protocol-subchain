@@ -33,18 +33,20 @@ import (
 )
 
 type Node struct {
-	Store            store.Store
-	Chain            *sbc.Chain
-	Consensus        *sconsensus.ConsensusEngine
-	ValidatorManager score.ValidatorManager
-	SyncManager      *snsync.SyncManager
-	Dispatcher       *dp.Dispatcher
-	Ledger           score.Ledger
-	Mempool          *smp.Mempool
-	RPC              *srpc.ThetaRPCServer
-	reporter         *srp.Reporter
-	MainchainWitness witness.ChainWitness
-	Orchestrator     orchestrator.ChainOrchestrator
+	Store                store.Store
+	Chain                *sbc.Chain
+	Consensus            *sconsensus.ConsensusEngine
+	ValidatorManager     score.ValidatorManager
+	SyncManager          *snsync.SyncManager
+	Dispatcher           *dp.Dispatcher
+	Ledger               score.Ledger
+	Mempool              *smp.Mempool
+	RPC                  *srpc.ThetaRPCServer
+	InterChainEventCache *score.InterChainEventCache
+	MainchainWitness     witness.ChainWitness
+	Orchestrator         orchestrator.ChainOrchestrator
+
+	reporter *srp.Reporter
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -134,7 +136,7 @@ func NewNode(params *Params) *Node {
 		}
 	}
 
-	orchestrator := orchestrator.NewSimulatedOrchestrator(viper.GetString(scom.CfgSubchainEthRpcURL),
+	orchestrator := orchestrator.NewOrchestrator(viper.GetString(scom.CfgSubchainEthRpcURL),
 		viper.GetString(scom.CfgMainchainEthRpcURL),
 		big.NewInt(viper.GetInt64(scom.CfgSubchainID)),
 		common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress)),
@@ -147,17 +149,18 @@ func NewNode(params *Params) *Node {
 	)
 
 	node := &Node{
-		Store:            store,
-		Chain:            chain,
-		Consensus:        consensus,
-		ValidatorManager: validatorManager,
-		SyncManager:      syncMgr,
-		Dispatcher:       dispatcher,
-		Ledger:           ledger,
-		Mempool:          mempool,
-		reporter:         reporter,
-		MainchainWitness: mainchainWitness,
-		Orchestrator:     orchestrator,
+		Store:                store,
+		Chain:                chain,
+		Consensus:            consensus,
+		ValidatorManager:     validatorManager,
+		SyncManager:          syncMgr,
+		Dispatcher:           dispatcher,
+		Ledger:               ledger,
+		Mempool:              mempool,
+		reporter:             reporter,
+		InterChainEventCache: interChainEventCache,
+		MainchainWitness:     mainchainWitness,
+		Orchestrator:         orchestrator,
 	}
 
 	if viper.GetBool(common.CfgRPCEnabled) {

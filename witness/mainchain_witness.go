@@ -2,7 +2,6 @@ package witness
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -18,11 +17,10 @@ import (
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/store"
-	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
-// SubchainRegisterSendToSubchainEvent
+// SubchainRegistrarSendToSubchainEvent
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
 type MainchainWitness struct {
@@ -35,12 +33,9 @@ type MainchainWitness struct {
 	client               *ec.Client
 	updateTicker         *time.Ticker
 
-	registerContractAddr        common.Address
-	ercContractAddr             common.Address
 	mainchainTFuelTokenBankAddr common.Address
 	mainchainTNT20TokenBankAddr common.Address
-	registerContract            *scta.SubchainRegister
-	ercContract                 *scta.SubchainERC
+	registrarContract           *scta.SubchainRegistrar
 
 	mainchainBlockNumber    uint64
 	mainchainBlockNumberBig *big.Int
@@ -59,8 +54,7 @@ type MainchainWitness struct {
 func NewMainchainWitness(
 	ethRpcURL string,
 	subchainID *big.Int,
-	registerContractAddr common.Address,
-	ercContractAddr common.Address,
+	registrarContractAddr common.Address,
 	mainchainTFuelTokenBankAddr common.Address,
 	mainchainTNT20TokenBankAddr common.Address,
 	updateInterval int,
@@ -70,13 +64,9 @@ func NewMainchainWitness(
 	if err != nil {
 		logger.Fatalf("the eth client failed to connect %v\n", err)
 	}
-	subchainRegisterContract, err := scta.NewSubchainRegister(registerContractAddr, client)
+	subchainRegistrarContract, err := scta.NewSubchainRegistrar(registrarContractAddr, client)
 	if err != nil {
-		logger.Fatalf("failed to create subchain register contract %v\n", err)
-	}
-	subchainERCContract, err := scta.NewSubchainERC(ercContractAddr, client)
-	if err != nil {
-		logger.Fatalf("failed to create erc contract %v\n", err)
+		logger.Fatalf("failed to create subchain Registrar contract %v\n", err)
 	}
 	mainChainID, err := client.ChainID(context.Background())
 	if err != nil {
@@ -92,12 +82,9 @@ func NewMainchainWitness(
 		validatorSetCache: make(map[string]*score.ValidatorSet),
 		client:            client,
 
-		registerContractAddr:        registerContractAddr,
-		ercContractAddr:             ercContractAddr,
 		mainchainTFuelTokenBankAddr: mainchainTFuelTokenBankAddr,
 		mainchainTNT20TokenBankAddr: mainchainTNT20TokenBankAddr,
-		registerContract:            subchainRegisterContract,
-		ercContract:                 subchainERCContract,
+		registrarContract:           subchainRegistrarContract,
 
 		mainchainBlockNumber:    0,
 		mainchainBlockNumberBig: common.Big0,
@@ -168,25 +155,6 @@ func (mw *MainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 	return validatorSet, nil
 }
 
-func (mw *MainchainWitness) CallMintOnMainchain(auth *bind.TransactOpts) {
-	amount, suceess := new(big.Int).SetString("2000000000000000000000", 10)
-	if !suceess {
-		logger.Fatal("Failed string")
-	}
-	result, err := mw.ercContract.GetBalance(nil, auth.From)
-	if err != nil {
-		logger.Fatal(err)
-	}
-	logger.Debug("balance : ", result)
-
-	tx, err := mw.ercContract.Mint(auth, amount)
-	if err != nil {
-		logger.Fatal(err)
-	}
-
-	fmt.Printf("tx sent: %s\n", tx.Hash().Hex())
-}
-
 func (mw *MainchainWitness) mainloop(ctx context.Context) {
 	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
 	for {
@@ -220,9 +188,9 @@ func (mw *MainchainWitness) update() {
 }
 
 func (mw *MainchainWitness) collectInterChainMessageEvents() {
-	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer)
+	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeCrossChainLock)
 	if err == store.ErrKeyNotFound {
-		mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, common.Big0)
+		mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainLock, common.Big0)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
@@ -234,15 +202,15 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 	for _, imceType := range queryTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
-		case score.IMCEventTypeCrossChainTFuelTransfer, score.IMCEventTypeUnLockTFuel:
+		case score.IMCEventTypeCrossChainLockTFuel, score.IMCEventTypeCrossChainUnlockTFuel:
 			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType, mw.ethRpcURL)
-		case score.IMCEventTypeCrossChainTNT20Transfer, score.IMCEventTypeUnLockTNT20:
+		case score.IMCEventTypeCrossChainLockTNT20, score.IMCEventTypeCrossChainUnlockTNT20:
 			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType, mw.ethRpcURL)
 		}
 		if len(events) == 0 {
 			continue
 		}
-		if imceType == score.IMCEventTypeUnLockTFuel || imceType == score.IMCEventTypeUnLockTNT20 || imceType == score.IMCEventTypeUnLockTNT721 {
+		if imceType == score.IMCEventTypeCrossChainUnlockTFuel || imceType == score.IMCEventTypeCrossChainUnlockTNT20 || imceType == score.IMCEventTypeCrossChainUnlockTNT721 {
 			mw.updateVoucherBurnStatus(events)
 		}
 		err = mw.interChainEventCache.InsertList(events)
@@ -250,13 +218,13 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 			logger.Panicf("failed to insert events into cache")
 		}
 	}
-	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainTransfer, toBlock)
+	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainLock, toBlock)
 }
 
 // func (mw *MainchainWitness) collectInterChainVoucherBurnEvents() {
-// 	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventUnLock)
+// 	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(score.IMCEventTypeCrossChainUnlock)
 // 	if err == store.ErrKeyNotFound {
-// 		mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventUnLock, common.Big0)
+// 		mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainUnlock, common.Big0)
 // 	} else if err != nil {
 // 		logger.Warnf("failed to get the last queryed height %v\n", err)
 // 	}
@@ -265,9 +233,9 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 // 	for _, imceType := range score.UnlockTypes {
 // 		var events []*score.InterChainMessageEvent
 // 		switch imceType {
-// 		case score.IMCEventTypeUnLockTFuel:
+// 		case score.IMCEventTypeCrossChainUnlockTFuel:
 // 			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTFuelTokenBankAddr, imceType, mw.ethRpcURL)
-// 		case score.IMCEventTypeUnLockTNT20:
+// 		case score.IMCEventTypeCrossChainUnlockTNT20:
 // 			events = score.QueryInterChainEventLog(fromBlock, toBlock, mw.mainchainTNT20TokenBankAddr, imceType, mw.ethRpcURL)
 // 		}
 // 		if len(events) == 0 {
@@ -275,7 +243,7 @@ func (mw *MainchainWitness) collectInterChainMessageEvents() {
 // 		}
 // 		mw.updateVoucherBurnStatus(events)
 // 	}
-// 	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventUnLock, toBlock)
+// 	mw.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainUnlock, toBlock)
 // }
 
 func (mw *MainchainWitness) updateVoucherBurnStatus(events []*score.InterChainMessageEvent) {
@@ -322,7 +290,7 @@ func (mw *MainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 
 	// old
 
-	// validatorAddrs, validatorStakes, err := mw.registerContract.GetValidatorAndStakeSetWithBlockHeight(nil, mw.subchainID, dynasty.Mul(dynasty, big.NewInt(100)))
+	// validatorAddrs, validatorStakes, err := mw.registrarContract.GetValidatorAndStakeSetWithBlockHeight(nil, mw.subchainID, dynasty.Mul(dynasty, big.NewInt(100)))
 
 	// if err != nil {
 	// 	return nil, err
