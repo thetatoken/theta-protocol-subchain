@@ -33,7 +33,7 @@ const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
 
 type Orchestrator struct {
 	subchainEthRpcURL string
-	mainChainID       *big.Int
+	mainchainID       *big.Int
 	subchainID        *big.Int
 	startingTime      time.Time
 
@@ -71,7 +71,7 @@ func NewOrchestrator(
 	tnt20TokenBankContractAddr common.Address,
 	interChainEventCache *score.InterChainEventCache,
 	engine *consensus.ConsensusEngine,
-	mainchainWitness witness.ChainWitness,
+	metachainWitness witness.ChainWitness,
 	updateInterval int,
 	privateKey *crypto.PrivateKey,
 ) *Orchestrator {
@@ -89,15 +89,15 @@ func NewOrchestrator(
 		logger.Fatalf("failed to create TNT20 token bank contract %v\n", err)
 	}
 
-	mainChainID, err := clientOnMainchain.ChainID(context.Background())
+	mainchainID, err := clientOnMainchain.ChainID(context.Background())
 	if err != nil {
 		logger.Fatalf("failed to get the chainID of the main chain %v\n", err)
 	}
-	logger.Printf("Create orchestrator for chain %d\n", mainChainID)
+	logger.Printf("Create orchestrator for chain %d\n", mainchainID)
 
 	oc := &Orchestrator{
 		subchainEthRpcURL: subchainEthRpcURL,
-		mainChainID:       mainChainID,
+		mainchainID:       mainchainID,
 		subchainID:        subchainID,
 		clientOnMainchain: clientOnMainchain,
 
@@ -106,7 +106,7 @@ func NewOrchestrator(
 		tnt20TokenBankContractAddr: tnt20TokenBankContractAddr,
 		tnt20TokenBankContract:     tnt20TokenBankContract,
 
-		MainchainWitness: mainchainWitness,
+		MainchainWitness: metachainWitness,
 
 		startingTime: time.Now(),
 
@@ -171,7 +171,7 @@ func (oc *Orchestrator) buildTxOpts() *bind.TransactOpts {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, oc.mainChainID)
+	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, oc.mainchainID)
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -229,9 +229,9 @@ func (oc *Orchestrator) collect() {
 		}
 		switch imceType {
 		case score.IMCEventTypeCrossChainVoucherBurnTFuel:
-			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.subchainEthRpcURL, oc.subchainID.String(), oc.mainChainID.String())
+			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.subchainEthRpcURL, oc.subchainID.String(), oc.mainchainID.String())
 		case score.IMCEventTypeCrossChainVoucherBurnTNT20:
-			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.subchainEthRpcURL, oc.subchainID.String(), oc.mainChainID.String())
+			events = score.QueryVoucherBurnEventLog(fromBlock, toBlock, *addr, imceType, oc.subchainEthRpcURL, oc.subchainID.String(), oc.mainchainID.String())
 		}
 		if len(events) == 0 {
 			continue

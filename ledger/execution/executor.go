@@ -46,7 +46,7 @@ type Executor struct {
 
 // NewExecutor creates a new instance of Executor
 func NewExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *Executor {
+	valMgr score.ValidatorManager, metachainWitness witness.ChainWitness) *Executor {
 	executor := &Executor{
 		db:                               db,
 		chain:                            chain,
@@ -54,8 +54,8 @@ func NewExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState
 		consensus:                        consensus,
 		valMgr:                           valMgr,
 		coinbaseTxExec:                   NewCoinbaseTxExecutor(db, chain, state, consensus, valMgr),
-		subchainValidatorSetUpdateTxExec: NewSubchainValidatorSetUpdateTxExecutor(db, chain, state, consensus, valMgr, mainchainWitness),
-		crosschainTransferTxExec:         NewInterChainMessageTxExecutor(db, chain, state, consensus, valMgr, mainchainWitness),
+		subchainValidatorSetUpdateTxExec: NewSubchainValidatorSetUpdateTxExecutor(db, chain, state, consensus, valMgr, metachainWitness),
+		crosschainTransferTxExec:         NewInterChainMessageTxExecutor(db, chain, state, consensus, valMgr, metachainWitness),
 		sendTxExec:                       NewSendTxExecutor(state),
 		smartContractTxExec:              NewSmartContractTxExecutor(chain, state),
 		skipSanityCheck:                  false,

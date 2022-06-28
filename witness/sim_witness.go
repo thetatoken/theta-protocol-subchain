@@ -55,9 +55,9 @@ func NewSimulatedMainchainWitness(
 		hasTransferredTNT721: false,
 		testId:               testId,
 	}
-	mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTFuel] = common.Big1
-	mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20] = common.Big1
-	mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT721] = common.Big1
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel] = common.Big1
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20] = common.Big1
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT721] = common.Big1
 
 	// amount := big.NewInt(88888)
 	// nonce := big.NewInt(1)
@@ -94,11 +94,6 @@ func (mw *SimulatedMainchainWitness) Wait() {
 func (mw *SimulatedMainchainWitness) GetMainchainBlockNumber() (*big.Int, error) {
 	blockNumber := int64((time.Since(mw.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
 	return big.NewInt(int64(blockNumber)), nil
-}
-
-func (mw *SimulatedMainchainWitness) GetMainchainBlockNumberUint() (uint64, error) {
-	blockNumber, _ := mw.GetMainchainBlockNumber()
-	return blockNumber.Uint64(), nil
 }
 
 func (mw *SimulatedMainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -163,10 +158,10 @@ func (mw *SimulatedMainchainWitness) update() {
 		if !ok {
 			logger.Panicf("failed to set amount %v", err)
 		}
-		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTFuel], mainchainBlockNumber)
+		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel], mainchainBlockNumber)
 		mw.crossChainEventCache.Insert(event)
 		// logger.Infof("Inserted Event %v", event)
-		mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTFuel] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTFuel], big.NewInt(1))
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel], big.NewInt(1))
 	}
 
 	// TNT20 cross-chain transfers
@@ -176,9 +171,9 @@ func (mw *SimulatedMainchainWitness) update() {
 	}
 	event := mw.generateInterChainEventForTNT20Transfer(
 		common.HexToAddress("0x1336739B05C7Ab8a526D40DCC0d04a826b5f8B03"), "TDrop", "TDROP", 18, amount,
-		mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20], mainchainBlockNumber)
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20], mainchainBlockNumber)
 	mw.crossChainEventCache.Insert(event)
-	mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20], big.NewInt(1))
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20], big.NewInt(1))
 
 	amount, ok = big.NewInt(0).SetString("9999999", 10)
 	if !ok {
@@ -186,9 +181,9 @@ func (mw *SimulatedMainchainWitness) update() {
 	}
 	event = mw.generateInterChainEventForTNT20Transfer(
 		common.HexToAddress("0x15cc4c3f21417c392119054c8fe5895146e1a493"), "Random Token", "RTK", 6, amount,
-		mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20], mainchainBlockNumber)
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20], mainchainBlockNumber)
 	mw.crossChainEventCache.Insert(event)
-	mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT20], big.NewInt(1))
+	mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT20], big.NewInt(1))
 
 	// TNT721 cross-chain transfers
 	if !mw.hasTransferredTNT721 {
@@ -198,11 +193,11 @@ func (mw *SimulatedMainchainWitness) update() {
 			"AI20",
 			big.NewInt(2076),
 			"https://api.thetadrop.com/type/type_qyh516vms3hz4b24n8x8wcq3pgf.json?nft_id=nft_n5gr1291uge56ydf1cv0kvguaxzw",
-			mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT721],
+			mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT721],
 			mainchainBlockNumber,
 		)
 		mw.crossChainEventCache.Insert(event)
-		mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT721] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainLockTNT721], big.NewInt(1))
+		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT721] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTNT721], big.NewInt(1))
 		mw.hasTransferredTNT721 = true
 	}
 }
@@ -265,7 +260,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 	}
 
 	event := score.NewInterChainMessageEvent(
-		score.IMCEventTypeCrossChainLockTFuel,
+		score.IMCEventTypeCrossChainTokenLockTFuel,
 		score.MainnetChainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -298,7 +293,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Transfer(tok
 	}
 
 	event := score.NewInterChainMessageEvent(
-		score.IMCEventTypeCrossChainLockTNT20,
+		score.IMCEventTypeCrossChainTokenLockTNT20,
 		score.MainnetChainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -325,7 +320,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Transfer(to
 	}
 
 	event := score.NewInterChainMessageEvent(
-		score.IMCEventTypeCrossChainLockTNT721,
+		score.IMCEventTypeCrossChainTokenLockTNT721,
 		score.MainnetChainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),

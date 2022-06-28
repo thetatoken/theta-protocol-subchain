@@ -81,33 +81,33 @@ func NewNode(params *Params) *Node {
 	interChainEventCache := score.NewInterChainEventCache(params.DB)
 
 	// For testing...
-	// mainchainWitness := witness.NewSimulatedMainchainWitness(
+	// metachainWitness := witness.NewSimulatedMainchainWitness(
 	// 	viper.GetString(scom.CfgMainchainEthRpcURL),
 	// 	params.ChainID,
 	// 	common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
 	// 	common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
 	// 	interChainEventCache,
 	// 	viper.GetInt(scom.CfgSubchainTestID))
-	mainchainWitness := witness.NewMainchainWitness(
-		viper.GetString(scom.CfgMainchainEthRpcURL),
-		big.NewInt(viper.GetInt64(scom.CfgSubchainID)),
+	metachainWitness := witness.NewMetachainWitness(
+	
 		common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
 		common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
-		common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress)),
-		common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress)),
+		,
+		,
 		viper.GetInt(scom.CfgSubchainUpdateInterval),
 		interChainEventCache)
 
-	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, mainchainWitness)
+	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, metachainWitness)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
 
 	syncMgr := snsync.NewSyncManager(chain, consensus, params.NetworkOld, params.Network, dispatcher, consensus, reporter)
 	mempool := smp.CreateMempool(dispatcher, consensus)
-	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool, mainchainWitness)
+	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool, metachainWitness)
 
 	validatorManager.SetConsensusEngine(consensus)
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
+	metachainWitness.SetSubchainTokenBankAddresses(ledger)
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
 
 	if !reflect.ValueOf(params.Network).IsNil() {
@@ -143,7 +143,7 @@ func NewNode(params *Params) *Node {
 		common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress)),
 		interChainEventCache,
 		consensus,
-		mainchainWitness,
+		metachainWitness,
 		viper.GetInt(scom.CfgSubchainUpdateInterval),
 		params.PrivateKey,
 	)
@@ -159,7 +159,7 @@ func NewNode(params *Params) *Node {
 		Mempool:              mempool,
 		reporter:             reporter,
 		InterChainEventCache: interChainEventCache,
-		MainchainWitness:     mainchainWitness,
+		MainchainWitness:     metachainWitness,
 		Orchestrator:         orchestrator,
 	}
 

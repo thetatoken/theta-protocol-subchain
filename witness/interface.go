@@ -12,8 +12,7 @@ type ChainWitness interface {
 	Start(ctx context.Context)
 	Stop()
 	Wait()
-	GetMainchainBlockNumber() (*big.Int, error)
-	GetMainchainBlockNumberUint() (uint64, error)
+	GetMainchainBlockHeight() (*big.Int, error)
 	GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error)
 	GetInterChainEventCache() *score.InterChainEventCache
 	CallMintOnMainchain(auth *bind.TransactOpts)

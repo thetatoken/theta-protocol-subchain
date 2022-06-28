@@ -42,7 +42,7 @@ type ConsensusEngine struct {
 	dispatcher       *dispatcher.Dispatcher
 	validatorManager score.ValidatorManager
 	ledger           score.Ledger
-	mainchainWitness witness.ChainWitness
+	metachainWitness witness.ChainWitness
 
 	incoming        chan interface{}
 	finalizedBlocks chan *score.Block
@@ -66,7 +66,7 @@ type ConsensusEngine struct {
 
 // NewConsensusEngine creates a instance of ConsensusEngine.
 func NewConsensusEngine(privateKey *crypto.PrivateKey, db store.Store, chain *sbc.Chain, dispatcher *dispatcher.Dispatcher,
-	validatorManager score.ValidatorManager, mainchainWitness witness.ChainWitness) *ConsensusEngine {
+	validatorManager score.ValidatorManager, metachainWitness witness.ChainWitness) *ConsensusEngine {
 	e := &ConsensusEngine{
 		chain:      chain,
 		dispatcher: dispatcher,
@@ -86,7 +86,7 @@ func NewConsensusEngine(privateKey *crypto.PrivateKey, db store.Store, chain *sb
 		voteTimerReady: false,
 		blockProcessed: false,
 
-		mainchainWitness: mainchainWitness,
+		metachainWitness: metachainWitness,
 	}
 
 	logger = util.GetLoggerForModule("consensus")
@@ -738,9 +738,12 @@ func (e *ConsensusEngine) broadcastVote(vote score.Vote) {
 }
 
 func (e *ConsensusEngine) createVote(block *score.Block) score.Vote {
-	mainchainHeight, err := e.mainchainWitness.GetMainchainBlockNumberUint()
+	mainchainHeightBigInt, err := e.metachainWitness.GetMainchainBlockHeight()
+	var mainchainHeight uint64
 	if err != nil {
 		mainchainHeight = 0
+	} else {
+		mainchainHeight = mainchainHeightBigInt.Uint64()
 	}
 
 	vote := score.Vote{
@@ -1022,7 +1025,7 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 	}
 
 	// For better liveness, check if the majority votes have dynasties at least as large as the local dynasties.
-	mainchainHeight, err := e.mainchainWitness.GetMainchainBlockNumber()
+	mainchainHeight, err := e.metachainWitness.GetMainchainBlockHeight()
 	if err != nil {
 		return false
 	}
@@ -1075,12 +1078,16 @@ func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.Extend
 	if err != nil {
 		return m
 	}
-	interChainEventCache := e.mainchainWitness.GetInterChainEventCache()
+	interChainEventCache := e.metachainWitness.GetInterChainEventCache()
 
-	transferTypes := [3]score.InterChainMessageEventType{
-		score.IMCEventTypeCrossChainLockTFuel,
-		score.IMCEventTypeCrossChainLockTNT20,
-		score.IMCEventTypeCrossChainLockTNT721,
+	transferTypes := [6]score.InterChainMessageEventType{
+		score.IMCEventTypeCrossChainTokenLockTFuel,
+		score.IMCEventTypeCrossChainTokenLockTNT20,
+		score.IMCEventTypeCrossChainTokenLockTNT721,
+
+		score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherBurnTNT721,
 	}
 
 	for _, imceType := range transferTypes {

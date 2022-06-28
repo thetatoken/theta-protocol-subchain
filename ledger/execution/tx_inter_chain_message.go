@@ -29,19 +29,19 @@ type InterChainMessageTxExecutor struct {
 	state            *slst.LedgerState
 	consensus        score.ConsensusEngine
 	valMgr           score.ValidatorManager
-	mainchainWitness witness.ChainWitness
+	metachainWitness witness.ChainWitness
 }
 
 // NewInterChainMessageTxExecutor creates a new instance of InterChainMessageTxExecutor
 func NewInterChainMessageTxExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *InterChainMessageTxExecutor {
+	valMgr score.ValidatorManager, metachainWitness witness.ChainWitness) *InterChainMessageTxExecutor {
 	return &InterChainMessageTxExecutor{
 		db:               db,
 		chain:            chain,
 		state:            state,
 		consensus:        consensus,
 		valMgr:           valMgr,
-		mainchainWitness: mainchainWitness,
+		metachainWitness: metachainWitness,
 	}
 }
 
@@ -90,8 +90,8 @@ func (exec *InterChainMessageTxExecutor) process(chainID string, view *slst.Stor
 		return common.Hash{}, result.Error("inter-chain message nonce %v mismatches with the expected nonce %v", icmNonce, view.GetLastProcessedEventNonce(tx.Event.Type))
 	}
 
-	eventCache := exec.mainchainWitness.GetInterChainEventCache()
-	witnessedEvent, err := eventCache.Get(tx.Event.Type, icmNonce)
+	eventCache := exec.metachainWitness.GetInterChainEventCache()
+	witnessedEvent, err := eventCache.Get(tx.Event.SourceChainID, tx.Event.Type, icmNonce)
 	if err != nil || witnessedEvent == nil {
 		return common.Hash{}, result.UndecidedWith(result.Info{"event not seen yet": tx.Event, "err": err}) // not seen on mainchain yet
 	}
@@ -146,11 +146,11 @@ func (exec *InterChainMessageTxExecutor) constructProxySctx(view *slst.StoreView
 
 	eventType := tx.Event.Type
 	switch eventType {
-	case score.IMCEventTypeCrossChainLockTFuel:
+	case score.IMCEventTypeCrossChainTokenLockTFuel:
 		proxySctx, err = interchain.ConstructMintTFuelVoucherProxySctx(tx.Proposer.Address, view, &tx.Event)
-	case score.IMCEventTypeCrossChainLockTNT20:
+	case score.IMCEventTypeCrossChainTokenLockTNT20:
 		proxySctx, err = interchain.ConstructMintTNT20VoucherProxySctx(tx.Proposer.Address, view, &tx.Event)
-	case score.IMCEventTypeCrossChainLockTNT721:
+	case score.IMCEventTypeCrossChainTokenLockTNT721:
 		proxySctx, err = interchain.ConstructMintTNT721VoucherProxySctx(tx.Proposer.Address, view, &tx.Event)
 	default:
 		return nil, fmt.Errorf("unsupported event type: %v", eventType)

@@ -22,20 +22,20 @@ const (
 	IMCEventTypeUnknown InterChainMessageEventType = 0
 	// 1 - 9999 reserved for future use
 
-	IMCEventTypeCrossChainLock       InterChainMessageEventType = 10000
-	IMCEventTypeCrossChainLockTFuel  InterChainMessageEventType = 10001
-	IMCEventTypeCrossChainLockTNT20  InterChainMessageEventType = 10002
-	IMCEventTypeCrossChainLockTNT721 InterChainMessageEventType = 10003
+	IMCEventTypeCrossChainTokenLock       InterChainMessageEventType = 10000
+	IMCEventTypeCrossChainTokenLockTFuel  InterChainMessageEventType = 10001
+	IMCEventTypeCrossChainTokenLockTNT20  InterChainMessageEventType = 10002
+	IMCEventTypeCrossChainTokenLockTNT721 InterChainMessageEventType = 10003
 
 	IMCEventTypeCrossChainVoucherBurn       InterChainMessageEventType = 20000
 	IMCEventTypeCrossChainVoucherBurnTFuel  InterChainMessageEventType = 20001
 	IMCEventTypeCrossChainVoucherBurnTNT20  InterChainMessageEventType = 20002
 	IMCEventTypeCrossChainVoucherBurnTNT721 InterChainMessageEventType = 20003
 
-	IMCEventTypeCrossChainUnlock       InterChainMessageEventType = 40000
-	IMCEventTypeCrossChainUnlockTFuel  InterChainMessageEventType = 40001
-	IMCEventTypeCrossChainUnlockTNT20  InterChainMessageEventType = 40002
-	IMCEventTypeCrossChainUnlockTNT721 InterChainMessageEventType = 40003
+	IMCEventTypeCrossChainTokenUnlock       InterChainMessageEventType = 40000
+	IMCEventTypeCrossChainTokenUnlockTFuel  InterChainMessageEventType = 40001
+	IMCEventTypeCrossChainTokenUnlockTNT20  InterChainMessageEventType = 40002
+	IMCEventTypeCrossChainTokenUnlockTNT721 InterChainMessageEventType = 40003
 )
 
 // InterChainMessageEvent contains the public information of a crosschain transfer event.
@@ -51,7 +51,7 @@ type InterChainMessageEvent struct {
 }
 
 // NewInterChainMessageEvent creates a new crosschain transfer event instance.
-func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChainID string, targetChainID string, sender common.Address, receiver common.Address,
+func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChainID *big.Int, targetChainID *big.Int, sender common.Address, receiver common.Address,
 	data common.Bytes, nonce *big.Int, blockNumber *big.Int) *InterChainMessageEvent {
 	return &InterChainMessageEvent{eventType, sourceChainID, targetChainID, sender, receiver, data, nonce, blockNumber}
 }
@@ -136,7 +136,7 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 	}
 	c.Type = eventType
 
-	sourceChainID := ""
+	sourceChainID := big.NewInt(0)
 	err = stream.Decode(&sourceChainID)
 	if err != nil {
 		return err
@@ -265,7 +265,7 @@ func NewCrossChainTFuelTransferEvent(sender common.Address, receiver common.Addr
 }
 
 func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossChainTFuelTransferEvent, error) {
-	if icme.Type != IMCEventTypeCrossChainLockTFuel {
+	if icme.Type != IMCEventTypeCrossChainTokenLockTFuel {
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
@@ -288,11 +288,6 @@ func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossCh
 
 	ccatEvent := NewCrossChainTFuelTransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.LockedAmount, icme.Nonce, icme.BlockNumber)
 	return ccatEvent, nil
-}
-
-func (cct *CrossChainTFuelTransferEvent) IsVoucherBurn(selfChainID string) (bool, error) {
-	isVoucherBurn, err := isVoucherBurn(selfChainID, cct.Denom)
-	return isVoucherBurn, err
 }
 
 // Cross-Chain TNT20 Transfer
@@ -328,7 +323,7 @@ func NewCrossChainTNT20TransferEvent(sender common.Address, receiver common.Addr
 }
 
 func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossChainTNT20TransferEvent, error) {
-	if icme.Type != IMCEventTypeCrossChainLockTNT20 {
+	if icme.Type != IMCEventTypeCrossChainTokenLockTNT20 {
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
@@ -351,11 +346,6 @@ func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossCh
 	}
 	ccatEvent := NewCrossChainTNT20TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.Decimal, tma.LockedAmount, icme.Nonce, icme.BlockNumber)
 	return ccatEvent, nil
-}
-
-func (cct *CrossChainTNT20TransferEvent) IsVoucherBurn(selfChainID string) (bool, error) {
-	isVoucherBurn, err := isVoucherBurn(selfChainID, cct.Denom)
-	return isVoucherBurn, err
 }
 
 // Cross-Chain TNT721 Transfer
@@ -386,7 +376,7 @@ func NewCrossChainTNT721TransferEvent(sender common.Address, receiver common.Add
 }
 
 func ParseToCrossChainTNT721TransferEvent(icme *InterChainMessageEvent) (*CrossChainTNT721TransferEvent, error) {
-	if icme.Type != IMCEventTypeCrossChainLockTNT721 {
+	if icme.Type != IMCEventTypeCrossChainTokenLockTNT721 {
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
@@ -407,11 +397,6 @@ func ParseToCrossChainTNT721TransferEvent(icme *InterChainMessageEvent) (*CrossC
 
 	ccatEvent := NewCrossChainTNT721TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.TokenID, tma.TokenURI, icme.Nonce, icme.BlockNumber)
 	return ccatEvent, nil
-}
-
-func (cct *CrossChainTNT721TransferEvent) IsVoucherBurn(selfChainID string) (bool, error) {
-	isVoucherBurn, err := isVoucherBurn(selfChainID, cct.Denom)
-	return isVoucherBurn, err
 }
 
 // ------------------------------------ Denom Utils ----------------------------------------------
@@ -475,13 +460,18 @@ func ValidateDenom(denom string) error {
 	return nil
 }
 
-func ExtractSourceChainIDFromDenom(denom string) (string, error) {
+func ExtractSourceChainIDFromDenom(denom string) (*big.Int, error) {
 	parts := strings.Split(denom, "/")
 	if len(parts) != 3 {
-		return "", fmt.Errorf("invalid denom: %v", denom)
+		return big.NewInt(0), fmt.Errorf("invalid denom: %v", denom)
 	}
 
-	return parts[0], nil
+	chainID, ok := big.NewInt(0).SetString(parts[0], 10)
+	if !ok {
+		return big.NewInt(0), fmt.Errorf("invalid denom: %v", denom)
+	}
+
+	return chainID, nil
 }
 
 func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, error) {
@@ -503,13 +493,4 @@ func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, err
 
 func isLowerCase(str string) bool {
 	return str == strings.ToLower(str)
-}
-
-func isVoucherBurn(selfChainID string, denom string) (bool, error) {
-	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(denom)
-	if err != nil {
-		return false, err
-	}
-	isVoucherBurn := (extractedSourceChainID != selfChainID)
-	return isVoucherBurn, nil
 }

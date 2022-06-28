@@ -16,6 +16,6 @@ func CalculateDynasty(mainchainHeight *big.Int) *big.Int {
 }
 
 func MapChainID(chainIDStr string) *big.Int {
-	mainChainBlockHeight := uint64(1000000000) // doesn't really matter for subchains, just set it to a sufficiently large number
-	return types.MapChainID(chainIDStr, mainChainBlockHeight)
+	mainchainBlockHeight := uint64(1000000000) // doesn't really matter for subchains, just set it to a sufficiently large number
+	return types.MapChainID(chainIDStr, mainchainBlockHeight)
 }

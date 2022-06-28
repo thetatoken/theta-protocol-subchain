@@ -49,14 +49,14 @@ type Ledger struct {
 	state    *slst.LedgerState
 	executor *sexec.Executor
 
-	mainchainWitness witness.ChainWitness
+	metachainWitness witness.ChainWitness
 }
 
 // NewLedger creates an instance of Ledger
 func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mempool *smp.Mempool, mainchainWitness witness.ChainWitness) *Ledger {
+	valMgr score.ValidatorManager, mempool *smp.Mempool, metachainWitness witness.ChainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
-	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, mainchainWitness)
+	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, metachainWitness)
 	ledger := &Ledger{
 		db:               db,
 		chain:            chain,
@@ -66,7 +66,7 @@ func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *
 		mu:               &sync.RWMutex{},
 		state:            state,
 		executor:         executor,
-		mainchainWitness: mainchainWitness,
+		metachainWitness: metachainWitness,
 	}
 	return ledger
 }
@@ -705,7 +705,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 				logger.Panic("nil last event nonce")
 			}
 			nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
-			eventCache := ledger.mainchainWitness.GetInterChainEventCache()
+			eventCache := ledger.metachainWitness.GetInterChainEventCache()
 			for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
 				nextEvent, err := eventCache.Get(imceType, nextEventNonce)
 				if nextEvent.Nonce.Cmp(nextEventNonce) != 0 { // these two nonces should match
@@ -725,7 +725,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 
 func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) {
 	currentDynasty := currentValidatorSet.Dynasty()
-	mainchainBlockHeight, err := ledger.mainchainWitness.GetMainchainBlockNumber()
+	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockNumber()
 	if err != nil {
 		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
 		return false, nil, nil
@@ -737,7 +737,7 @@ func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.V
 	}
 	// at this point: witnessedDynasty >= currentDynasty + 1
 
-	witnessedValidatorSet, err := ledger.mainchainWitness.GetValidatorSetByDynasty(witnessedDynasty)
+	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
 	if err != nil {
 		logger.Warnf("Failed to get validator set by dynasty %v when checking validator set updates, err: %v", witnessedDynasty, err)
 		return false, nil, nil

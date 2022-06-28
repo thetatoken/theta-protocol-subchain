@@ -42,10 +42,10 @@ type TransferEvent struct {
 	Nonce  *big.Int
 }
 
-var TransferTypes = []InterChainMessageEventType{
-	IMCEventTypeCrossChainLockTFuel,
-	IMCEventTypeCrossChainLockTNT20,
-	IMCEventTypeCrossChainLockTNT721,
+var LockTypes = []InterChainMessageEventType{
+	IMCEventTypeCrossChainTokenLockTFuel,
+	IMCEventTypeCrossChainTokenLockTNT20,
+	IMCEventTypeCrossChainTokenLockTNT721,
 }
 
 var VoucherBurnTypes = []InterChainMessageEventType{
@@ -55,21 +55,21 @@ var VoucherBurnTypes = []InterChainMessageEventType{
 }
 
 var UnlockTypes = []InterChainMessageEventType{
-	IMCEventTypeCrossChainUnlockTFuel,
-	IMCEventTypeCrossChainUnlockTNT20,
-	IMCEventTypeCrossChainUnlockTNT721,
+	IMCEventTypeCrossChainTokenUnlockTFuel,
+	IMCEventTypeCrossChainTokenUnlockTNT20,
+	IMCEventTypeCrossChainTokenUnlockTNT721,
 }
 
 var EventSelectors = map[InterChainMessageEventType]string{
-	IMCEventTypeCrossChainLockTFuel: crypto.Keccak256Hash([]byte("TFuelTokenLocked(uint256,address,address,uint256,uint256,string)")).Hex(),
-	IMCEventTypeCrossChainLockTNT20: crypto.Keccak256Hash([]byte("TNT20TokenLocked(uint256,address,address,uint256,address,string,string,uint8,uint256,string)")).Hex(),
-	// IMCEventTypeCrossChainLockTNT721 : crypto.Keccak256Hash([]byte("")).Hex(),
+	IMCEventTypeCrossChainTokenLockTFuel: crypto.Keccak256Hash([]byte("TFuelTokenLocked(uint256,address,address,uint256,uint256,string)")).Hex(),
+	IMCEventTypeCrossChainTokenLockTNT20: crypto.Keccak256Hash([]byte("TNT20TokenLocked(uint256,address,address,uint256,address,string,string,uint8,uint256,string)")).Hex(),
+	// IMCEventTypeCrossChainTokenLockTNT721 : crypto.Keccak256Hash([]byte("")).Hex(),
 	IMCEventTypeCrossChainVoucherBurnTFuel:  crypto.Keccak256Hash([]byte("BurnTFuelVouchers(address,address,uint256,uint256)")).Hex(),
 	IMCEventTypeCrossChainVoucherBurnTNT20:  crypto.Keccak256Hash([]byte("BurnTNT20Vouchers(string,address,address,uint256,uint256)")).Hex(),
 	IMCEventTypeCrossChainVoucherBurnTNT721: crypto.Keccak256Hash([]byte("BurnTNT721Vouchers(string,address,address,uint256,uint256)")).Hex(),
-	IMCEventTypeCrossChainUnlockTFuel:       crypto.Keccak256Hash([]byte("TFuelTokenUnlocked(uint256,address,uint256,uint256)")).Hex(),
-	IMCEventTypeCrossChainUnlockTNT20:       crypto.Keccak256Hash([]byte("")).Hex(),
-	IMCEventTypeCrossChainUnlockTNT721:      crypto.Keccak256Hash([]byte("")).Hex(),
+	IMCEventTypeCrossChainTokenUnlockTFuel:  crypto.Keccak256Hash([]byte("TFuelTokenUnlocked(uint256,address,uint256,uint256)")).Hex(),
+	IMCEventTypeCrossChainTokenUnlockTNT20:  crypto.Keccak256Hash([]byte("")).Hex(),
+	IMCEventTypeCrossChainTokenUnlockTNT721: crypto.Keccak256Hash([]byte("")).Hex(),
 }
 
 func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string) []*InterChainMessageEvent {
@@ -106,16 +106,16 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 		logData := logData
 		data, _ := hex.DecodeString(logData.Data[2:])
 		switch imceType {
-		case IMCEventTypeCrossChainLockTFuel:
+		case IMCEventTypeCrossChainTokenLockTFuel:
 			var tma TfuelTransferMetaData
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", data)
 			sourceChainID, _ := ExtractSourceChainIDFromDenom(tma.Denom)
 			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 			event := &InterChainMessageEvent{
-				Type:          IMCEventTypeCrossChainLockTFuel,
+				Type:          IMCEventTypeCrossChainTokenLockTFuel,
 				SourceChainID: sourceChainID,
-				TargetChainID: tma.TargetChainID.String(),
+				TargetChainID: tma.TargetChainID,
 				Sender:        tma.MainchainTokenSender,
 				Receiver:      tma.SubchainTokenReceiver,
 				Data:          data,
@@ -124,16 +124,16 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 			}
 			logger.Infof("got tfuel event : %v, logdata : %v", tma, logData)
 			events = append(events, event)
-		case IMCEventTypeCrossChainLockTNT20:
+		case IMCEventTypeCrossChainTokenLockTNT20:
 			var tma TNT20TransferMetaData
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
 			contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", data)
 			sourceChainID, _ := ExtractSourceChainIDFromDenom(tma.Denom)
 			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 			event := &InterChainMessageEvent{
-				Type:          IMCEventTypeCrossChainLockTNT20,
+				Type:          IMCEventTypeCrossChainTokenLockTNT20,
 				SourceChainID: sourceChainID,
-				TargetChainID: tma.TargetChainID.String(),
+				TargetChainID: tma.TargetChainID,
 				Sender:        tma.MainchainTokenSender,
 				Receiver:      tma.SubchainTokenReceiver,
 				Data:          data,
@@ -142,15 +142,15 @@ func QueryInterChainEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr 
 			}
 			logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
 			events = append(events, event)
-		case IMCEventTypeCrossChainLockTNT721:
-		case IMCEventTypeCrossChainUnlockTFuel:
+		case IMCEventTypeCrossChainTokenLockTNT721:
+		case IMCEventTypeCrossChainTokenUnlockTFuel:
 			var tma TFuelVoucherUnlockMetaData
 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 			contractAbi.UnpackIntoInterface(&tma, "TFuelTokenUnlocked", data)
 			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 			event := &InterChainMessageEvent{
-				Type:          IMCEventTypeCrossChainLockTFuel,
-				SourceChainID: tma.SourceChainID.String(),
+				Type:          IMCEventTypeCrossChainTokenLockTFuel,
+				SourceChainID: tma.SourceChainID,
 				TargetChainID: MainnetChainID,
 				Sender:        tma.SubchainTokenSender,
 				Receiver:      tma.MainchainTokenReceiver,

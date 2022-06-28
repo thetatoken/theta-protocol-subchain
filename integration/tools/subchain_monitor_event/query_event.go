@@ -91,17 +91,17 @@ func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 	// 	// 	continue
 	// 	// }
 	// 	switch imceType {
-	// 	case score.IMCEventTypeCrossChainLockTFuel:
+	// 	case score.IMCEventTypeCrossChainTokenLockTFuel:
 	// 		var tma score.TfuelTransferMetaData
 	// 		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 	// 		contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 	// 		fmt.Println(tma)
-	// 	case score.IMCEventTypeCrossChainLockTNT20:
+	// 	case score.IMCEventTypeCrossChainTokenLockTNT20:
 	// 		var tma score.TNT20TransferMetaData
 	// 		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
 	// 		contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 	// 		fmt.Println(tma)
-	// 	case score.IMCEventTypeCrossChainLockTNT721:
+	// 	case score.IMCEventTypeCrossChainTokenLockTNT721:
 	// 	default:
 	// 	}
 	// }
@@ -134,7 +134,7 @@ func main() {
 	flag.Parse()
 	s := score.NewInterChainEventCache(nil)
 	// fmt.Println(s.EventSelectors)
-	queryEventLog(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0xde9f866B980C3c1197b316d482D50F70b2854C95"), score.IMCEventTypeCrossChainLockTFuel, s)
+	queryEventLog(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0xde9f866B980C3c1197b316d482D50F70b2854C95"), score.IMCEventTypeCrossChainTokenLockTFuel, s)
 	// fromBlock := oct(*fbk)
 	// toBlock := oct(*tbk)
 	// contractAddr :=
