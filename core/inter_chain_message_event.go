@@ -38,30 +38,30 @@ const (
 	IMCEventTypeCrossChainTokenUnlockTNT721 InterChainMessageEventType = 40003
 )
 
-// InterChainMessageEvent contains the public information of a crosschain transfer event.
+// InterChainMessageEvent represents an inter-chain messaging event.
 type InterChainMessageEvent struct {
 	Type          InterChainMessageEventType
 	SourceChainID *big.Int
 	TargetChainID *big.Int
-	Sender        common.Address
-	Receiver      common.Address
-	Data          common.Bytes // generic data field that can be used to encode arbitrary data for inter-chain messaging
+	Sender        common.Address // sender of the message on the source chain
+	Receiver      common.Address // receiver of the msssage on the target chain
+	Data          common.Bytes   // generic data field that can be used to encode arbitrary data for inter-chain messaging
 	Nonce         *big.Int
-	BlockNumber   *big.Int
+	BlockHeight   *big.Int
 }
 
-// NewInterChainMessageEvent creates a new crosschain transfer event instance.
+// NewInterChainMessageEvent creates a new inter-chain messaging event instance.
 func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChainID *big.Int, targetChainID *big.Int, sender common.Address, receiver common.Address,
-	data common.Bytes, nonce *big.Int, blockNumber *big.Int) *InterChainMessageEvent {
-	return &InterChainMessageEvent{eventType, sourceChainID, targetChainID, sender, receiver, data, nonce, blockNumber}
+	data common.Bytes, nonce *big.Int, blockHeight *big.Int) *InterChainMessageEvent {
+	return &InterChainMessageEvent{eventType, sourceChainID, targetChainID, sender, receiver, data, nonce, blockHeight}
 }
 
-// ID returns the ID of the crosschain transfer event, which is the string representation of its address.
+// ID returns the ID of the inter-chain messaging event.
 func (c *InterChainMessageEvent) ID() string {
 	return strconv.FormatUint(uint64(c.Type), 10) + "/" + c.Nonce.String()
 }
 
-// Equals checks whether the crosschain transfer event is the same as another crosschain transfer event
+// Equals checks whether an inter-chain messaging event is identical to the other
 func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 	if c.Type != x.Type {
 		return false
@@ -84,16 +84,16 @@ func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 	if !bytes.Equal(c.Data, x.Data) {
 		return false
 	}
-	if c.BlockNumber.Cmp(x.BlockNumber) != 0 {
+	if c.BlockHeight.Cmp(x.BlockHeight) != 0 {
 		return false
 	}
 	return true
 }
 
-// String represents the string representation of the validator
+// String represents the string representation of the event
 func (c *InterChainMessageEvent) String() string {
-	return fmt.Sprintf("{ID: %v, Type: %v, SourceChainID: %v, TargetChainID: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockNumber: %v}",
-		c.ID(), c.Type, c.SourceChainID, c.TargetChainID, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockNumber.String())
+	return fmt.Sprintf("{ID: %v, Type: %v, SourceChainID: %v, TargetChainID: %v, Sender: %v, Receiver: %v,  Data: %v, Nonce: %v, BlockHeight: %v}",
+		c.ID(), c.Type, c.SourceChainID, c.TargetChainID, c.Sender.Hex(), c.Receiver.Hex(), string(c.Data), c.Nonce.String(), c.BlockHeight.String())
 }
 
 // ByID implements sort.Interface for InterChainMessageEvent based on ID (Nonce).
@@ -118,7 +118,7 @@ func (c *InterChainMessageEvent) EncodeRLP(w io.Writer) error {
 		c.Receiver,
 		c.Data,
 		c.Nonce,
-		c.BlockNumber,
+		c.BlockHeight,
 	})
 }
 
@@ -177,17 +177,218 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 	}
 	c.Nonce = nonce
 
-	blockNumber := big.NewInt(0)
-	err = stream.Decode(blockNumber)
+	blockHeight := big.NewInt(0)
+	err = stream.Decode(blockHeight)
 	if err != nil {
 		return err
 	}
-	c.BlockNumber = blockNumber
+	c.BlockHeight = blockHeight
 
 	return stream.ListEnd()
 }
 
-// ------------------------------------ Cross-Chain Voucher Burn --------------------------------------------
+// ------------------------------------ Cross-Chain: Token Lock --------------------------------------------
+
+// Cross-Chain TFuel Lock
+
+type CrossChainTFuelTokenLockedEvent struct { // corresponding to the "TFuelTokenLocked" event
+	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
+	Denom                      string
+	SourceChainTokenSender     common.Address
+	TargetChainVoucherReceiver common.Address
+	LockedAmount               *big.Int
+	TokenLockNonce             *big.Int
+}
+
+func ParseToCrossChainTFuelTokenLockedEvent(icme *InterChainMessageEvent) (*CrossChainTFuelTokenLockedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainTokenLockTFuel {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var event CrossChainTFuelTokenLockedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TFuelTokenLocked", icme.Data)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
+		// Token Lock events can only happen on the chain where the authenic token was deployed. Thus, the "source chain", i.e. where the token is sending from
+		// needs to be the same as the "originated chain".
+		return nil, fmt.Errorf("source chain ID mismatch for TFuel lock: %v vs %v", icme.SourceChainID, originatedChainID)
+	}
+
+	return &event, nil
+}
+
+// Cross-Chain TNT20 Lock
+
+type CrossChainTNT20TokenLockedEvent struct { // corresponding to the "TNT20TokenLocked" event
+	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
+	Denom                      string
+	SourceChainTokenSender     common.Address
+	TargetChainVoucherReceiver common.Address
+	LockedAmount               *big.Int
+	Name                       string
+	Symbol                     string
+	Decimal                    uint8
+	TokenLockNonce             *big.Int
+}
+
+func ParseToCrossChainTNT20TokenLockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT20TokenLockedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainTokenLockTNT20 {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var event CrossChainTNT20TokenLockedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TNT20TokenLocked", icme.Data)
+	event.Denom = strings.ToLower(event.Denom)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
+		// Token Lock events can only happen on the chain where the authenic token was deployed. Thus, the "source chain", i.e. where the token is sending from
+		// needs to be the same as the "originated chain".
+		return nil, fmt.Errorf("source chain ID mismatch for TNT20 lock: %v vs %v", icme.SourceChainID, originatedChainID)
+	}
+	return &event, nil
+}
+
+// Cross-Chain TNT721 Lock
+
+// type CrossChainTNT721TokenLockedEvent struct { // corresponding to the "TNT721TokenLocked" event
+// 	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
+// 	Denom                      string
+// 	SourceChainTokenSender     common.Address
+// 	TargetChainVoucherReceiver common.Address
+// 	TokenID                    *big.Int
+// 	TokenURI                   string
+// 	Name                       string
+// 	Symbol                     string
+// 	TokenLockNonce             *big.Int
+// }
+
+// func ParseToCrossChainTNT721TokenLockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT721TokenLockedEvent, error) {
+// 	if icme.Type != IMCEventTypeCrossChainTokenLockTNT721 {
+// 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+// 	}
+
+// 	var event CrossChainTNT721TokenLockedEvent
+// 	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT721TokenBankABI)))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	contractAbi.UnpackIntoInterface(&event, "TNT721TokenLocked", icme.Data)
+// 	event.Denom = strings.ToLower(event.Denom)
+// 	if err := ValidateDenom(event.Denom); err != nil {
+// 		return nil, err
+// 	}
+// 	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
+// 		// Token Lock events can only happen on the chain where the authenic token was deployed. Thus, the "source chain", i.e. where the token is sending from
+// 		// needs to be the same as the "originated chain".
+// 		return nil, fmt.Errorf("source chain ID mismatch for TNT721 lock: %v vs %v", icme.SourceChainID, originatedChainID)
+// 	}
+
+// 	return &event, nil
+// }
+
+// ------------------------------------ Cross-Chain: Token Unlock --------------------------------------------
+
+// Cross-Chain TFuel Unlock
+
+type CrossChainTFuelUnlockedEvent struct { // corresponding to the "TFuelTokenUnlocked" event
+	SourceChainID               *big.Int // sourceChain: the chain on which the voucher burn happens
+	Denom                       string
+	SourceChainTokenSender      common.Address
+	UnlockedAmount              *big.Int
+	sourceChainVoucherBurnNonce *big.Int
+	tokenUnlockNonce            *big.Int
+}
+
+func ParseToCrossChainTFuelTokenUnlockedEvent(icme *InterChainMessageEvent) (*CrossChainTFuelUnlockedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainTokenUnlockTFuel {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var event CrossChainTFuelUnlockedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TFuelTokenUnlocked", icme.Data)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("source chain ID mismatch for TFuel unlock: %v vs %v", icme.TargetChainID, originatedChainID)
+	}
+
+	return &event, nil
+}
+
+// Cross-Chain TNT20 Unlock
+
+type CrossChainTNT20UnlockedEvent struct { // corresponding to the "TNT20TokenUnlocked" event
+	SourceChainID              *big.Int // sourceChain: the chain on which the voucher burn happens
+	Denom                      string
+	SourceChainTokenSender     common.Address
+	TargetChainVoucherReceiver common.Address
+	LockedAmount               *big.Int
+	Name                       string
+	Symbol                     string
+	Decimal                    uint8
+	TokenLockNonce             *big.Int
+}
+
+func ParseToCrossChainTNT20TokenUnlockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT20UnlockedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainTokenUnlockTNT20 {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var event CrossChainTNT20UnlockedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TNT20TokenUnlocked", icme.Data)
+	event.Denom = strings.ToLower(event.Denom)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("source chain ID mismatch for TNT20 unlock: %v vs %v", icme.TargetChainID, originatedChainID)
+	}
+	return &event, nil
+}
+
+// ------------------------------------ Cross-Chain: Voucher Burn --------------------------------------------
+
 type VoucherBurnEventStatus byte
 
 const (
@@ -205,198 +406,72 @@ type VoucherBurnEventStatusInfo struct {
 	RetriedTime              uint
 }
 
-type VoucherBurnData struct {
-	SubchainID  *big.Int
-	Dynasty     *big.Int
-	TxHash      common.Hash
-	Denom       string
-	Receiver    common.Address
-	Amount      *big.Int
-	TFuelAmount *big.Int
+type CrossChainTFuelVoucherBurnedEvent struct { // corresponding to the "TFuelVoucherBurned" event
+	TargetChainID            *big.Int // targetChain: the chain on which authentic token will be unlocked after the voucher burn
+	Denom                    string
+	SourceChainVoucherOwner  common.Address
+	TargetChainTokenReceiver common.Address
+	Amount                   *big.Int
+	VoucherBurnNonce         *big.Int
 }
 
-type TFuelVoucherBurnMetaData struct {
-	VoucherOwner           common.Address
-	MainchainTokenReceiver common.Address
-	Amount                 *big.Int
-	Nonce                  *big.Int
-}
-
-type TNT20VoucherBurnMetaData struct {
-	TxHash  common.Hash
-	Denom   string
-	Amount  *big.Int
-	TokenId *big.Int
-}
-
-type TFuelVoucherUnlockMetaData struct {
-	SourceChainID          *big.Int
-	MainchainTokenReceiver common.Address
-	SubchainTokenSender    common.Address
-	UnlockedAmount         *big.Int
-	Nonce                  *big.Int
-}
-
-// ------------------------------------ Cross-Chain Asset Transfer --------------------------------------------
-
-// Cross-Chain TFuel Transfer
-
-type TfuelTransferMetaData struct {
-	TargetChainID         *big.Int
-	MainchainTokenSender  common.Address
-	SubchainTokenReceiver common.Address
-	LockedAmount          *big.Int
-	Nonce                 *big.Int
-	Denom                 string
-}
-
-type CrossChainTFuelTransferEvent struct {
-	Sender      common.Address
-	Receiver    common.Address
-	Denom       string
-	Amount      *big.Int
-	Nonce       *big.Int
-	BlockNumber *big.Int
-}
-
-func NewCrossChainTFuelTransferEvent(sender common.Address, receiver common.Address, denom string,
-	amount *big.Int, nonce *big.Int, blockNumber *big.Int) *CrossChainTFuelTransferEvent {
-	return &CrossChainTFuelTransferEvent{sender, receiver, denom, amount, nonce, blockNumber}
-}
-
-func ParseToCrossChainTFuelTransferEvent(icme *InterChainMessageEvent) (*CrossChainTFuelTransferEvent, error) {
-	if icme.Type != IMCEventTypeCrossChainTokenLockTFuel {
+func ParseToCrossChainTFuelVoucherBurnedEvent(icme *InterChainMessageEvent) (*CrossChainTFuelVoucherBurnedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainVoucherBurnTFuel {
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
-	var tma TfuelTransferMetaData
+	var event CrossChainTFuelVoucherBurnedEvent
 	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
-	contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", icme.Data)
-	if err := ValidateDenom(tma.Denom); err != nil {
+	contractAbi.UnpackIntoInterface(&event, "TFuelVoucherBurned", icme.Data)
+	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(tma.Denom)
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
 	if err != nil {
 		return nil, err
 	}
-	if icme.SourceChainID != extractedSourceChainID {
-		return nil, fmt.Errorf("source chain ID mismatch for TFuel transfer: %v vs %v", icme.SourceChainID, extractedSourceChainID)
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("source chain ID mismatch for TFuel voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
 	}
 
-	ccatEvent := NewCrossChainTFuelTransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.LockedAmount, icme.Nonce, icme.BlockNumber)
-	return ccatEvent, nil
+	return &event, nil
 }
 
-// Cross-Chain TNT20 Transfer
-
-type TNT20TransferMetaData struct {
-	TargetChainID         *big.Int
-	MainchainTokenSender  common.Address
-	SubchainTokenReceiver common.Address
-	LockedAmount          *big.Int
-	TNT20Contract         common.Address
-	Name                  string
-	Symbol                string
-	Decimal               uint8
-	Nonce                 *big.Int
-	Denom                 string
+type CrossChainTNT20VoucherBurnedEvent struct { // corresponding to the "TNT20VoucherBurned" event
+	SourceChainID *big.Int
+	TargetChainID *big.Int
+	TxHash        common.Hash
+	Denom         string
+	Amount        *big.Int
+	TokenID       *big.Int
 }
 
-type CrossChainTNT20TransferEvent struct {
-	Sender      common.Address
-	Receiver    common.Address
-	Denom       string
-	Name        string
-	Symbol      string
-	Decimals    uint8
-	Amount      *big.Int
-	Nonce       *big.Int
-	BlockNumber *big.Int
-}
-
-func NewCrossChainTNT20TransferEvent(sender common.Address, receiver common.Address, denom string,
-	name string, symbol string, decimals uint8, amount *big.Int, nonce *big.Int, blockNumber *big.Int) *CrossChainTNT20TransferEvent {
-	return &CrossChainTNT20TransferEvent{sender, receiver, denom, name, symbol, decimals, amount, nonce, blockNumber}
-}
-
-func ParseToCrossChainTNT20TransferEvent(icme *InterChainMessageEvent) (*CrossChainTNT20TransferEvent, error) {
-	if icme.Type != IMCEventTypeCrossChainTokenLockTNT20 {
+func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*CrossChainTNT20VoucherBurnedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainVoucherBurnTNT20 {
 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
 	}
 
-	var tma TNT20TransferMetaData
+	var event CrossChainTNT20VoucherBurnedEvent
 	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
-	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", icme.Data)
-	tma.Denom = strings.ToLower(tma.Denom)
-	if err := ValidateDenom(tma.Denom); err != nil {
+	contractAbi.UnpackIntoInterface(&event, "TNT20VoucherBurned", icme.Data)
+	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(tma.Denom)
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
 	if err != nil {
 		return nil, err
 	}
-	if icme.SourceChainID != extractedSourceChainID {
-		return nil, fmt.Errorf("source chain ID mismatch for TNT20 transfer: %v vs %v", icme.SourceChainID, extractedSourceChainID)
-	}
-	ccatEvent := NewCrossChainTNT20TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.Decimal, tma.LockedAmount, icme.Nonce, icme.BlockNumber)
-	return ccatEvent, nil
-}
-
-// Cross-Chain TNT721 Transfer
-
-type TNT721TransferMetaData struct {
-	Denom    string
-	Name     string
-	Symbol   string
-	TokenID  *big.Int
-	TokenURI string
-}
-
-type CrossChainTNT721TransferEvent struct {
-	Sender      common.Address
-	Receiver    common.Address
-	Denom       string
-	Name        string
-	Symbol      string
-	TokenID     *big.Int
-	TokenURI    string
-	Nonce       *big.Int
-	BlockNumber *big.Int
-}
-
-func NewCrossChainTNT721TransferEvent(sender common.Address, receiver common.Address, denom string,
-	name string, symbol string, tokenID *big.Int, tokenURI string, nonce *big.Int, blockNumber *big.Int) *CrossChainTNT721TransferEvent {
-	return &CrossChainTNT721TransferEvent{sender, receiver, denom, name, symbol, tokenID, tokenURI, nonce, blockNumber}
-}
-
-func ParseToCrossChainTNT721TransferEvent(icme *InterChainMessageEvent) (*CrossChainTNT721TransferEvent, error) {
-	if icme.Type != IMCEventTypeCrossChainTokenLockTNT721 {
-		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("source chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
 	}
 
-	var tma TNT721TransferMetaData
-	if err := rlp.DecodeBytes(icme.Data, &tma); err != nil {
-		return nil, err
-	}
-	if err := ValidateDenom(tma.Denom); err != nil {
-		return nil, err
-	}
-	extractedSourceChainID, err := ExtractSourceChainIDFromDenom(tma.Denom)
-	if err != nil {
-		return nil, err
-	}
-	if icme.SourceChainID != extractedSourceChainID {
-		return nil, fmt.Errorf("source chain ID mismatch for TNT721 transfer: %v vs %v", icme.SourceChainID, extractedSourceChainID)
-	}
-
-	ccatEvent := NewCrossChainTNT721TransferEvent(icme.Sender, icme.Receiver, tma.Denom, tma.Name, tma.Symbol, tma.TokenID, tma.TokenURI, icme.Nonce, icme.BlockNumber)
-	return ccatEvent, nil
+	return &event, nil
 }
 
 // ------------------------------------ Denom Utils ----------------------------------------------
@@ -412,17 +487,17 @@ const (
 
 const tfuelAddressPlaceholder = "0x0000000000000000000000000000000000000000"
 
-// sourceChainID: the chainID of the chain that the token was originated
-func TFuelDenom(sourceChainID string) string {
-	return strings.ToLower(fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTFuel, tfuelAddressPlaceholder)) // normalize to lower case to prevent duplication
+// originatedChainID: the chainID of the chain that the token was originated
+func TFuelDenom(originatedChainID string) string {
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", originatedChainID, CrossChainTokenTypeTFuel, tfuelAddressPlaceholder)) // normalize to lower case to prevent duplication
 }
 
-func TNT20Denom(sourceChainID string, contractAddress common.Address) string {
-	return strings.ToLower(fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT20, contractAddress.Hex())) // normalize to lower case to prevent duplication
+func TNT20Denom(originatedChainID string, contractAddress common.Address) string {
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", originatedChainID, CrossChainTokenTypeTNT20, contractAddress.Hex())) // normalize to lower case to prevent duplication
 }
 
-func TNT721Denom(sourceChainID string, contractAddress common.Address) string {
-	return strings.ToLower(fmt.Sprintf("%v/%v/%v", sourceChainID, CrossChainTokenTypeTNT721, contractAddress.Hex())) // normalize to lower case to prevent duplication
+func TNT721Denom(originatedChainID string, contractAddress common.Address) string {
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", originatedChainID, CrossChainTokenTypeTNT721, contractAddress.Hex())) // normalize to lower case to prevent duplication
 }
 
 func ValidateDenom(denom string) error {
@@ -460,7 +535,7 @@ func ValidateDenom(denom string) error {
 	return nil
 }
 
-func ExtractSourceChainIDFromDenom(denom string) (*big.Int, error) {
+func ExtractOriginatedChainIDFromDenom(denom string) (*big.Int, error) {
 	parts := strings.Split(denom, "/")
 	if len(parts) != 3 {
 		return big.NewInt(0), fmt.Errorf("invalid denom: %v", denom)

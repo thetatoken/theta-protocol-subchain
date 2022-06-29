@@ -11,7 +11,7 @@ import (
 )
 
 func ConstructMintTFuelVoucherProxySctx(blockProposer common.Address, view *slst.StoreView, icme *score.InterChainMessageEvent) (*types.SmartContractTx, error) {
-	ccte, err := score.ParseToCrossChainTFuelTransferEvent(icme)
+	ccte, err := score.ParseToCrossChainTFuelTokenLockedEvent(icme)
 	if err != nil {
 		return nil, err
 	}

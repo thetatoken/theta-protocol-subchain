@@ -34,7 +34,6 @@ type MetachainWitness struct {
 	mainchainEthRpcUrl          string
 	mainchainEthRpcClient       *ec.Client
 	witnessedDynasty            *big.Int
-	validatorSetCache           map[string]*score.ValidatorSet
 	subchainRegistrar           *scta.SubchainRegistrar // the SubchainRegistrar contract deployed on the main chain
 	mainchainTFuelTokenBankAddr common.Address
 	mainchainTFuelTokenBank     *scta.MainchainTFuelTokenBank // the MainchainTFuelTokenBank contract deployed on the main chain
@@ -52,7 +51,10 @@ type MetachainWitness struct {
 	subchainTNT20TokenBankAddr common.Address
 	subchainTNT20TokenBank     *scta.SubchainTNT20TokenBank // the SubchainTNT20TokenBank contract deployed on the subchain
 
-	// Inter-chain
+	// Validator set
+	validatorSetCache map[string]*score.ValidatorSet
+
+	// Inter-chain messaging
 	interChainEventCache *score.InterChainEventCache
 
 	// Life cycle

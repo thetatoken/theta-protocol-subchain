@@ -27,7 +27,7 @@ func NewTNT721TokenBank() *TNT721TokenBank {
 // TokenBank contract deploys the the vouncher contract first and then mints the vouchers in the same call.
 // Note: if a user calls the the TNT721TokenBank.mintVouchers() function, the transaction should fail with the "evm revert" error.
 //       This is because mintVouchers() is only allowed in the privileged execution context
-func (tb *TNT721TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT721TransferEvent) (*types.SmartContractTx, error) {
+func (tb *TNT721TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT721TokenLockedEvent) (*types.SmartContractTx, error) {
 	voucherReceiver := ccte.Receiver
 	denom := ccte.Denom
 	name := ccte.Name

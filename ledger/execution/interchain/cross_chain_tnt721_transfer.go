@@ -11,7 +11,7 @@ import (
 )
 
 func ConstructMintTNT721VoucherProxySctx(blockProposer common.Address, view *slst.StoreView, icme *score.InterChainMessageEvent) (*types.SmartContractTx, error) {
-	ccte, err := score.ParseToCrossChainTNT721TransferEvent(icme)
+	ccte, err := score.ParseToCrossChainTNT721TokenLockedEvent(icme)
 	if err != nil {
 		return nil, err
 	}

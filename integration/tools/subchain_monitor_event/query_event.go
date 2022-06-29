@@ -97,7 +97,7 @@ func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Add
 	// 		contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 	// 		fmt.Println(tma)
 	// 	case score.IMCEventTypeCrossChainTokenLockTNT20:
-	// 		var tma score.TNT20TransferMetaData
+	// 		var tma score.CrossChainTNT20TokenLockedEvent
 	// 		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
 	// 		contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", h)
 	// 		fmt.Println(tma)

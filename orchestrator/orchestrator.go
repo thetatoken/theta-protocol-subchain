@@ -352,15 +352,15 @@ func (oc *Orchestrator) PrepareDataAndSignature(event *score.InterChainMessageEv
 	}
 	switch event.Type {
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
-		var vma score.TFuelVoucherBurnMetaData
+		var vma score.CrossChainTFuelVoucherBurnEvent
 		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.SubchainTFuelTokenBankABI)))
-		contractAbi.UnpackIntoInterface(&vma, "BurnTFuelVouchers", event.Data)
+		contractAbi.UnpackIntoInterface(&vma, "TFuelVoucherBurned", event.Data)
 		logger.Infof("Preparing data %v", vma)
 		// TODO: Dynasty rather mainchainBlockNumber
 		data = predeployed.PrepareTFuelCalldata(oc.subchainID, mainchainBlockNumber, event.Sender, event.Receiver, vma.Amount, event.Nonce, string(score.MainnetChainID)+"/0/0x0000000000000000000000000000000000000000")
 		return data, oc.signVoucherBurnData(data), err
 	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
-		var tnt20vbma score.TNT20VoucherBurnMetaData
+		var tnt20vbma score.CrossChainTNT20VoucherBurnedEvent
 		if err := rlp.DecodeBytes(event.Data, &tnt20vbma); err != nil {
 			return nil, nil, err
 		}
