@@ -28,14 +28,14 @@ var (
 	_ = event.NewSubscription
 )
 
-// Struct3 is an auto generated low-level Go binding around an user-defined struct.
-type Struct3 struct {
+// Struct2 is an auto generated low-level Go binding around an user-defined struct.
+type Struct2 struct {
 	Validator   common.Address
 	Shareamount *big.Int
 }
 
-// Struct1 is an auto generated low-level Go binding around an user-defined struct.
-type Struct1 struct {
+// Struct4 is an auto generated low-level Go binding around an user-defined struct.
+type Struct4 struct {
 	Guarantor        common.Address
 	Collateralamount *big.Int
 	Governancetoken  common.Address
@@ -43,21 +43,21 @@ type Struct1 struct {
 	Exists           bool
 }
 
-// Struct2 is an auto generated low-level Go binding around an user-defined struct.
-type Struct2 struct {
+// Struct0 is an auto generated low-level Go binding around an user-defined struct.
+type Struct0 struct {
 	Receiver     common.Address
 	Amount       *big.Int
 	Returnheight *big.Int
 }
 
-// Struct4 is an auto generated low-level Go binding around an user-defined struct.
-type Struct4 struct {
+// Struct3 is an auto generated low-level Go binding around an user-defined struct.
+type Struct3 struct {
 	Height *big.Int
-	Stakes []Struct3
+	Stakes []Struct2
 }
 
-// Struct0 is an auto generated low-level Go binding around an user-defined struct.
-type Struct0 struct {
+// Struct1 is an auto generated low-level Go binding around an user-defined struct.
+type Struct1 struct {
 	V uint8
 	R [32]byte
 	S [32]byte
@@ -301,15 +301,15 @@ func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getallsubchainids() ([
 // Getpendingstakewithdrawals is a free data retrieval call binding the contract method 0x3eac32a1.
 //
 // Solidity: function getpendingstakewithdrawals(uint256 subchainid, address staker) view returns((address,uint256,uint256)[])
-func (_SubchainRegistrar *SubchainRegistrarCaller) Getpendingstakewithdrawals(opts *bind.CallOpts, subchainid *big.Int, staker common.Address) ([]Struct2, error) {
+func (_SubchainRegistrar *SubchainRegistrarCaller) Getpendingstakewithdrawals(opts *bind.CallOpts, subchainid *big.Int, staker common.Address) ([]Struct0, error) {
 	var out []interface{}
 	err := _SubchainRegistrar.contract.Call(opts, &out, "getpendingstakewithdrawals", subchainid, staker)
 
 	if err != nil {
-		return *new([]Struct2), err
+		return *new([]Struct0), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new([]Struct2)).(*[]Struct2)
+	out0 := *abi.ConvertType(out[0], new([]Struct0)).(*[]Struct0)
 
 	return out0, err
 
@@ -318,29 +318,29 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Getpendingstakewithdrawals(op
 // Getpendingstakewithdrawals is a free data retrieval call binding the contract method 0x3eac32a1.
 //
 // Solidity: function getpendingstakewithdrawals(uint256 subchainid, address staker) view returns((address,uint256,uint256)[])
-func (_SubchainRegistrar *SubchainRegistrarSession) Getpendingstakewithdrawals(subchainid *big.Int, staker common.Address) ([]Struct2, error) {
+func (_SubchainRegistrar *SubchainRegistrarSession) Getpendingstakewithdrawals(subchainid *big.Int, staker common.Address) ([]Struct0, error) {
 	return _SubchainRegistrar.Contract.Getpendingstakewithdrawals(&_SubchainRegistrar.CallOpts, subchainid, staker)
 }
 
 // Getpendingstakewithdrawals is a free data retrieval call binding the contract method 0x3eac32a1.
 //
 // Solidity: function getpendingstakewithdrawals(uint256 subchainid, address staker) view returns((address,uint256,uint256)[])
-func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getpendingstakewithdrawals(subchainid *big.Int, staker common.Address) ([]Struct2, error) {
+func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getpendingstakewithdrawals(subchainid *big.Int, staker common.Address) ([]Struct0, error) {
 	return _SubchainRegistrar.Contract.Getpendingstakewithdrawals(&_SubchainRegistrar.CallOpts, subchainid, staker)
 }
 
 // Getpendingvalidatorcollateralwithdrawals is a free data retrieval call binding the contract method 0x050b6ca0.
 //
 // Solidity: function getpendingvalidatorcollateralwithdrawals(uint256 subchainid, address guarantor) view returns((address,uint256,uint256)[])
-func (_SubchainRegistrar *SubchainRegistrarCaller) Getpendingvalidatorcollateralwithdrawals(opts *bind.CallOpts, subchainid *big.Int, guarantor common.Address) ([]Struct2, error) {
+func (_SubchainRegistrar *SubchainRegistrarCaller) Getpendingvalidatorcollateralwithdrawals(opts *bind.CallOpts, subchainid *big.Int, guarantor common.Address) ([]Struct0, error) {
 	var out []interface{}
 	err := _SubchainRegistrar.contract.Call(opts, &out, "getpendingvalidatorcollateralwithdrawals", subchainid, guarantor)
 
 	if err != nil {
-		return *new([]Struct2), err
+		return *new([]Struct0), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new([]Struct2)).(*[]Struct2)
+	out0 := *abi.ConvertType(out[0], new([]Struct0)).(*[]Struct0)
 
 	return out0, err
 
@@ -349,14 +349,14 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Getpendingvalidatorcollateral
 // Getpendingvalidatorcollateralwithdrawals is a free data retrieval call binding the contract method 0x050b6ca0.
 //
 // Solidity: function getpendingvalidatorcollateralwithdrawals(uint256 subchainid, address guarantor) view returns((address,uint256,uint256)[])
-func (_SubchainRegistrar *SubchainRegistrarSession) Getpendingvalidatorcollateralwithdrawals(subchainid *big.Int, guarantor common.Address) ([]Struct2, error) {
+func (_SubchainRegistrar *SubchainRegistrarSession) Getpendingvalidatorcollateralwithdrawals(subchainid *big.Int, guarantor common.Address) ([]Struct0, error) {
 	return _SubchainRegistrar.Contract.Getpendingvalidatorcollateralwithdrawals(&_SubchainRegistrar.CallOpts, subchainid, guarantor)
 }
 
 // Getpendingvalidatorcollateralwithdrawals is a free data retrieval call binding the contract method 0x050b6ca0.
 //
 // Solidity: function getpendingvalidatorcollateralwithdrawals(uint256 subchainid, address guarantor) view returns((address,uint256,uint256)[])
-func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getpendingvalidatorcollateralwithdrawals(subchainid *big.Int, guarantor common.Address) ([]Struct2, error) {
+func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getpendingvalidatorcollateralwithdrawals(subchainid *big.Int, guarantor common.Address) ([]Struct0, error) {
 	return _SubchainRegistrar.Contract.Getpendingvalidatorcollateralwithdrawals(&_SubchainRegistrar.CallOpts, subchainid, guarantor)
 }
 
@@ -397,7 +397,7 @@ func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getstakerswithpendingw
 func (_SubchainRegistrar *SubchainRegistrarCaller) Getstakesnapshot(opts *bind.CallOpts, subchainid *big.Int, blockheight *big.Int) (struct {
 	Exists               bool
 	Targetsnapshotheight *big.Int
-	Targetstakesnapshot  Struct4
+	Targetstakesnapshot  Struct3
 }, error) {
 	var out []interface{}
 	err := _SubchainRegistrar.contract.Call(opts, &out, "getstakesnapshot", subchainid, blockheight)
@@ -405,7 +405,7 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Getstakesnapshot(opts *bind.C
 	outstruct := new(struct {
 		Exists               bool
 		Targetsnapshotheight *big.Int
-		Targetstakesnapshot  Struct4
+		Targetstakesnapshot  Struct3
 	})
 	if err != nil {
 		return *outstruct, err
@@ -413,7 +413,7 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Getstakesnapshot(opts *bind.C
 
 	outstruct.Exists = *abi.ConvertType(out[0], new(bool)).(*bool)
 	outstruct.Targetsnapshotheight = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
-	outstruct.Targetstakesnapshot = *abi.ConvertType(out[2], new(Struct4)).(*Struct4)
+	outstruct.Targetstakesnapshot = *abi.ConvertType(out[2], new(Struct3)).(*Struct3)
 
 	return *outstruct, err
 
@@ -425,7 +425,7 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Getstakesnapshot(opts *bind.C
 func (_SubchainRegistrar *SubchainRegistrarSession) Getstakesnapshot(subchainid *big.Int, blockheight *big.Int) (struct {
 	Exists               bool
 	Targetsnapshotheight *big.Int
-	Targetstakesnapshot  Struct4
+	Targetstakesnapshot  Struct3
 }, error) {
 	return _SubchainRegistrar.Contract.Getstakesnapshot(&_SubchainRegistrar.CallOpts, subchainid, blockheight)
 }
@@ -436,7 +436,7 @@ func (_SubchainRegistrar *SubchainRegistrarSession) Getstakesnapshot(subchainid 
 func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getstakesnapshot(subchainid *big.Int, blockheight *big.Int) (struct {
 	Exists               bool
 	Targetsnapshotheight *big.Int
-	Targetstakesnapshot  Struct4
+	Targetstakesnapshot  Struct3
 }, error) {
 	return _SubchainRegistrar.Contract.Getstakesnapshot(&_SubchainRegistrar.CallOpts, subchainid, blockheight)
 }
@@ -475,15 +475,15 @@ func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getstakesnapshotheight
 // Getsubchainmetadata is a free data retrieval call binding the contract method 0x07233780.
 //
 // Solidity: function getsubchainmetadata(uint256 subchainid) view returns((address,uint256,address,string,bool))
-func (_SubchainRegistrar *SubchainRegistrarCaller) Getsubchainmetadata(opts *bind.CallOpts, subchainid *big.Int) (Struct1, error) {
+func (_SubchainRegistrar *SubchainRegistrarCaller) Getsubchainmetadata(opts *bind.CallOpts, subchainid *big.Int) (Struct4, error) {
 	var out []interface{}
 	err := _SubchainRegistrar.contract.Call(opts, &out, "getsubchainmetadata", subchainid)
 
 	if err != nil {
-		return *new(Struct1), err
+		return *new(Struct4), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(Struct1)).(*Struct1)
+	out0 := *abi.ConvertType(out[0], new(Struct4)).(*Struct4)
 
 	return out0, err
 
@@ -492,14 +492,14 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Getsubchainmetadata(opts *bin
 // Getsubchainmetadata is a free data retrieval call binding the contract method 0x07233780.
 //
 // Solidity: function getsubchainmetadata(uint256 subchainid) view returns((address,uint256,address,string,bool))
-func (_SubchainRegistrar *SubchainRegistrarSession) Getsubchainmetadata(subchainid *big.Int) (Struct1, error) {
+func (_SubchainRegistrar *SubchainRegistrarSession) Getsubchainmetadata(subchainid *big.Int) (Struct4, error) {
 	return _SubchainRegistrar.Contract.Getsubchainmetadata(&_SubchainRegistrar.CallOpts, subchainid)
 }
 
 // Getsubchainmetadata is a free data retrieval call binding the contract method 0x07233780.
 //
 // Solidity: function getsubchainmetadata(uint256 subchainid) view returns((address,uint256,address,string,bool))
-func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getsubchainmetadata(subchainid *big.Int) (Struct1, error) {
+func (_SubchainRegistrar *SubchainRegistrarCallerSession) Getsubchainmetadata(subchainid *big.Int) (Struct4, error) {
 	return _SubchainRegistrar.Contract.Getsubchainmetadata(&_SubchainRegistrar.CallOpts, subchainid)
 }
 
@@ -935,7 +935,7 @@ func (_SubchainRegistrar *SubchainRegistrarCallerSession) Vcm() (common.Address,
 // Verifyvalidatorsignatures is a free data retrieval call binding the contract method 0x0b4343cb.
 //
 // Solidity: function verifyvalidatorsignatures(uint256 subchainid, uint256 blockheight, address[] validators, bytes32[] msghashes, (uint8,bytes32,bytes32)[] signatures) view returns(bool)
-func (_SubchainRegistrar *SubchainRegistrarCaller) Verifyvalidatorsignatures(opts *bind.CallOpts, subchainid *big.Int, blockheight *big.Int, validators []common.Address, msghashes [][32]byte, signatures []Struct0) (bool, error) {
+func (_SubchainRegistrar *SubchainRegistrarCaller) Verifyvalidatorsignatures(opts *bind.CallOpts, subchainid *big.Int, blockheight *big.Int, validators []common.Address, msghashes [][32]byte, signatures []Struct1) (bool, error) {
 	var out []interface{}
 	err := _SubchainRegistrar.contract.Call(opts, &out, "verifyvalidatorsignatures", subchainid, blockheight, validators, msghashes, signatures)
 
@@ -952,14 +952,14 @@ func (_SubchainRegistrar *SubchainRegistrarCaller) Verifyvalidatorsignatures(opt
 // Verifyvalidatorsignatures is a free data retrieval call binding the contract method 0x0b4343cb.
 //
 // Solidity: function verifyvalidatorsignatures(uint256 subchainid, uint256 blockheight, address[] validators, bytes32[] msghashes, (uint8,bytes32,bytes32)[] signatures) view returns(bool)
-func (_SubchainRegistrar *SubchainRegistrarSession) Verifyvalidatorsignatures(subchainid *big.Int, blockheight *big.Int, validators []common.Address, msghashes [][32]byte, signatures []Struct0) (bool, error) {
+func (_SubchainRegistrar *SubchainRegistrarSession) Verifyvalidatorsignatures(subchainid *big.Int, blockheight *big.Int, validators []common.Address, msghashes [][32]byte, signatures []Struct1) (bool, error) {
 	return _SubchainRegistrar.Contract.Verifyvalidatorsignatures(&_SubchainRegistrar.CallOpts, subchainid, blockheight, validators, msghashes, signatures)
 }
 
 // Verifyvalidatorsignatures is a free data retrieval call binding the contract method 0x0b4343cb.
 //
 // Solidity: function verifyvalidatorsignatures(uint256 subchainid, uint256 blockheight, address[] validators, bytes32[] msghashes, (uint8,bytes32,bytes32)[] signatures) view returns(bool)
-func (_SubchainRegistrar *SubchainRegistrarCallerSession) Verifyvalidatorsignatures(subchainid *big.Int, blockheight *big.Int, validators []common.Address, msghashes [][32]byte, signatures []Struct0) (bool, error) {
+func (_SubchainRegistrar *SubchainRegistrarCallerSession) Verifyvalidatorsignatures(subchainid *big.Int, blockheight *big.Int, validators []common.Address, msghashes [][32]byte, signatures []Struct1) (bool, error) {
 	return _SubchainRegistrar.Contract.Verifyvalidatorsignatures(&_SubchainRegistrar.CallOpts, subchainid, blockheight, validators, msghashes, signatures)
 }
 

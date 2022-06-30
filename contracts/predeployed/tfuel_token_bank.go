@@ -31,8 +31,8 @@ func NewTFuelTokenBank() *TFuelTokenBank {
 // the transaction should fail with the "evm revert" error:
 //       thetasubcli tx smart_contract --chain="tsub_360777" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=0xBd770416a3345F91E4B34576cb804a576fa48EB1 --gas_price=4000000000000wei --gas_limit=5000000 --data=da837d5a0000000000000000000000002e833968e5bb786ae419c4d13189fb081cc43bab000000000000000000000000000000000000000000000004c53ecdc18a600000 --password=qwertyuiop --seq=2
 func (tb *TFuelTokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTFuelTokenLockedEvent) (*types.SmartContractTx, error) {
-	voucherReceiver := ccte.Receiver
-	amount := ccte.Amount
+	voucherReceiver := ccte.TargetChainVoucherReceiver
+	amount := ccte.LockedAmount
 
 	calldata := tb.encodeCalldata(voucherReceiver, amount)
 	tfuelTokenBankContractAddr := view.GetTFuelTokenBankContractAddress()

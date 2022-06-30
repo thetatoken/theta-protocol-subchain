@@ -725,7 +725,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 
 func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) {
 	currentDynasty := currentValidatorSet.Dynasty()
-	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockNumber()
+	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockHeight()
 	if err != nil {
 		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
 		return false, nil, nil
@@ -849,7 +849,7 @@ func (ledger *Ledger) addInterChainMessageTx(view *slst.StoreView, proposer *sco
 
 	crossChainTransferTx := &stypes.InterChainMessageTx{
 		Proposer:    proposerTxIn,
-		BlockNumber: nextInterChainMessageEvent.BlockNumber,
+		BlockNumber: nextInterChainMessageEvent.BlockHeight,
 		Event:       *nextInterChainMessageEvent,
 	}
 

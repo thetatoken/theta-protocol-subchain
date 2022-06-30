@@ -284,7 +284,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Lock(tokenSo
 		Denom:                 tnt20Denom,
 		Name:                  tokenName,
 		Symbol:                tokenSymbol,
-		Decimal:               tokenDecimals,
+		Decimals:              tokenDecimals,
 		Nonce:                 nonce,
 		LockedAmount:          tokenAmount,
 	})

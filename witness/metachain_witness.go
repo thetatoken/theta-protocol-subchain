@@ -232,25 +232,25 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
 	mw.collectInterChainMessageEventsOnChain(mw.subchainID, mw.subchainEthRpcUrl, mw.subchainTFuelTokenBankAddr, mw.subchainTNT20TokenBankAddr)
 }
 
-func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(sourceChainID *big.Int, ethRpcUrl string,
+func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,
 	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address) {
-	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(sourceChainID, score.IMCEventTypeCrossChainTokenLock)
+	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock)
 	if err == store.ErrKeyNotFound {
-		mw.interChainEventCache.SetLastQueryedHeightForType(sourceChainID, score.IMCEventTypeCrossChainTokenLock, common.Big0)
+		mw.interChainEventCache.SetLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, common.Big0)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
 	toBlock := mw.calculateToBlock(fromBlock)
-	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", sourceChainID.String(), fromBlock.String(), toBlock.String())
+	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", queriedChainID.String(), fromBlock.String(), toBlock.String())
 
 	queryTypes := append(score.LockTypes, score.UnlockTypes...)
 	for _, imceType := range queryTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
 		case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
-			events = score.QueryInterChainEventLog(fromBlock, toBlock, tfuelTokenBankAddr, imceType, ethRpcUrl)
+			events = score.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, imceType, ethRpcUrl)
 		case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
-			events = score.QueryInterChainEventLog(fromBlock, toBlock, tnt20TokenBankAddr, imceType, ethRpcUrl)
+			events = score.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tnt20TokenBankAddr, imceType, ethRpcUrl)
 		}
 		if len(events) == 0 {
 			continue
@@ -263,7 +263,7 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(sourceChainID 
 			logger.Panicf("failed to insert events into cache")
 		}
 	}
-	mw.interChainEventCache.SetLastQueryedHeightForType(sourceChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
+	mw.interChainEventCache.SetLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
 }
 
 func (mw *MetachainWitness) updateVoucherBurnStatus(events []*score.InterChainMessageEvent) {

@@ -77,7 +77,7 @@ var EventSelectors = map[InterChainMessageEventType]string{
 	IMCEventTypeCrossChainVoucherBurnTNT721: crypto.Keccak256Hash([]byte("TNT721VoucherBurned(uint256,string,address,address,uint256,uint256)")).Hex(),
 }
 
-func QueryInterChainEventLog(sourceChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string) []*InterChainMessageEvent {
+func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string) []*InterChainMessageEvent {
 	var events []*InterChainMessageEvent
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
 	var jsonData = []byte(queryStr)
@@ -113,34 +113,34 @@ func QueryInterChainEventLog(sourceChainID *big.Int, fromBlock *big.Int, toBlock
 
 		// TokenLock events
 		case IMCEventTypeCrossChainTokenLockTFuel:
-			extractTFuelTokenLockEvent(sourceChainID, logData, &events)
+			extractTFuelTokenLockedEvent(queriedChainID, logData, &events)
 		case IMCEventTypeCrossChainTokenLockTNT20:
-			extractTNT20TokenLockEvent(sourceChainID, logData, &events)
+			extractTNT20TokenLockedEvent(queriedChainID, logData, &events)
 		case IMCEventTypeCrossChainTokenLockTNT721:
-			extractTNT721TokenLockEvent(sourceChainID, logData, &events)
+			extractTNT721TokenLockedEvent(queriedChainID, logData, &events)
 
 		// TokenUnlock events
 		case IMCEventTypeCrossChainTokenUnlockTFuel:
-			extractTFuelTokenUnlockEvent(sourceChainID, logData, &events)
+			extractTFuelTokenUnlockedEvent(queriedChainID, logData, &events)
 		case IMCEventTypeCrossChainTokenUnlockTNT20:
-			extractTNT20TokenUnlockEvent(sourceChainID, logData, &events)
+			extractTNT20TokenUnlockedEvent(queriedChainID, logData, &events)
 		case IMCEventTypeCrossChainTokenUnlockTNT721:
-			extractTNT721TokenUnlockEvent(sourceChainID, logData, &events)
+			extractTNT721TokenUnlockedEvent(queriedChainID, logData, &events)
 
 		// VoucherBurn events
 		case IMCEventTypeCrossChainVoucherBurnTFuel:
-			extractTFuelVoucherBurnEvent(sourceChainID, logData, &events)
+			extractTFuelVoucherBurnedEvent(queriedChainID, logData, &events)
 		case IMCEventTypeCrossChainVoucherBurnTNT20:
-			extractTNT20VoucherBurnEvent(sourceChainID, logData, &events)
+			extractTNT20VoucherBurnedEvent(queriedChainID, logData, &events)
 		case IMCEventTypeCrossChainVoucherBurnTNT721:
-			extractTNT721VoucherBurnEvent(sourceChainID, logData, &events)
+			extractTNT721VoucherBurnedEvent(queriedChainID, logData, &events)
 		default:
 		}
 	}
 	return events
 }
 
-func extractTFuelTokenLockEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+func extractTFuelTokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
 	data, _ := hex.DecodeString(logData.Data[2:])
 	var tma CrossChainTFuelTokenLockedEvent
 	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
@@ -153,14 +153,14 @@ func extractTFuelTokenLockEvent(sourceChainID *big.Int, logData LogData, events 
 		Sender:        tma.SourceChainTokenSender,
 		Receiver:      tma.TargetChainVoucherReceiver,
 		Data:          data,
-		Nonce:         tma.Nonce,
+		Nonce:         tma.TokenLockNonce,
 		BlockHeight:   blockHeight,
 	}
 	logger.Infof("got tfuel event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
 }
 
-func extractTNT20TokenLockEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+func extractTNT20TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
 	data, _ := hex.DecodeString(logData.Data[2:])
 	var tma CrossChainTNT20TokenLockedEvent
 	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
@@ -173,14 +173,14 @@ func extractTNT20TokenLockEvent(sourceChainID *big.Int, logData LogData, events 
 		Sender:        tma.SourceChainTokenSender,
 		Receiver:      tma.TargetChainVoucherReceiver,
 		Data:          data,
-		Nonce:         tma.Nonce,
+		Nonce:         tma.TokenLockNonce,
 		BlockHeight:   blockHeight,
 	}
 	logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
 }
 
-func extractTNT721TokenLockEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
 	// data, _ := hex.DecodeString(logData.Data[2:])
 	// var tma CrossChainTNT721TokenLockedEvent
 	// contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT721TokenBankABI)))
@@ -200,116 +200,90 @@ func extractTNT721TokenLockEvent(sourceChainID *big.Int, logData LogData, events
 	// *events = append(*events, event)
 }
 
-func extractTFuelTokenUnlockEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+func extractTFuelTokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
 	data, _ := hex.DecodeString(logData.Data[2:])
-	var tma TFuelTokenUnlockEvent
+	var tma CrossChainTFuelTokenUnlockedEvent
 	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
 	contractAbi.UnpackIntoInterface(&tma, "TFuelTokenUnlocked", data)
 	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 	event := &InterChainMessageEvent{
-		Type:          IMCEventTypeCrossChainTokenLockTFuel,
-		SourceChainID: sourceChainID,
-		TargetChainID: tma.TargetChainID,
-		Sender:        tma.SubchainTokenSender,
-		Receiver:      tma.MainchainTokenReceiver,
+		Type:          IMCEventTypeCrossChainTokenUnlockTFuel,
+		SourceChainID: tma.SourceChainID,
+		TargetChainID: targetChainID,
+		Sender:        common.Address{}, // not needed
+		Receiver:      tma.TargetChainTokenReceiver,
 		Data:          data,
-		Nonce:         tma.Nonce,
+		Nonce:         tma.TokenUnlockNonce,
 		BlockHeight:   blockHeight,
 	}
 	logger.Infof("got tfuel unlock event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
 }
 
-func extractTNT20TokenUnlockEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+func extractTNT20TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+	data, _ := hex.DecodeString(logData.Data[2:])
+	var tma CrossChainTNT20TokenUnlockedEvent
+	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenUnlocked", data)
+	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	event := &InterChainMessageEvent{
+		Type:          IMCEventTypeCrossChainTokenUnlockTNT20,
+		SourceChainID: tma.SourceChainID,
+		TargetChainID: targetChainID,
+		Sender:        common.Address{}, // not needed
+		Receiver:      tma.TargetChainTokenReceiver,
+		Data:          data,
+		Nonce:         tma.TokenUnlockNonce,
+		BlockHeight:   blockHeight,
+	}
+	logger.Infof("got tnt20 unlock event : %v, logdata : %v", tma, logData)
+	*events = append(*events, event)
+}
+
+func extractTNT721TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
 
 }
 
-func extractTNT721TokenUnlockEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
-
-}
-
-func extractTFuelVoucherBurnEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
-	var vma CrossChainTFuelVoucherBurnEvent
+func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+	data, _ := hex.DecodeString(logData.Data[2:])
+	var tma CrossChainTFuelVoucherBurnedEvent
 	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.SubchainTFuelTokenBankABI)))
-	contractAbi.UnpackIntoInterface(&vma, "TFuelVoucherBurned", data)
-	blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi.UnpackIntoInterface(&tma, "TFuelVoucherBurned", data)
+	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 	event := &InterChainMessageEvent{
 		Type:          IMCEventTypeCrossChainVoucherBurnTFuel,
 		SourceChainID: sourceChainID,
-		TargetChainID: targetChainID,
-		Sender:        vma.VoucherOwner,
-		Receiver:      vma.MainchainTokenReceiver,
+		TargetChainID: tma.TargetChainID,
+		Sender:        tma.SourceChainVoucherOwner,
+		Receiver:      tma.TargetChainTokenReceiver,
 		Data:          data,
-		Nonce:         vma.Nonce,
-		BlockNumber:   blockNumber,
+		Nonce:         tma.VoucherBurnNonce,
+		BlockHeight:   blockHeight,
 	}
-	logger.Infof("got tfuel voucher burn event : %v, logdata : %v", vma, logData)
-	events = append(events, event)
+	logger.Infof("got tfuel voucher burn event : %v, logdata : %v", tma, logData)
+	*events = append(*events, event)
 }
 
-func extractTNT20VoucherBurnEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
-
+func extractTNT20VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+	data, _ := hex.DecodeString(logData.Data[2:])
+	var tma CrossChainTFuelVoucherBurnedEvent
+	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherBurned", data)
+	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	event := &InterChainMessageEvent{
+		Type:          IMCEventTypeCrossChainVoucherBurnTNT20,
+		SourceChainID: sourceChainID,
+		TargetChainID: tma.TargetChainID,
+		Sender:        tma.SourceChainVoucherOwner,
+		Receiver:      tma.TargetChainTokenReceiver,
+		Data:          data,
+		Nonce:         tma.VoucherBurnNonce,
+		BlockHeight:   blockHeight,
+	}
+	logger.Infof("got tnt20 voucher burn event : %v, logdata : %v", tma, logData)
+	*events = append(*events, event)
 }
 
-func extractTNT721VoucherBurnEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
+func extractTNT721VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*InterChainMessageEvent) {
 
 }
-
-// func QueryVoucherBurnEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType InterChainMessageEventType, url string, sourceChainID string, targetChainID string) []*InterChainMessageEvent {
-// 	var events []*InterChainMessageEvent
-// 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
-// 	var jsonData = []byte(queryStr)
-
-// 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
-// 	if err != nil {
-// 		logger.Fatal(err)
-// 	}
-// 	request.Header.Set("Content-Type", "application/json")
-
-// 	client := &http.Client{}
-// 	response, err := client.Do(request)
-// 	if err != nil {
-// 		logger.Fatalf("response error : %v", err)
-// 	}
-// 	defer response.Body.Close()
-
-// 	body, _ := ioutil.ReadAll(response.Body)
-// 	var rpcres RPCResult
-
-// 	err = json.Unmarshal(body, &rpcres)
-// 	if err != nil {
-// 		fmt.Printf("error decoding response: %v\n", err)
-// 		if e, ok := err.(*json.SyntaxError); ok {
-// 			fmt.Printf("syntax error at byte offset %d\n", e.Offset)
-// 		}
-// 		fmt.Printf("response: %q\n", body)
-// 	}
-
-// 	for _, logData := range rpcres.Result {
-// 		logData := logData
-// 		data, _ := hex.DecodeString(logData.Data[2:])
-// 		switch imceType {
-// 		case IMCEventTypeCrossChainVoucherBurnTFuel:
-// 			var vma CrossChainTFuelVoucherBurnEvent
-// 			contractAbi, _ := abi.JSON(strings.NewReader(string(scta.SubchainTFuelTokenBankABI)))
-// 			contractAbi.UnpackIntoInterface(&vma, "TFuelVoucherBurned", data)
-// 			blockNumber, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
-// 			event := &InterChainMessageEvent{
-// 				Type:          IMCEventTypeCrossChainVoucherBurnTFuel,
-// 				SourceChainID: sourceChainID,
-// 				TargetChainID: targetChainID,
-// 				Sender:        vma.VoucherOwner,
-// 				Receiver:      vma.MainchainTokenReceiver,
-// 				Data:          data,
-// 				Nonce:         vma.Nonce,
-// 				BlockNumber:   blockNumber,
-// 			}
-// 			logger.Infof("got tfuel voucher burn event : %v, logdata : %v", vma, logData)
-// 			events = append(events, event)
-// 		case IMCEventTypeCrossChainVoucherBurnTNT20:
-// 		default:
-// 		}
-// 	}
-
-// 	return events
-// }

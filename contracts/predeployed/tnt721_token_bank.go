@@ -28,7 +28,7 @@ func NewTNT721TokenBank() *TNT721TokenBank {
 // Note: if a user calls the the TNT721TokenBank.mintVouchers() function, the transaction should fail with the "evm revert" error.
 //       This is because mintVouchers() is only allowed in the privileged execution context
 func (tb *TNT721TokenBank) GenerateMintVouchersProxySctx(blockProposer common.Address, view *slst.StoreView, ccte *core.CrossChainTNT721TokenLockedEvent) (*types.SmartContractTx, error) {
-	voucherReceiver := ccte.Receiver
+	voucherReceiver := ccte.TargetChainVoucherReceiver
 	denom := ccte.Denom
 	name := ccte.Name
 	symbol := ccte.Symbol
