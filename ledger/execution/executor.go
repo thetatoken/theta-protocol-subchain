@@ -37,7 +37,6 @@ type Executor struct {
 
 	coinbaseTxExec                   *CoinbaseTxExecutor
 	subchainValidatorSetUpdateTxExec *SubchainValidatorSetUpdateTxExecutor
-	crosschainTransferTxExec         *InterChainMessageTxExecutor
 	sendTxExec                       *SendTxExecutor
 	smartContractTxExec              *SmartContractTxExecutor
 
@@ -55,7 +54,6 @@ func NewExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState
 		valMgr:                           valMgr,
 		coinbaseTxExec:                   NewCoinbaseTxExecutor(db, chain, state, consensus, valMgr),
 		subchainValidatorSetUpdateTxExec: NewSubchainValidatorSetUpdateTxExecutor(db, chain, state, consensus, valMgr, metachainWitness),
-		crosschainTransferTxExec:         NewInterChainMessageTxExecutor(db, chain, state, consensus, valMgr, metachainWitness),
 		sendTxExec:                       NewSendTxExecutor(state),
 		smartContractTxExec:              NewSmartContractTxExecutor(chain, state),
 		skipSanityCheck:                  false,
@@ -188,8 +186,6 @@ func (exec *Executor) getTxExecutor(tx types.Tx) TxExecutor {
 		txExecutor = exec.coinbaseTxExec
 	case *stypes.SubchainValidatorSetUpdateTx:
 		txExecutor = exec.subchainValidatorSetUpdateTxExec
-	case *stypes.InterChainMessageTx:
-		txExecutor = exec.crosschainTransferTxExec
 	case *types.SendTx:
 		txExecutor = exec.sendTxExec
 	case *types.SmartContractTx:

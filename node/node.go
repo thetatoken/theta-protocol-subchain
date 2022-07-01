@@ -89,11 +89,6 @@ func NewNode(params *Params) *Node {
 	// 	interChainEventCache,
 	// 	viper.GetInt(scom.CfgSubchainTestID))
 	metachainWitness := witness.NewMetachainWitness(
-	
-		common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
-		common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
-		,
-		,
 		viper.GetInt(scom.CfgSubchainUpdateInterval),
 		interChainEventCache)
 
@@ -107,7 +102,7 @@ func NewNode(params *Params) *Node {
 	validatorManager.SetConsensusEngine(consensus)
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
-	metachainWitness.SetSubchainTokenBankAddresses(ledger)
+	metachainWitness.SetSubchainTokenBanks(ledger)
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
 
 	if !reflect.ValueOf(params.Network).IsNil() {

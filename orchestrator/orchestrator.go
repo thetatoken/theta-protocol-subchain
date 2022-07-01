@@ -320,7 +320,6 @@ func (oc *Orchestrator) handleVoucherBurnTx() {
 // }
 
 func (oc *Orchestrator) CallVourcherBurnOnMainchain(event *score.InterChainMessageEvent) error {
-	oc.MainchainWitness.CallMintOnMainchain(oc.buildTxOpts())
 	voucherBurnData, sigData, err := oc.PrepareDataAndSignature(event)
 	opts := oc.buildTxOpts()
 	if err != nil {

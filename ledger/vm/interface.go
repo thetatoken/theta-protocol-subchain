@@ -38,6 +38,8 @@ type StateDB interface {
 	GetThetaBalance(common.Address) *big.Int // GetThetaBalance returns the ThetaWei balance of the given address
 	GetThetaStake(common.Address) *big.Int   // GetThetaStake returns the total amount of ThetaWei the address staked to validators and/or guardians
 
+	GetTFuelTokenBankContractAddress() *common.Address
+
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)
 

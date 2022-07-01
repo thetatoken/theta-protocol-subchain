@@ -398,7 +398,7 @@ func (c *mintTFuel) RequiredGas(input []byte, blockHeight uint64) uint64 {
 }
 
 func (c *mintTFuel) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	if !evm.HasPreviledgedAccess() {
+	if !evm.HasPreviledgedAccess(callerAddr) {
 		return nil, errors.New("the execution context does not have previledged access")
 	}
 

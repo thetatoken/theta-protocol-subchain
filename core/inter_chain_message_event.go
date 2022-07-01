@@ -192,9 +192,9 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 // Cross-Chain TFuel Lock
 
 type CrossChainTFuelTokenLockedEvent struct { // corresponding to the "TFuelTokenLocked" event
-	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	Denom                      string
 	SourceChainTokenSender     common.Address
+	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	TargetChainVoucherReceiver common.Address
 	LockedAmount               *big.Int
 	TokenLockNonce             *big.Int
@@ -206,7 +206,7 @@ func ParseToCrossChainTFuelTokenLockedEvent(icme *InterChainMessageEvent) (*Cros
 	}
 
 	var event CrossChainTFuelTokenLockedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
@@ -230,9 +230,9 @@ func ParseToCrossChainTFuelTokenLockedEvent(icme *InterChainMessageEvent) (*Cros
 // Cross-Chain TNT20 Lock
 
 type CrossChainTNT20TokenLockedEvent struct { // corresponding to the "TNT20TokenLocked" event
-	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	Denom                      string
 	SourceChainTokenSender     common.Address
+	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	TargetChainVoucherReceiver common.Address
 	LockedAmount               *big.Int
 	Name                       string
@@ -247,7 +247,7 @@ func ParseToCrossChainTNT20TokenLockedEvent(icme *InterChainMessageEvent) (*Cros
 	}
 
 	var event CrossChainTNT20TokenLockedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
@@ -271,9 +271,9 @@ func ParseToCrossChainTNT20TokenLockedEvent(icme *InterChainMessageEvent) (*Cros
 // Cross-Chain TNT721 Lock
 
 type CrossChainTNT721TokenLockedEvent struct { // corresponding to the "TNT721TokenLocked" event
-	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	Denom                      string
 	SourceChainTokenSender     common.Address
+	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	TargetChainVoucherReceiver common.Address
 	TokenID                    *big.Int
 	TokenURI                   string
@@ -316,7 +316,6 @@ func ParseToCrossChainTNT721TokenLockedEvent(icme *InterChainMessageEvent) (*Cro
 // Cross-Chain TFuel Unlock
 
 type CrossChainTFuelTokenUnlockedEvent struct { // corresponding to the "TFuelTokenUnlocked" event
-	SourceChainID               *big.Int // sourceChain: the chain on which the voucher burn happens
 	Denom                       string
 	TargetChainTokenReceiver    common.Address
 	UnlockedAmount              *big.Int
@@ -330,7 +329,7 @@ func ParseToCrossChainTFuelTokenUnlockedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 
 	var event CrossChainTFuelTokenUnlockedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
@@ -352,7 +351,6 @@ func ParseToCrossChainTFuelTokenUnlockedEvent(icme *InterChainMessageEvent) (*Cr
 // Cross-Chain TNT20 Unlock
 
 type CrossChainTNT20TokenUnlockedEvent struct { // corresponding to the "TNT20TokenUnlocked" event
-	SourceChainID               *big.Int // sourceChain: the chain on which the voucher burn happens
 	Denom                       string
 	TargetChainTokenReceiver    common.Address
 	LockedAmount                *big.Int
@@ -366,7 +364,7 @@ func ParseToCrossChainTNT20TokenUnlockedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 
 	var event CrossChainTNT20TokenUnlockedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
@@ -405,11 +403,10 @@ type VoucherBurnEventStatusInfo struct {
 }
 
 type CrossChainTFuelVoucherBurnedEvent struct { // corresponding to the "TFuelVoucherBurned" event
-	TargetChainID            *big.Int // targetChain: the chain on which authentic token will be unlocked after the voucher burn
 	Denom                    string
 	SourceChainVoucherOwner  common.Address
 	TargetChainTokenReceiver common.Address
-	Amount                   *big.Int
+	BurnedAmount             *big.Int
 	VoucherBurnNonce         *big.Int
 }
 
@@ -419,7 +416,7 @@ func ParseToCrossChainTFuelVoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 
 	var event CrossChainTFuelVoucherBurnedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTFuelTokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
@@ -439,12 +436,11 @@ func ParseToCrossChainTFuelVoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 }
 
 type CrossChainTNT20VoucherBurnedEvent struct { // corresponding to the "TNT20VoucherBurned" event
-	SourceChainID *big.Int
-	TargetChainID *big.Int
-	TxHash        common.Hash
-	Denom         string
-	Amount        *big.Int
-	TokenID       *big.Int
+	Denom                    string
+	SourceChainVoucherOwner  common.Address
+	TargetChainTokenReceiver common.Address
+	BurnedAmount             *big.Int
+	VoucherBurnNonce         *big.Int
 }
 
 func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*CrossChainTNT20VoucherBurnedEvent, error) {
@@ -453,7 +449,7 @@ func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 
 	var event CrossChainTNT20VoucherBurnedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT20TokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
 	if err != nil {
 		return nil, err
 	}

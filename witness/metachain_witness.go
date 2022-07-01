@@ -36,9 +36,9 @@ type MetachainWitness struct {
 	witnessedDynasty            *big.Int
 	subchainRegistrar           *scta.SubchainRegistrar // the SubchainRegistrar contract deployed on the main chain
 	mainchainTFuelTokenBankAddr common.Address
-	mainchainTFuelTokenBank     *scta.MainchainTFuelTokenBank // the MainchainTFuelTokenBank contract deployed on the main chain
+	mainchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the main chain
 	mainchainTNT20TokenBankAddr common.Address
-	mainchainTNT20TokenBank     *scta.MainchainTNT20TokenBank // the MainchainTNT20TokenBank contract deployed on the main chain
+	mainchainTNT20TokenBank     *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the main chain
 	mainchainBlockHeight        *big.Int
 	lastQueryedMainChainHeight  *big.Int
 
@@ -47,9 +47,9 @@ type MetachainWitness struct {
 	subchainEthRpcUrl          string
 	subchainEthRpcClient       *ec.Client
 	subchainTFuelTokenBankAddr common.Address
-	subchainTFuelTokenBank     *scta.SubchainTFuelTokenBank // the SubchainTFuelTokenBank contract deployed on the subchain
+	subchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the subchain
 	subchainTNT20TokenBankAddr common.Address
-	subchainTNT20TokenBank     *scta.SubchainTNT20TokenBank // the SubchainTNT20TokenBank contract deployed on the subchain
+	subchainTNT20TokenBank     *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the subchain
 
 	// Validator set
 	validatorSetCache map[string]*score.ValidatorSet
@@ -80,12 +80,12 @@ func NewMetachainWitness(updateInterval int, interChainEventCache *score.InterCh
 		logger.Fatalf("failed to create SubchainRegistrar contract %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
-	mainchainTFuelTokenBank, err := scta.NewMainchainTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
+	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to create MainchainTFuelTokenBank contract %v\n", err)
 	}
 	mainchainTNT20TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress))
-	mainchainTNT20TokenBank, err := scta.NewMainchainTNT20TokenBank(mainchainTNT20TokenBankAddr, mainchainEthRpcClient)
+	mainchainTNT20TokenBank, err := scta.NewTNT20TokenBank(mainchainTNT20TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
 	}
@@ -149,7 +149,7 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
 	}
 	mw.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
-	mw.subchainTFuelTokenBank, err = scta.NewSubchainTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
+	mw.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
@@ -159,7 +159,7 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
 	}
 	mw.subchainTNT20TokenBankAddr = *subchainTNT20TokenBankAddr
-	mw.subchainTNT20TokenBank, err = scta.NewSubchainTNT20TokenBank(*subchainTNT20TokenBankAddr, mw.subchainEthRpcClient)
+	mw.subchainTNT20TokenBank, err = scta.NewTNT20TokenBank(*subchainTNT20TokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}

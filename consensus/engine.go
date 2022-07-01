@@ -1049,106 +1049,6 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 	return true
 }
 
-// process the inter-chain event tx from the last processed event to the event that has the nonce in the return value
-func (e *ConsensusEngine) includeInterChainMessageTxsTillNonce(tip *score.ExtendedBlock) map[score.InterChainMessageEventType]*big.Int {
-	m := make(map[score.InterChainMessageEventType]*big.Int)
-	// Check if majority has greater block height.
-	epochVotes, err := e.state.GetEpochVotes()
-	if err != nil {
-		e.logger.WithFields(log.Fields{"error": err}).Warn("Failed to load epoch votes")
-		return m
-	}
-	validators := e.validatorManager.GetNextValidatorSet(tip.Hash())
-	votes := score.NewVoteSet()
-	for _, v := range epochVotes.Votes() {
-		if v.Height >= tip.Height+1 {
-			votes.AddVote(v)
-		}
-	}
-
-	if validators.HasMajority(votes) {
-		e.logger.WithFields(log.Fields{
-			"tip":        tip.Hash().Hex(),
-			"tip.Height": tip.Height,
-			"votes":      votes.String(),
-		}).Debug("canIncludeValidatorUpdateTxs=false: tip height smaller than majority")
-		return m
-	}
-
-	if err != nil {
-		return m
-	}
-	interChainEventCache := e.metachainWitness.GetInterChainEventCache()
-
-	transferTypes := [6]score.InterChainMessageEventType{
-		score.IMCEventTypeCrossChainTokenLockTFuel,
-		score.IMCEventTypeCrossChainTokenLockTNT20,
-		score.IMCEventTypeCrossChainTokenLockTNT721,
-
-		score.IMCEventTypeCrossChainVoucherBurnTFuel,
-		score.IMCEventTypeCrossChainVoucherBurnTNT20,
-		score.IMCEventTypeCrossChainVoucherBurnTNT721,
-	}
-
-	for _, imceType := range transferTypes {
-		lastEventNonce, err := e.ledger.GetLastProcessedEventNonce(imceType, tip.Hash())
-		if err != nil {
-			e.logger.WithFields(log.Fields{
-				"error":         err,
-				"tip.StateHash": tip.StateHash.Hex(),
-				"tip":           tip,
-			}).Panic("Failed to get last processed event nonce :")
-		}
-
-		// nextEventNonce, _ := interChainEventCache.GetNextTransferNonceForType(imceType)
-		var nextEventNonce *big.Int
-		if lastEventNonce.Cmp(common.Big0) == 0 {
-			nextEventNonce = big.NewInt(1)
-		} else {
-			nextEventNonce = new(big.Int).Add(lastEventNonce, big.NewInt(1))
-		}
-
-		// next event does not exist yet
-		if exists, _ := interChainEventCache.Exists(imceType, nextEventNonce); !exists {
-			break
-		}
-
-		processTillNonce := big.NewInt(0)
-		for {
-			nextEventToProcess, ok := interChainEventCache.Get(imceType, nextEventNonce)
-			if ok != nil {
-				e.logger.WithFields(log.Fields{
-					"imce type":        imceType,
-					"next event nonce": nextEventNonce,
-				}).Debug("cannot find the next event to process")
-				break
-			}
-			// For better liveness, check if the majority votes have dynasties at least as large as the block number in the event.
-			mainchainHeightVotes := score.NewVoteSet()
-			for _, v := range epochVotes.Votes() {
-				if big.NewInt(int64(v.MainchainHeight)).Cmp(nextEventToProcess.BlockNumber) > 0 {
-					mainchainHeightVotes.AddVote(v)
-				}
-			}
-
-			if !validators.HasMajority(mainchainHeightVotes) {
-				// The majority of the validators are still lagging behind this node. Hence, higly likely that if the
-				// proposed block includes the inter-chain message tx, it will be ignored by the majority of the validators.
-				// So it is better not to include the tx so the block can be finalized. Otherwise, this proposer slot will be wasted.
-				break
-			}
-			processTillNonce = nextEventNonce
-			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
-		}
-		m[imceType] = processTillNonce
-		e.logger.WithFields(log.Fields{
-			"processTillNonce": processTillNonce,
-		}).Info("Process Till Nonce is : ")
-	}
-
-	return m
-}
-
 func (e *ConsensusEngine) shouldProposeByID(previousBlock common.Hash, epoch uint64, id string) bool {
 	if epoch == 0 { // special handling for genesis epoch
 		return false
@@ -1166,7 +1066,7 @@ func (e *ConsensusEngine) shouldProposeByID(previousBlock common.Hash, epoch uin
 	return true
 }
 
-func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonceMap map[score.InterChainMessageEventType]*big.Int) (score.Proposal, error) {
+func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool) (score.Proposal, error) {
 	tip := e.GetTipToExtend()
 	//result := e.ledger.ResetState(tip.Height, tip.StateHash)
 	result := e.ledger.ResetState(tip.Block)
@@ -1191,7 +1091,7 @@ func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool, incl
 	block.HCC.Votes = e.chain.FindVotesByHash(block.HCC.BlockHash).UniqueVoter().FilterByValidators(hccValidators)
 
 	// Add Txs.
-	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonceMap)
+	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, canIncludeValidatorUpdateTxs)
 	if result.IsError() || result.IsUndecided() { // the proposer should NOT propose a block that is either invalid or undecided
 		err := fmt.Errorf("Failed to collect Txs for block proposal: %v", result.String())
 		return score.Proposal{}, err
@@ -1234,7 +1134,6 @@ func (e *ConsensusEngine) propose() {
 	}
 
 	canIncludeValidatorUpdateTxs := e.canIncludeValidatorUpdateTxs(tip)
-	includeInterChainMessageTxsTillNonce := e.includeInterChainMessageTxsTillNonce(tip)
 	var proposal score.Proposal
 	var err error
 	lastProposal := e.state.GetLastProposal()
@@ -1242,7 +1141,7 @@ func (e *ConsensusEngine) propose() {
 		proposal = lastProposal
 		e.logger.WithFields(log.Fields{"proposal": proposal}).Info("Repeating proposal")
 	} else {
-		proposal, err = e.createProposal(canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonce)
+		proposal, err = e.createProposal(canIncludeValidatorUpdateTxs)
 		if err != nil {
 			e.logger.WithFields(log.Fields{"error": err}).Error("Failed to create proposal")
 			return
