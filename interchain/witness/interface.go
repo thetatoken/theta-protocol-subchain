@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	score "github.com/thetatoken/thetasubchain/core"
+	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 )
 
 type ChainWitness interface {
@@ -13,5 +14,5 @@ type ChainWitness interface {
 	Wait()
 	GetMainchainBlockHeight() (*big.Int, error)
 	GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error)
-	GetInterChainEventCache() *score.InterChainEventCache
+	GetInterChainEventCache() *siu.InterChainEventCache
 }

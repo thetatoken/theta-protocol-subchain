@@ -23,11 +23,11 @@ import (
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
 	sexec "github.com/thetatoken/thetasubchain/ledger/execution"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	smp "github.com/thetatoken/thetasubchain/mempool"
-	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "ledger"})

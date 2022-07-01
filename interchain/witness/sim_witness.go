@@ -9,15 +9,18 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 
 	"github.com/thetatoken/theta/common"
 )
 
 const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
 
-// SimulatedMainchainWitness is a simulated mainchain witness for end-to-end testing
-type SimulatedMainchainWitness struct {
-	subchainID        string
+// SimulatedMetachainWitness is a simulated mainchain witness for end-to-end testing
+type SimulatedMetachainWitness struct {
+	mainchainID *big.Int
+	subchainID  *big.Int
+
 	witnessedDynasty  *big.Int
 	validatorSetCache map[string]*score.ValidatorSet
 	updateTicker      *time.Ticker
@@ -27,24 +30,25 @@ type SimulatedMainchainWitness struct {
 	wg                   *sync.WaitGroup
 	ctx                  context.Context
 	cancel               context.CancelFunc
-	crossChainEventCache *score.InterChainEventCache
+	crossChainEventCache *siu.InterChainEventCache
 
 	lastSimEventNonce    map[score.InterChainMessageEventType]*big.Int
 	hasTransferredTNT721 bool
 	testId               int
 }
 
-// NewSimulatedMainchainWitness creates a new SimulatedMainchainWitness
-func NewSimulatedMainchainWitness(
-	ethClientAddress string,
-	subchainID string,
+// NewSimulatedMetachainWitness creates a new SimulatedMetachainWitness
+func NewSimulatedMetachainWitness(
+	mainchainIDStr string,
+	subchainIDStr string,
 	registerContractAddr common.Address,
 	ercContractAddr common.Address,
-	crossChainEventCache *score.InterChainEventCache,
+	crossChainEventCache *siu.InterChainEventCache,
 	testId int,
-) *SimulatedMainchainWitness {
-	mw := &SimulatedMainchainWitness{
-		subchainID:           subchainID,
+) *SimulatedMetachainWitness {
+	mw := &SimulatedMetachainWitness{
+		mainchainID:          scom.MapChainID(mainchainIDStr),
+		subchainID:           scom.MapChainID(subchainIDStr),
 		witnessedDynasty:     nil, // will be updated in the first update() call
 		validatorSetCache:    make(map[string]*score.ValidatorSet),
 		startingTime:         time.Now(),
@@ -71,7 +75,7 @@ func NewSimulatedMainchainWitness(
 	return mw
 }
 
-func (mw *SimulatedMainchainWitness) Start(ctx context.Context) {
+func (mw *SimulatedMetachainWitness) Start(ctx context.Context) {
 	c, cancel := context.WithCancel(ctx)
 	mw.ctx = c
 	mw.cancel = cancel
@@ -80,23 +84,23 @@ func (mw *SimulatedMainchainWitness) Start(ctx context.Context) {
 	go mw.mainloop(ctx)
 }
 
-func (mw *SimulatedMainchainWitness) Stop() {
+func (mw *SimulatedMetachainWitness) Stop() {
 	if mw.updateTicker != nil {
 		mw.updateTicker.Stop()
 	}
 	mw.cancel()
 }
 
-func (mw *SimulatedMainchainWitness) Wait() {
+func (mw *SimulatedMetachainWitness) Wait() {
 	mw.wg.Wait()
 }
 
-func (mw *SimulatedMainchainWitness) GetMainchainBlockNumber() (*big.Int, error) {
+func (mw *SimulatedMetachainWitness) GetMainchainBlockNumber() (*big.Int, error) {
 	blockNumber := int64((time.Since(mw.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
 	return big.NewInt(int64(blockNumber)), nil
 }
 
-func (mw *SimulatedMainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
+func (mw *SimulatedMetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
 	validatorSet, ok := mw.validatorSetCache[dynasty.String()]
 	if ok && validatorSet != nil && validatorSet.Dynasty() == dynasty {
 		return validatorSet, nil
@@ -111,7 +115,7 @@ func (mw *SimulatedMainchainWitness) GetValidatorSetByDynasty(dynasty *big.Int) 
 	return validatorSet, nil
 }
 
-func (mw *SimulatedMainchainWitness) mainloop(ctx context.Context) {
+func (mw *SimulatedMetachainWitness) mainloop(ctx context.Context) {
 	mw.updateTicker = time.NewTicker(time.Duration(1000) * time.Millisecond)
 	for {
 		select {
@@ -123,7 +127,7 @@ func (mw *SimulatedMainchainWitness) mainloop(ctx context.Context) {
 	}
 }
 
-func (mw *SimulatedMainchainWitness) update() {
+func (mw *SimulatedMetachainWitness) update() {
 	mainchainBlockNumber, err := mw.GetMainchainBlockNumber()
 	logger.Debugf("witnessed main chain block height: %v", mainchainBlockNumber)
 
@@ -145,7 +149,7 @@ func (mw *SimulatedMainchainWitness) update() {
 			if !ok {
 				logger.Panicf("failed to set amount %v", err)
 			}
-			event := mw.generateInterChainEventForTFuelTransfer(amount, big.NewInt(10), mainchainBlockNumber)
+			event := mw.generateInterChainEventForTFuelLock(amount, big.NewInt(10), mainchainBlockNumber)
 			mw.crossChainEventCache.Insert(event)
 			// logger.Infof("Inserted Event %v", event)
 		}
@@ -158,7 +162,7 @@ func (mw *SimulatedMainchainWitness) update() {
 		if !ok {
 			logger.Panicf("failed to set amount %v", err)
 		}
-		event := mw.generateInterChainEventForTFuelTransfer(amount, mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel], mainchainBlockNumber)
+		event := mw.generateInterChainEventForTFuelLock(amount, mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel], mainchainBlockNumber)
 		mw.crossChainEventCache.Insert(event)
 		// logger.Infof("Inserted Event %v", event)
 		mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel] = new(big.Int).Add(mw.lastSimEventNonce[score.IMCEventTypeCrossChainTokenLockTFuel], big.NewInt(1))
@@ -202,7 +206,7 @@ func (mw *SimulatedMainchainWitness) update() {
 	}
 }
 
-func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
+func (mw *SimulatedMetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	// Simulate validator set updates
 	validatorAddrList := []string{
 		"0x2E833968E5bB786Ae419c4d13189fB081Cc43bab",
@@ -241,19 +245,19 @@ func (mw *SimulatedMainchainWitness) updateValidatorSetCache(dynasty *big.Int) (
 	return validatorSet, nil
 }
 
-func (mw *SimulatedMainchainWitness) GetInterChainEventCache() *score.InterChainEventCache {
+func (mw *SimulatedMetachainWitness) GetInterChainEventCache() *siu.InterChainEventCache {
 	return mw.crossChainEventCache
 }
 
-func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	tfuelDenom := score.TFuelDenom(score.MainnetChainID)
-	data, err := rlp.EncodeToBytes(score.TfuelTransferMetaData{
-		TargetChainID:         big.NewInt(3610001),
-		MainchainTokenSender:  common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		SubchainTokenReceiver: common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		Denom:                 tfuelDenom,
-		LockedAmount:          amount,
-		Nonce:                 nonce,
+func (mw *SimulatedMetachainWitness) generateInterChainEventForTFuelLock(amount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
+	tfuelDenom := score.TFuelDenom(mw.mainchainID)
+	data, err := rlp.EncodeToBytes(score.CrossChainTFuelTokenLockedEvent{
+		Denom:                      tfuelDenom,
+		SourceChainTokenSender:     common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		TargetChainID:              mw.mainchainID,
+		TargetChainVoucherReceiver: common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		LockedAmount:               amount,
+		TokenLockNonce:             nonce,
 	})
 	if err != nil {
 		logger.Panicf("failed to get encode inter-chain message event data for TFuel transfer: %v", err)
@@ -261,7 +265,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 
 	event := score.NewInterChainMessageEvent(
 		score.IMCEventTypeCrossChainTokenLockTFuel,
-		score.MainnetChainID,
+		mw.mainchainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -272,21 +276,19 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTFuelTransfer(amo
 	return event
 }
 
-func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Lock(tokenSourceAddress common.Address,
+func (mw *SimulatedMetachainWitness) generateInterChainEventForTNT20Lock(tokenSourceAddress common.Address,
 	tokenName string, tokenSymbol string, tokenDecimals uint8, tokenAmount *big.Int, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	tnt20Denom := score.TNT20Denom(score.MainnetChainID, tokenSourceAddress)
-	targetChainId, _ := new(big.Int).SetString(mw.subchainID, 10)
+	tnt20Denom := score.TNT20Denom(mw.mainchainID, tokenSourceAddress)
 	data, err := rlp.EncodeToBytes(score.CrossChainTNT20TokenLockedEvent{
-		TargetChainID:         targetChainId,
-		MainchainTokenSender:  common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		SubchainTokenReceiver: common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
-		TNT20Contract:         tokenSourceAddress,
-		Denom:                 tnt20Denom,
-		Name:                  tokenName,
-		Symbol:                tokenSymbol,
-		Decimals:              tokenDecimals,
-		Nonce:                 nonce,
-		LockedAmount:          tokenAmount,
+		Denom:                      tnt20Denom,
+		SourceChainTokenSender:     common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		TargetChainID:              mw.subchainID,
+		TargetChainVoucherReceiver: common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
+		LockedAmount:               tokenAmount,
+		Name:                       tokenName,
+		Symbol:                     tokenSymbol,
+		Decimals:                   tokenDecimals,
+		TokenLockNonce:             nonce,
 	})
 	if err != nil {
 		logger.Panicf("failed to get encode inter-chain message event data for TNT20 token transfer: %v", err)
@@ -294,7 +296,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Lock(tokenSo
 
 	event := score.NewInterChainMessageEvent(
 		score.IMCEventTypeCrossChainTokenLockTNT20,
-		score.MainnetChainID,
+		mw.mainchainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
@@ -305,9 +307,9 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT20Lock(tokenSo
 	return event
 }
 
-func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Lock(tokenSourceAddress common.Address,
+func (mw *SimulatedMetachainWitness) generateInterChainEventForTNT721Lock(tokenSourceAddress common.Address,
 	tokenName string, tokenSymbol string, tokenID *big.Int, tokenURI string, nonce *big.Int, mainchainBlockNumber *big.Int) *score.InterChainMessageEvent {
-	tnt721Denom := score.TNT721Denom(score.MainnetChainID, tokenSourceAddress)
+	tnt721Denom := score.TNT721Denom(mw.mainchainID, tokenSourceAddress)
 	data, err := rlp.EncodeToBytes(score.CrossChainTNT721TokenLockedEvent{
 		Denom:    tnt721Denom,
 		Name:     tokenName,
@@ -321,7 +323,7 @@ func (mw *SimulatedMainchainWitness) generateInterChainEventForTNT721Lock(tokenS
 
 	event := score.NewInterChainMessageEvent(
 		score.IMCEventTypeCrossChainTokenLockTNT721,
-		score.MainnetChainID,
+		mw.mainchainID,
 		mw.subchainID,
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),
 		common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"),

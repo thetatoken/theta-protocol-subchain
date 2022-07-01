@@ -15,10 +15,12 @@ import (
 	scom "github.com/thetatoken/thetasubchain/common"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
+	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/store"
+	"github.com/thetatoken/theta/store/database"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
@@ -28,6 +30,7 @@ var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 type MetachainWitness struct {
 	updateTicker   *time.Ticker
 	updateInterval int
+	witnessState   *metachainWitnessState
 
 	// The main chain
 	mainchainID                 *big.Int
@@ -55,7 +58,7 @@ type MetachainWitness struct {
 	validatorSetCache map[string]*score.ValidatorSet
 
 	// Inter-chain messaging
-	interChainEventCache *score.InterChainEventCache
+	interChainEventCache *siu.InterChainEventCache
 
 	// Life cycle
 	wg     *sync.WaitGroup
@@ -64,7 +67,7 @@ type MetachainWitness struct {
 }
 
 // NewMetachainWitness creates a new MetachainWitness
-func NewMetachainWitness(updateInterval int, interChainEventCache *score.InterChainEventCache) *MetachainWitness {
+func NewMetachainWitness(db database.Database, updateInterval int, interChainEventCache *siu.InterChainEventCache) *MetachainWitness {
 	mainchainEthRpcURL := viper.GetString(scom.CfgMainchainEthRpcURL)
 	mainchainEthRpcClient, err := ec.Dial(mainchainEthRpcURL)
 	if err != nil {
@@ -97,8 +100,11 @@ func NewMetachainWitness(updateInterval int, interChainEventCache *score.InterCh
 		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
 	}
 
+	witnessState := newMetachainWitnessState(db)
+
 	mw := &MetachainWitness{
 		updateInterval: updateInterval,
+		witnessState:   witnessState,
 
 		mainchainID:                 mainchainID,
 		mainchainEthRpcUrl:          mainchainEthRpcURL,
@@ -163,7 +169,6 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
-
 }
 
 // TODO: make sure the block number returned by the client.BlockNumber() call is the lastest *finalized* block number
@@ -234,23 +239,23 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,
 	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address) {
-	fromBlock, err := mw.interChainEventCache.GetLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock)
+	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock)
 	if err == store.ErrKeyNotFound {
-		mw.interChainEventCache.SetLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, common.Big0)
+		mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, common.Big0)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
 	toBlock := mw.calculateToBlock(fromBlock)
 	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", queriedChainID.String(), fromBlock.String(), toBlock.String())
 
-	queryTypes := append(score.LockTypes, score.UnlockTypes...)
+	queryTypes := append(siu.LockTypes, siu.UnlockTypes...)
 	for _, imceType := range queryTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
 		case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
-			events = score.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, imceType, ethRpcUrl)
+			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, imceType, ethRpcUrl)
 		case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
-			events = score.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tnt20TokenBankAddr, imceType, ethRpcUrl)
+			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tnt20TokenBankAddr, imceType, ethRpcUrl)
 		}
 		if len(events) == 0 {
 			continue
@@ -263,7 +268,7 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 			logger.Panicf("failed to insert events into cache")
 		}
 	}
-	mw.interChainEventCache.SetLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
+	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
 }
 
 func (mw *MetachainWitness) updateVoucherBurnStatus(events []*score.InterChainMessageEvent) {
@@ -291,8 +296,8 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 	if err != nil {
 		return fromBlock
 	}
-	maxBlockRange := int64(1000) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
-	minBlockGap := int64(10)     // tentative, to ensure the chain has enough time to finalize the event
+	maxBlockRange := int64(300) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
+	minBlockGap := int64(10)    // tentative, to ensure the chain has enough time to finalize the event
 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
 		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
@@ -329,6 +334,6 @@ func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	return validatorSet, nil
 }
 
-func (mw *MetachainWitness) GetInterChainEventCache() *score.InterChainEventCache {
+func (mw *MetachainWitness) GetInterChainEventCache() *siu.InterChainEventCache {
 	return mw.interChainEventCache
 }

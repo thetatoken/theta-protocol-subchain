@@ -47,7 +47,6 @@ var PrecompiledContracts = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 
-	common.BytesToAddress([]byte{181}): &hasPreviledgedAccess{},
 	common.BytesToAddress([]byte{182}): &mintTFuel{},
 	common.BytesToAddress([]byte{183}): &burnTFuel{},
 
@@ -367,25 +366,6 @@ func (c *bn256Pairing) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 		return true32Byte, nil
 	}
 	return false32Byte, nil
-}
-
-// hasPreviledgedAccess return if the current execution context has previledged access
-type hasPreviledgedAccess struct {
-}
-
-func (c *hasPreviledgedAccess) RequiredGas(input []byte, blockHeight uint64) uint64 {
-	const previledgeAcessCheckGas = uint64(50)
-	return previledgeAcessCheckGas
-}
-
-func (c *hasPreviledgedAccess) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	hasPreviledgedAccess := big.NewInt(0).SetUint64(0)
-	if evm.HasPreviledgedAccess() {
-		hasPreviledgedAccess.SetUint64(1)
-	}
-	hasPreviledgedAccessBytes := hasPreviledgedAccess.Bytes()
-	hasPreviledgedAccessBytes32 := common.LeftPadBytes(hasPreviledgedAccessBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
-	return hasPreviledgedAccessBytes32, nil
 }
 
 // mintTFuel mints TFuel for a given account when the current execution context has previledge access

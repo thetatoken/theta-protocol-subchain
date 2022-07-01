@@ -11,9 +11,9 @@ import (
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
-	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var _ TxExecutor = (*SubchainValidatorSetUpdateTxExecutor)(nil)

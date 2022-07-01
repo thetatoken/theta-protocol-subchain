@@ -21,15 +21,17 @@ import (
 	scom "github.com/thetatoken/thetasubchain/common"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/interchain/orchestrator"
+	siu "github.com/thetatoken/thetasubchain/interchain/utils"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
+
 	sld "github.com/thetatoken/thetasubchain/ledger"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	snsync "github.com/thetatoken/thetasubchain/netsync"
-	"github.com/thetatoken/thetasubchain/orchestrator"
 	srp "github.com/thetatoken/thetasubchain/report"
 	srpc "github.com/thetatoken/thetasubchain/rpc"
 	ssnst "github.com/thetatoken/thetasubchain/snapshot"
 	srollingdb "github.com/thetatoken/thetasubchain/store/rollingdb"
-	"github.com/thetatoken/thetasubchain/witness"
 )
 
 type Node struct {
@@ -42,7 +44,7 @@ type Node struct {
 	Ledger               score.Ledger
 	Mempool              *smp.Mempool
 	RPC                  *srpc.ThetaRPCServer
-	InterChainEventCache *score.InterChainEventCache
+	InterChainEventCache *siu.InterChainEventCache
 	MainchainWitness     witness.ChainWitness
 	Orchestrator         orchestrator.ChainOrchestrator
 
@@ -78,7 +80,7 @@ func NewNode(params *Params) *Node {
 	validatorManager := sconsensus.NewRotatingValidatorManager()
 	dispatcher := dp.NewDispatcher(params.NetworkOld, params.Network)
 
-	interChainEventCache := score.NewInterChainEventCache(params.DB)
+	interChainEventCache := siu.NewInterChainEventCache(params.DB)
 
 	// For testing...
 	// metachainWitness := witness.NewSimulatedMainchainWitness(
@@ -89,8 +91,16 @@ func NewNode(params *Params) *Node {
 	// 	interChainEventCache,
 	// 	viper.GetInt(scom.CfgSubchainTestID))
 	metachainWitness := witness.NewMetachainWitness(
+		params.DB,
 		viper.GetInt(scom.CfgSubchainUpdateInterval),
 		interChainEventCache)
+	orchestrator := orchestrator.NewOrchestrator(
+		params.DB,
+		viper.GetInt(scom.CfgSubchainUpdateInterval),
+		interChainEventCache,
+		metachainWitness,
+		params.PrivateKey,
+	)
 
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, metachainWitness)
 	reporter := srp.NewReporter(dispatcher, consensus, chain)
@@ -103,6 +113,7 @@ func NewNode(params *Params) *Node {
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
 	metachainWitness.SetSubchainTokenBanks(ledger)
+	orchestrator.SetSubchainTokenBanks(ledger)
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
 
 	if !reflect.ValueOf(params.Network).IsNil() {
@@ -130,18 +141,6 @@ func NewNode(params *Params) *Node {
 			state.SetLastProposal(score.Proposal{})
 		}
 	}
-
-	orchestrator := orchestrator.NewOrchestrator(viper.GetString(scom.CfgSubchainEthRpcURL),
-		viper.GetString(scom.CfgMainchainEthRpcURL),
-		big.NewInt(viper.GetInt64(scom.CfgSubchainID)),
-		common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress)),
-		common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress)),
-		interChainEventCache,
-		consensus,
-		metachainWitness,
-		viper.GetInt(scom.CfgSubchainUpdateInterval),
-		params.PrivateKey,
-	)
 
 	node := &Node{
 		Store:                store,

@@ -8,14 +8,16 @@ import (
 	"time"
 
 	log "github.com/sirupsen/logrus"
+	"github.com/spf13/viper"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/store"
+	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
-	"github.com/thetatoken/thetasubchain/witness"
+	siu "github.com/thetatoken/thetasubchain/interchain/utils"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
 
 	scom "github.com/thetatoken/thetasubchain/common"
-	"github.com/thetatoken/thetasubchain/consensus"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	"github.com/thetatoken/thetasubchain/contracts/predeployed"
 	score "github.com/thetatoken/thetasubchain/core"
@@ -32,29 +34,32 @@ const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
 // var voucherBurnRetryBlockNumberTimeOut *big.Int = big.NewInt(10)
 
 type Orchestrator struct {
-	subchainEthRpcURL string
-	mainchainID       *big.Int
-	subchainID        *big.Int
-	startingTime      time.Time
+	updateInterval   int
+	privateKey       *crypto.PrivateKey
+	collectTicker    *time.Ticker
+	ocstState        *orchestratorState
+	metachainWitness witness.ChainWitness
 
-	privateKey              *crypto.PrivateKey
-	interChainEventCache    *score.InterChainEventCache
-	clientOnMainchain       *ec.Client
-	collectTicker           *time.Ticker
-	handleVoucherBurnTicker *time.Ticker
+	// The main chain
+	mainchainID                 *big.Int
+	mainchainEthRpcURL          string
+	mainchainEthRpcClient       *ec.Client
+	mainchainTFuelTokenBankAddr common.Address
+	mainchainTFuelTokenBank     *scta.TFuelTokenBank
+	mainchainTNT20TokenBankAddr common.Address
+	mainchainTNT20TokenBank     *scta.TNT20TokenBank
 
-	tfuelTokenBankContractAddr common.Address
-	tnt20TokenBankContractAddr common.Address
+	// The subchain
+	subchainID                 *big.Int
+	subchainEthRpcURL          string
+	subchainEthRpcClient       *ec.Client
+	subchainTFuelTokenBankAddr common.Address
+	subchainTFuelTokenBank     *scta.TFuelTokenBank
+	subchainTNT20TokenBankAddr common.Address
+	subchainTNT20TokenBank     *scta.TNT20TokenBank
 
-	tfuelTokenBankContract *scta.MainchainTFuelTokenBank
-	tnt20TokenBankContract *scta.MainchainTNT20TokenBank
-
-	MainchainWitness witness.ChainWitness
-
-	updateInterval int
-
-	// GetLastFinalizedBlock is not an interface required function, so I use consensus.ConsensusEngine
-	engine *consensus.ConsensusEngine
+	// Inter-chain messaging
+	interChainEventCache *siu.InterChainEventCache
 
 	// Life cycle
 	wg     *sync.WaitGroup
@@ -63,61 +68,59 @@ type Orchestrator struct {
 }
 
 // NewOrchestrator creates a new Orchestrator
-func NewOrchestrator(
-	subchainEthRpcURL string,
-	mainchainEthRpcURL string,
-	subchainID *big.Int,
-	tfuelTokenBankContractAddr common.Address,
-	tnt20TokenBankContractAddr common.Address,
-	interChainEventCache *score.InterChainEventCache,
-	engine *consensus.ConsensusEngine,
-	metachainWitness witness.ChainWitness,
-	updateInterval int,
-	privateKey *crypto.PrivateKey,
-) *Orchestrator {
-	clientOnMainchain, err := ec.Dial(mainchainEthRpcURL)
-	if err != nil {
-		logger.Fatalf("the eth clientOnMainchain failed to connect %v\n", err)
-	}
+func NewOrchestrator(db database.Database, updateInterval int, interChainEventCache *siu.InterChainEventCache,
+	metachainWitness witness.ChainWitness, privateKey *crypto.PrivateKey) *Orchestrator {
 
-	tfuelTokenBankContract, err := scta.NewMainchainTFuelTokenBank(tfuelTokenBankContractAddr, clientOnMainchain)
+	mainchainEthRpcURL := viper.GetString(scom.CfgMainchainEthRpcURL)
+	mainchainEthRpcClient, err := ec.Dial(mainchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("failed to create TFuel token bank contract %v\n", err)
+		logger.Fatalf("the ETH client failed to connect to the mainchain ETH RPC %v\n", err)
 	}
-	tnt20TokenBankContract, err := scta.NewMainchainTNT20TokenBank(tnt20TokenBankContractAddr, clientOnMainchain)
-	if err != nil {
-		logger.Fatalf("failed to create TNT20 token bank contract %v\n", err)
-	}
-
-	mainchainID, err := clientOnMainchain.ChainID(context.Background())
+	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
 		logger.Fatalf("failed to get the chainID of the main chain %v\n", err)
 	}
-	logger.Printf("Create orchestrator for chain %d\n", mainchainID)
+	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
+	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to create MainchainTFuelTokenBank contract %v\n", err)
+	}
+	mainchainTNT20TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress))
+	mainchainTNT20TokenBank, err := scta.NewTNT20TokenBank(mainchainTNT20TokenBankAddr, mainchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
+	}
+
+	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
+	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
+	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
+	if err != nil {
+		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
+	}
+
+	ocstState := newOrchestratorState(db)
 
 	oc := &Orchestrator{
-		subchainEthRpcURL: subchainEthRpcURL,
-		mainchainID:       mainchainID,
-		subchainID:        subchainID,
-		clientOnMainchain: clientOnMainchain,
+		updateInterval:   updateInterval,
+		privateKey:       privateKey,
+		ocstState:        ocstState,
+		metachainWitness: metachainWitness,
 
-		tfuelTokenBankContractAddr: tfuelTokenBankContractAddr,
-		tfuelTokenBankContract:     tfuelTokenBankContract,
-		tnt20TokenBankContractAddr: tnt20TokenBankContractAddr,
-		tnt20TokenBankContract:     tnt20TokenBankContract,
+		mainchainID:                 mainchainID,
+		mainchainEthRpcURL:          mainchainEthRpcURL,
+		mainchainEthRpcClient:       mainchainEthRpcClient,
+		mainchainTFuelTokenBankAddr: mainchainTFuelTokenBankAddr,
+		mainchainTFuelTokenBank:     mainchainTFuelTokenBank,
+		mainchainTNT20TokenBankAddr: mainchainTNT20TokenBankAddr,
+		mainchainTNT20TokenBank:     mainchainTNT20TokenBank,
 
-		MainchainWitness: metachainWitness,
-
-		startingTime: time.Now(),
+		subchainID:           subchainID,
+		subchainEthRpcURL:    subchainEthRpcURL,
+		subchainEthRpcClient: subchainEthRpcClient,
 
 		interChainEventCache: interChainEventCache,
-		engine:               engine,
 
 		wg: &sync.WaitGroup{},
-
-		updateInterval: updateInterval,
-
-		privateKey: privateKey,
 	}
 	return oc
 }
@@ -129,26 +132,45 @@ func (oc *Orchestrator) Start(ctx context.Context) {
 
 	oc.wg.Add(1)
 	go oc.mainloop(ctx)
+	logger.Info("Metachain orchestrator started")
 }
 
 func (oc *Orchestrator) Stop() {
-	logger.Info("Orchestrator stopped")
 	if oc.collectTicker != nil {
 		oc.collectTicker.Stop()
 	}
-	if oc.handleVoucherBurnTicker != nil {
-		oc.handleVoucherBurnTicker.Stop()
-	}
 	oc.cancel()
+	logger.Info("Metachain orchestrator stopped")
 }
 
 func (oc *Orchestrator) Wait() {
 	oc.wg.Wait()
 }
 
+func (oc *Orchestrator) SetSubchainTokenBanks(ledger score.Ledger) {
+	subchainTFuelTokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
+	if subchainTFuelTokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
+	}
+	oc.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
+	oc.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, oc.subchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
+	}
+
+	subchainTNT20TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
+	if subchainTNT20TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	}
+	oc.subchainTNT20TokenBankAddr = *subchainTNT20TokenBankAddr
+	oc.subchainTNT20TokenBank, err = scta.NewTNT20TokenBank(*subchainTNT20TokenBankAddr, oc.subchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
+	}
+}
+
 func (oc *Orchestrator) mainloop(ctx context.Context) {
 	oc.collectTicker = time.NewTicker(3 * time.Duration(oc.updateInterval) * time.Millisecond)
-	oc.handleVoucherBurnTicker = time.NewTicker(3 * time.Duration(oc.updateInterval) * time.Millisecond)
 	for {
 		select {
 		case <-ctx.Done():
@@ -156,18 +178,16 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 		case <-oc.collectTicker.C:
 			oc.collect()
 			oc.handleVoucherBurnTx()
-		case <-oc.handleVoucherBurnTicker.C:
-
 		}
 	}
 }
 
 func (oc *Orchestrator) buildTxOpts() *bind.TransactOpts {
-	gasPrice, err := oc.clientOnMainchain.SuggestGasPrice(context.Background())
+	gasPrice, err := oc.mainchainEthRpcClient.SuggestGasPrice(context.Background())
 	if err != nil {
 		logger.Fatal(err)
 	}
-	nonce, err := oc.clientOnMainchain.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
+	nonce, err := oc.mainchainEthRpcClient.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
 	if err != nil {
 		logger.Fatal(err)
 	}
@@ -181,16 +201,6 @@ func (oc *Orchestrator) buildTxOpts() *bind.TransactOpts {
 	txOpts.GasPrice = gasPrice
 	logger.Debugf("building tx opts with address %v", oc.privateKey.PublicKey().Address())
 	return txOpts
-}
-
-func (oc *Orchestrator) GetMainchainBlockNumber() (*big.Int, error) {
-	blockNumber := int64((time.Since(oc.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
-	return big.NewInt(int64(blockNumber)), nil
-}
-
-func (oc *Orchestrator) GetLatestFinalizedSubchainBlockNumber() uint64 {
-	blockNumber := oc.engine.GetLastFinalizedBlock().Height
-	return blockNumber
 }
 
 func (oc *Orchestrator) setEventStatus(list []*score.InterChainMessageEvent) {
@@ -245,9 +255,13 @@ func (oc *Orchestrator) collect() {
 	oc.interChainEventCache.SetLastQueryedHeightForType(score.IMCEventTypeCrossChainVoucherBurn, toBlock)
 }
 
+func (oc *Orchestrator) getTokenBankContractAddress(cctt score.CrossChainTokenType, isOnMainchain bool) {
+
+}
+
 func (oc *Orchestrator) handleVoucherBurnTx() {
-	for _, imceType := range score.VoucherBurnTypes {
-		mainchainBlockNumber, err := oc.MainchainWitness.GetMainchainBlockNumber()
+	for _, imceType := range siu.VoucherBurnTypes {
+		mainchainBlockHeight, err := oc.metachainWitness.GetMainchainBlockHeight()
 		if err != nil {
 			// Should not happen.
 			logger.Panic(err)
@@ -275,7 +289,7 @@ func (oc *Orchestrator) handleVoucherBurnTx() {
 				oc.interChainEventCache.SetNextVoucherBurnNonceForType(imceType, new(big.Int).Add(nextEventNonce, common.Big1))
 				nextEventNonce = new(big.Int).Add(nextEventNonce, common.Big1)
 			} else if eventStatus.Status == score.VoucherBurnEventStatusProcessed {
-				if scom.CalculateDynasty(mainchainBlockNumber).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) != 0 {
+				if scom.CalculateDynasty(mainchainBlockHeight).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) != 0 {
 					// dynasty changed and this event is not finalized on mainchain, so process it again
 					continueProcessVoucherBurn = true
 				}
@@ -294,18 +308,17 @@ func (oc *Orchestrator) handleVoucherBurnTx() {
 
 		logger.Infof("Processing voucher burn type %v nonce %v", imceType, nextEventNonce)
 
-		// if eventStatus.Status == score.VoucherBurnEventStatusProcessed && scom.CalculateDynasty(mainchainBlockNumber).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) == 0 {
+		// if eventStatus.Status == score.VoucherBurnEventStatusProcessed && scom.CalculateDynasty(mainchainBlockHeight).Cmp(scom.CalculateDynasty(eventStatus.LastProcessedBlockHeight)) == 0 {
 		// 	// processed and dynasty unchanged, do not need to process
 		// 	break
 		// }
 		if eventStatus.RetriedTime >= voucherBurnMaxRetryTime {
 			logger.Warning("event failed many times!!")
 		}
-		eventStatus.LastProcessedBlockHeight = mainchainBlockNumber
+		eventStatus.LastProcessedBlockHeight = mainchainBlockHeight
 		eventStatus.Status = score.VoucherBurnEventStatusProcessed
 		eventStatus.RetriedTime += 1
 		oc.interChainEventCache.SetVoucherBurnStatus(eventStatus)
-		// 获得event
 		event, err := oc.interChainEventCache.Get(imceType, eventStatus.Nonce)
 		if err != nil {
 			// Should not happen. Since statusExists
@@ -314,10 +327,6 @@ func (oc *Orchestrator) handleVoucherBurnTx() {
 		oc.CallVourcherBurnOnMainchain(event)
 	}
 }
-
-// func (oc *Orchestrator) queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, witnessXTransferCache *score.InterChainEventCache) []score.InterChainMessageEvent {
-// 	return make([]score.InterChainMessageEvent, 1)
-// }
 
 func (oc *Orchestrator) CallVourcherBurnOnMainchain(event *score.InterChainMessageEvent) error {
 	voucherBurnData, sigData, err := oc.PrepareDataAndSignature(event)
@@ -328,7 +337,7 @@ func (oc *Orchestrator) CallVourcherBurnOnMainchain(event *score.InterChainMessa
 	}
 	switch event.Type {
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
-		tx, err := oc.tfuelTokenBankContract.Unlock(opts, voucherBurnData, sigData)
+		tx, err := oc.mainchainTFuelTokenBank.Unlocktokens(opts, voucherBurnData, sigData)
 		if err != nil {
 			logger.Error("call unlock error! : ", err)
 			return err
@@ -336,7 +345,7 @@ func (oc *Orchestrator) CallVourcherBurnOnMainchain(event *score.InterChainMessa
 
 		logger.Infof("TFuel voucher burn call tx sent: %s", tx.Hash().Hex())
 	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
-		// oc.tnt20TokenBankContract.Unlock(voucherBurnData, sigData)
+		// oc.mainchainTNT20TokenBank.Unlock(voucherBurnData, sigData)
 	}
 	return nil
 }
@@ -344,19 +353,19 @@ func (oc *Orchestrator) CallVourcherBurnOnMainchain(event *score.InterChainMessa
 func (oc *Orchestrator) PrepareDataAndSignature(event *score.InterChainMessageEvent) ([]byte, []byte, error) {
 	var data []byte
 	// should get block number from witness
-	mainchainBlockNumber, err := oc.MainchainWitness.GetMainchainBlockNumber()
+	mainchainBlockHeight, err := oc.metachainWitness.GetMainchainBlockHeight()
 	if err != nil {
 		// Should not happen.
 		logger.Panic(err)
 	}
 	switch event.Type {
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
-		var vma score.CrossChainTFuelVoucherBurnEvent
-		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.SubchainTFuelTokenBankABI)))
+		var vma score.CrossChainTFuelVoucherBurnedEvent
+		contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
 		contractAbi.UnpackIntoInterface(&vma, "TFuelVoucherBurned", event.Data)
 		logger.Infof("Preparing data %v", vma)
-		// TODO: Dynasty rather mainchainBlockNumber
-		data = predeployed.PrepareTFuelCalldata(oc.subchainID, mainchainBlockNumber, event.Sender, event.Receiver, vma.Amount, event.Nonce, string(score.MainnetChainID)+"/0/0x0000000000000000000000000000000000000000")
+		// TODO: Dynasty rather mainchainBlockHeight
+		data = predeployed.PrepareTFuelCalldata(oc.subchainID, mainchainBlockHeight, event.Sender, event.Receiver, vma.Amount, event.Nonce, string(score.MainnetChainID)+"/0/0x0000000000000000000000000000000000000000")
 		return data, oc.signVoucherBurnData(data), err
 	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
 		var tnt20vbma score.CrossChainTNT20VoucherBurnedEvent
