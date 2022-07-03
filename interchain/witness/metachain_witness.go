@@ -252,16 +252,13 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	for _, imceType := range queryTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
-		case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
+		case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainVoucherBurnTFuel:
 			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, imceType, ethRpcUrl)
-		case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
+		case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainVoucherBurnTNT20:
 			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tnt20TokenBankAddr, imceType, ethRpcUrl)
 		}
 		if len(events) == 0 {
 			continue
-		}
-		if imceType == score.IMCEventTypeCrossChainTokenUnlockTFuel || imceType == score.IMCEventTypeCrossChainTokenUnlockTNT20 || imceType == score.IMCEventTypeCrossChainTokenUnlockTNT721 {
-			mw.updateVoucherBurnStatus(events)
 		}
 		err = mw.interChainEventCache.InsertList(events)
 		if err != nil { // should not happen
@@ -269,26 +266,6 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 		}
 	}
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
-}
-
-func (mw *MetachainWitness) updateVoucherBurnStatus(events []*score.InterChainMessageEvent) {
-	for _, e := range events {
-		sourceChainID := e.SourceChainID
-		statusExists, err := mw.interChainEventCache.VoucherBurnNonceExists(sourceChainID, e.Type, e.Nonce)
-		if !statusExists && err == nil {
-			break
-		} else {
-			// Should not happen. Since statusExists
-			logger.Panic(err)
-		}
-		eventStatus, err := mw.interChainEventCache.GetVoucherBurnStatus(sourceChainID, e.Type, e.Nonce)
-		if err == nil {
-			// Should not happen. Since statusExists
-			logger.Panic(err)
-		}
-		eventStatus.Status = score.VoucherBurnEventStatusFinalized
-		mw.interChainEventCache.SetVoucherBurnStatus(sourceChainID, eventStatus)
-	}
 }
 
 func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {

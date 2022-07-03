@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"encoding/hex"
 	"fmt"
 	"io"
 	"math/big"
@@ -9,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/rlp"
 	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	"github.com/thetatoken/thetasubchain/eth/abi"
@@ -63,7 +65,9 @@ func NewInterChainMessageEvent(eventType InterChainMessageEventType, sourceChain
 
 // ID returns the ID of the inter-chain messaging event.
 func (c *InterChainMessageEvent) ID() string {
-	return strconv.FormatUint(uint64(c.Type), 10) + "/" + c.Nonce.String()
+	eventStr := strconv.FormatUint(uint64(c.Type), 10) + "/" + c.SourceChainID.String() + "/" + c.Nonce.String()
+	id := hex.EncodeToString(crypto.Keccak256([]byte(eventStr)))
+	return id
 }
 
 // Equals checks whether an inter-chain messaging event is identical to the other
