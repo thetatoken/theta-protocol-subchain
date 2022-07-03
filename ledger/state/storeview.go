@@ -156,22 +156,6 @@ func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool)
 	sv.subchainValidatorSetTransactinProcessed = processed
 }
 
-// InterChainMessageTransactionProcessed returns whether the cross-chain transfer transaction has been processed
-func (sv *StoreView) InterChainMessageTransactionProcessed(eventType score.InterChainMessageEventType, crossChainTransferID *big.Int) bool {
-	return sv.GetLastProcessedEventNonce(eventType).Cmp(crossChainTransferID) > 0
-}
-
-// ShouldProcessThisInterChainMessageEvent returns whether the crossChainTransferID is the next nonce to process
-func (sv *StoreView) ShouldProcessThisInterChainMessageEvent(eventType score.InterChainMessageEventType, crossChainTransferID *big.Int) bool {
-	// if the crossChainTransferID equals the LastProcessedEventNonce + 1 then process it
-	return crossChainTransferID.Cmp(new(big.Int).Add(sv.GetLastProcessedEventNonce(eventType), big.NewInt(1))) == 0
-}
-
-// SetInterChainMessageTransactionProcessed sets whether the validator set update transaction for the current block has been processed
-func (sv *StoreView) SetInterChainMessageTransactionProcessed(eventType score.InterChainMessageEventType, crossChainTransferID *big.Int) {
-	sv.UpdateLastProcessedEventNonce(eventType, crossChainTransferID)
-}
-
 // GetAccount returns an account.
 func (sv *StoreView) GetAccount(addr common.Address) *types.Account {
 	data := sv.Get(AccountKey(addr))
@@ -318,31 +302,6 @@ func (sv *StoreView) GetTNT721TokenBankContractAddress() *common.Address {
 			data, err.Error())
 	}
 	return tbca
-}
-
-// GetLastProcessedEventNonce gets the last processed event nonce.
-func (sv *StoreView) GetLastProcessedEventNonce(eventType score.InterChainMessageEventType) *big.Int {
-	data := sv.Get(EventNonceKey(eventType))
-	if data == nil || len(data) == 0 {
-		return nil
-	}
-	lastProcessedEventNonce := big.NewInt(0)
-	err := types.FromBytes(data, lastProcessedEventNonce)
-	if err != nil {
-		log.Panicf("Error reading validator set %X, error: %v",
-			data, err.Error())
-	}
-	return lastProcessedEventNonce
-}
-
-// UpdateLastProcessedEventNonce updates the last processed event nonce.
-func (sv *StoreView) UpdateLastProcessedEventNonce(eventType score.InterChainMessageEventType, lastProcessedEventNonce *big.Int) {
-	lpenBytes, err := types.ToBytes(lastProcessedEventNonce)
-	if err != nil {
-		log.Panicf("Error writing last processed event nonce %v, error: %v",
-			lastProcessedEventNonce, err.Error())
-	}
-	sv.Set(EventNonceKey(eventType), lpenBytes)
 }
 
 // GetValidatorSetUpdateTxHeightList gets the heights of blocks that contain stake related transactions

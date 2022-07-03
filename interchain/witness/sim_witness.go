@@ -129,7 +129,7 @@ func (mw *SimulatedMetachainWitness) mainloop(ctx context.Context) {
 
 func (mw *SimulatedMetachainWitness) update() {
 	mainchainBlockNumber, err := mw.GetMainchainBlockNumber()
-	logger.Debugf("witnessed main chain block height: %v", mainchainBlockNumber)
+	logger.Debugf("witnessed mainchain block height: %v", mainchainBlockNumber)
 
 	if err != nil {
 		logger.Warnf("failed to get the mainchain block number %v", err)

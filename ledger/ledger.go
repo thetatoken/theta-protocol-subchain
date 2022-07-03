@@ -81,6 +81,11 @@ func (ledger *Ledger) GetCurrentBlock() *score.Block {
 	return ledger.currentBlock
 }
 
+// GetDynasty returns the current dyansty
+func (ledger *Ledger) GetDynasty() *big.Int {
+	return ledger.state.Finalized().GetDynasty()
+}
+
 // GetScreenedSnapshot returns a snapshot of screened ledger state to query about accounts, etc.
 func (ledger *Ledger) GetScreenedSnapshot() (*slst.StoreView, error) {
 	ledger.mu.Lock()
@@ -146,68 +151,6 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 	}
 
 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
-}
-
-// // GetFinalizedValidatorSet returns the validator set of the latest DIRECTLY finalized block
-// func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
-// 	db := ledger.state.DB()
-// 	store := kvstore.NewKVStore(db)
-
-// 	block, err := findBlock(store, blockHash)
-// 	if err != nil {
-// 		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
-// 		return nil, err
-// 	}
-// 	if block == nil {
-// 		return nil, fmt.Errorf("Block is nil for hash %v", blockHash.Hex())
-// 	}
-
-// 	if block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
-// 		stateRoot := block.BlockHeader.StateHash
-// 		storeView := slst.NewStoreView(block.Height, stateRoot, db)
-// 		if storeView == nil {
-// 			logger.WithFields(log.Fields{
-// 				"block.Hash":                  blockHash.Hex(),
-// 				"block.Height":                block.Height,
-// 				"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
-// 				"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
-// 				"block.Status.IsTrusted()":    block.Status.IsTrusted(),
-// 			}).Panic("Failed to load state for last processed event nonce")
-// 		}
-// 		lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
-// 		return lastProcessedEventNonce, nil
-// 	}
-
-// 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
-// }
-
-func (ledger *Ledger) GetLastProcessedEventNonce(imceType score.InterChainMessageEventType, blockHash common.Hash) (*big.Int, error) {
-	db := ledger.state.DB()
-	store := kvstore.NewKVStore(db)
-
-	block, err := findBlock(store, blockHash)
-	if err != nil {
-		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
-		return nil, err
-	}
-	if block == nil {
-		return nil, fmt.Errorf("block is nil for hash %v", blockHash.Hex())
-	}
-
-	stateRoot := block.BlockHeader.StateHash
-	storeView := slst.NewStoreView(block.Height, stateRoot, db)
-	if storeView == nil {
-		logger.WithFields(log.Fields{
-			"block.Hash":                  blockHash.Hex(),
-			"block.Height":                block.Height,
-			"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
-			"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
-			"block.Status.IsTrusted()":    block.Status.IsTrusted(),
-		}).Panic("Failed to load state for last processed event nonce")
-	}
-	lastProcessedEventNonce := storeView.GetLastProcessedEventNonce(imceType)
-	return lastProcessedEventNonce, nil
-
 }
 
 func (ledger *Ledger) GetTokenBankContractAddress(tokenType score.CrossChainTokenType) (*common.Address, error) {

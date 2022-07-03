@@ -92,11 +92,11 @@ func NewNode(params *Params) *Node {
 	// 	viper.GetInt(scom.CfgSubchainTestID))
 	metachainWitness := witness.NewMetachainWitness(
 		params.DB,
-		viper.GetInt(scom.CfgSubchainUpdateInterval),
+		viper.GetInt(scom.CfgSubchainUpdateIntervalInMilliseconds),
 		interChainEventCache)
 	orchestrator := orchestrator.NewOrchestrator(
 		params.DB,
-		viper.GetInt(scom.CfgSubchainUpdateInterval),
+		viper.GetInt(scom.CfgSubchainUpdateIntervalInMilliseconds),
 		interChainEventCache,
 		metachainWitness,
 		params.PrivateKey,
@@ -113,7 +113,7 @@ func NewNode(params *Params) *Node {
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
 	metachainWitness.SetSubchainTokenBanks(ledger)
-	orchestrator.SetSubchainTokenBanks(ledger)
+	orchestrator.SetLedgerAndSubchainTokenBanks(ledger)
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
 
 	if !reflect.ValueOf(params.Network).IsNil() {

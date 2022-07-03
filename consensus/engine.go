@@ -25,7 +25,7 @@ import (
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
-	"github.com/thetatoken/thetasubchain/witness"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
 )
 
 var logger = log.WithFields(log.Fields{"prefix": "consensus"})
@@ -613,10 +613,10 @@ func (e *ConsensusEngine) handleNormalBlock(eb *score.ExtendedBlock) {
 			"block":           block.Hash().Hex(),
 			"block.StateHash": block.StateHash.Hex(),
 		}).Warn("Failed to apply block Txs")
-		return // If the main chain node falls out-of-sync, the subchain node might not have evidence to
+		return // If the mainchain node falls out-of-sync, the subchain node might not have evidence to
 		// either confirm or reject the ValidatorSetUpdateTx. In such a case, the the processing result of
 		// a normal block could be undecided. Hence, we should NOT mark the block as invalid. Instead, we
-		// should keep the block in the "Pending" state, Later after the main chain node is in-sync, this
+		// should keep the block in the "Pending" state, Later after the mainchain node is in-sync, this
 		// block could be re-processed.
 	}
 	applyBlockTime := time.Since(start1)

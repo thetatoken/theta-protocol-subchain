@@ -32,16 +32,16 @@ type MetachainWitness struct {
 	updateInterval int
 	witnessState   *metachainWitnessState
 
-	// The main chain
+	// The mainchain
 	mainchainID                 *big.Int
 	mainchainEthRpcUrl          string
 	mainchainEthRpcClient       *ec.Client
 	witnessedDynasty            *big.Int
-	subchainRegistrar           *scta.SubchainRegistrar // the SubchainRegistrar contract deployed on the main chain
+	subchainRegistrar           *scta.SubchainRegistrar // the SubchainRegistrar contract deployed on the mainchain
 	mainchainTFuelTokenBankAddr common.Address
-	mainchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the main chain
+	mainchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the mainchain
 	mainchainTNT20TokenBankAddr common.Address
-	mainchainTNT20TokenBank     *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the main chain
+	mainchainTNT20TokenBank     *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the mainchain
 	mainchainBlockHeight        *big.Int
 	lastQueryedMainChainHeight  *big.Int
 
@@ -75,7 +75,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the main chain %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain %v\n", err)
 	}
 	subchainRegistrarAddr := common.HexToAddress(viper.GetString(scom.CfgSubchainRegistrarContractAddress))
 	subchainRegistrar, err := scta.NewSubchainRegistrar(subchainRegistrarAddr, mainchainEthRpcClient)

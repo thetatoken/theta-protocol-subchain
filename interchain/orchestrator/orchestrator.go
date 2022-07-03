@@ -25,18 +25,15 @@ import (
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 
-const voucherBurnMaxRetryTime uint = 6
-const mainchainBlockIntervalMilliseconds int64 = 2000 // millseconds
-// var voucherBurnRetryBlockNumberTimeOut *big.Int = big.NewInt(10)
-
 type Orchestrator struct {
 	updateInterval        int
 	privateKey            *crypto.PrivateKey
+	ledger                score.Ledger
 	eventProcessingTicker *time.Ticker
 	metachainWitness      witness.ChainWitness
 	eventProcessedTime    map[string]time.Time
 
-	// The main chain
+	// The mainchain
 	mainchainID                 *big.Int
 	mainchainEthRpcURL          string
 	mainchainEthRpcClient       *ec.Client
@@ -74,7 +71,7 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the main chain %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
@@ -140,7 +137,9 @@ func (oc *Orchestrator) Wait() {
 	oc.wg.Wait()
 }
 
-func (oc *Orchestrator) SetSubchainTokenBanks(ledger score.Ledger) {
+func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
+	oc.ledger = ledger
+
 	subchainTFuelTokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
 	if subchainTFuelTokenBankAddr == nil || err != nil {
 		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
@@ -170,12 +169,12 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 			return
 		case <-oc.eventProcessingTicker.C:
 			// Handle token lock events
-			oc.processNextTokenLockEvent(oc.mainchainID, oc.subchainID)
-			oc.processNextTokenLockEvent(oc.subchainID, oc.mainchainID)
+			oc.processNextTokenLockEvent(oc.mainchainID, oc.subchainID) // send token from the mainchain to the subchain
+			oc.processNextTokenLockEvent(oc.subchainID, oc.mainchainID) // send token from the subchain to the mainchain
 
 			// Handle voucher burn events
-			oc.processNextVoucherBurnEvent(oc.mainchainID, oc.subchainID)
-			oc.processNextVoucherBurnEvent(oc.subchainID, oc.mainchainID)
+			oc.processNextVoucherBurnEvent(oc.mainchainID, oc.subchainID) // burn voucher to send token from the mainchain back to the subchain
+			oc.processNextVoucherBurnEvent(oc.subchainID, oc.mainchainID) // burn voucher to send token from the subchain back to the mainchain
 		}
 	}
 }
@@ -235,26 +234,27 @@ func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int,
 }
 
 func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *big.Int, sourceChainEventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
-	oc.cleanUpCache(sourceChainID, sourceChainEventType, maxProcessedNonce)
+	oc.cleanUpInterChainEventCache(sourceChainID, sourceChainEventType, maxProcessedNonce)
 
 	nextNonce := big.NewInt(0).Add(maxProcessedNonce, big.NewInt(1))
-	event, err := oc.interChainEventCache.Get(sourceChainID, sourceChainEventType, nextNonce)
+	sourceEvent, err := oc.interChainEventCache.Get(sourceChainID, sourceChainEventType, nextNonce)
 	if err == ts.ErrKeyNotFound {
 		return // the next event (e.g. Token Lock, or Voucher Burn) has not occurred yet
 	}
 
 	targetEventType := oc.getTargetChainCorrespondingEventType(sourceChainEventType)
-	if oc.timeElapsedSinceEventProcessed(event) > threshold { // retry if the tx has been submitted for a long time
-		err := oc.callTargetContract(targetChainID, targetEventType, event)
+	retryThreshold := oc.getRetryThreshold(targetChainID)
+	if oc.timeElapsedSinceEventProcessed(sourceEvent) > retryThreshold { // retry if the tx has been submitted for a long time
+		err := oc.callTargetContract(targetChainID, targetEventType, sourceEvent)
 		if err == nil {
-			oc.updateEventProcessedTime(event)
+			oc.updateEventProcessedTime(sourceEvent)
 		} else {
 			logger.Warnf("Failed to call target contract: %v", err)
 		}
 	}
 }
 
-func (oc *Orchestrator) cleanUpCache(sourceChainID *big.Int, eventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
+func (oc *Orchestrator) cleanUpInterChainEventCache(sourceChainID *big.Int, eventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
 	exists, err := oc.interChainEventCache.Exists(sourceChainID, eventType, maxProcessedNonce)
 	if err != nil {
 		return
@@ -280,10 +280,10 @@ func (oc *Orchestrator) updateEventProcessedTime(event *score.InterChainMessageE
 
 // For Token Lock events on the source chain, call the Mint Voucher method of the corresponding TokenBank contract on the target chain
 // For Voucher Burn events on the source chain, call the Unlock Token method  of the corresponding TokenBank contract on the target chain
-func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventType score.InterChainMessageEventType) error {
+func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventType score.InterChainMessageEventType, sourceEvent *score.InterChainMessageEvent) error {
 	var err error
 
-	targetChainEthRpcClient := oc.getEthRpcClient(targetChainId)
+	targetChainEthRpcClient := oc.getEthRpcClient(targetChainID)
 	txOpts, err := oc.buildTxOpts(targetChainID, targetChainEthRpcClient)
 	if err != nil {
 		return err
@@ -292,19 +292,15 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 	switch targetEventType {
 	// Voucher Mint events
 	case score.IMCEventTypeCrossChainVoucherMintTFuel:
-		tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-		_, err = tfuelTokenBank.Mintvouchers(txOpts)
+		err = oc.mintTFuelVouchers(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainVoucherMintTNT20:
-		tnt20TokenBank := oc.getTNT20TokenBank(targetChainID)
-		_, err = tnt20TokenBank.Mintvouchers(txOpts)
+		err = oc.mintTNT20Vouchers(txOpts, targetChainID, sourceEvent)
 
 	// Token Unlock events
 	case score.IMCEventTypeCrossChainTokenUnlockTFuel:
-		tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-		_, err = tfuelTokenBank.Unlocktokens(txOpts)
+		err = oc.unlockTFuelTokens(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainTokenUnlockTNT20:
-		tnt20TokenBank := oc.getTNT20TokenBank(targetChainID)
-		_, err = tnt20TokenBank.Unlocktokens(txOpts)
+		err = oc.unlockTNT20Tokens(txOpts, targetChainID, sourceEvent)
 
 	default:
 		return nil
@@ -315,6 +311,37 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 		return err
 	}
 
+	return nil
+}
+
+func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	se, err := score.ParseToCrossChainTFuelTokenLockedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+
+	dynasty := oc.getDynasty()
+	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
+	_, err = tfuelTokenBank.Mintvouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	// TODO: implementation
+	return nil
+}
+
+func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	// TODO: implementation
+	return nil
+}
+
+func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	// TODO: implementation
 	return nil
 }
 
@@ -337,6 +364,30 @@ func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bin
 	txOpts.GasPrice = gasPrice
 	logger.Debugf("building tx opts with address %v", oc.privateKey.PublicKey().Address())
 	return txOpts, nil
+}
+
+func (oc *Orchestrator) getDynasty() *big.Int {
+	return oc.ledger.GetDynasty()
+}
+
+func (oc *Orchestrator) getRetryThreshold(chainID *big.Int) time.Duration {
+	var blockIntervalInSeconds int
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		blockIntervalInSeconds = viper.GetInt(scom.CfgSubchainMainchainBlockIntervalInSeconds)
+	} else {
+		blockIntervalInSeconds = viper.GetInt(scom.CfgConsensusMinBlockInterval)
+	}
+	numBlocks := 4 // typically a tx should be finalized within 2 block intervals, here we conservatively use 4
+	retryThreshold := time.Duration(numBlocks*blockIntervalInSeconds) * time.Second
+	return retryThreshold
+}
+
+func (oc *Orchestrator) getEthRpcClient(chainID *big.Int) *ec.Client {
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		return oc.mainchainEthRpcClient
+	} else {
+		return oc.subchainEthRpcClient
+	}
 }
 
 func (oc *Orchestrator) getTFuelTokenBank(chainID *big.Int) *scta.TFuelTokenBank {
