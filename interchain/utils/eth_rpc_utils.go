@@ -12,9 +12,9 @@ import (
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
-	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/thetasubchain/eth/abi"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
 // RPC related

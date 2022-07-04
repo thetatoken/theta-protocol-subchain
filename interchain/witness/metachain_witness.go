@@ -13,8 +13,8 @@ import (
 	// "github.com/thetatoken/theta/crypto"
 
 	scom "github.com/thetatoken/thetasubchain/common"
-	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
@@ -24,7 +24,6 @@ import (
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
-// SubchainRegistrarSendToSubchainEvent
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
 type MetachainWitness struct {
@@ -37,7 +36,7 @@ type MetachainWitness struct {
 	mainchainEthRpcUrl          string
 	mainchainEthRpcClient       *ec.Client
 	witnessedDynasty            *big.Int
-	subchainRegistrar           *scta.SubchainRegistrar // the SubchainRegistrar contract deployed on the mainchain
+	chainRegistrarOnMainchain   *scta.ChainRegistrarOnMainchain // the ChainRegistrarOnMainchain contract deployed on the mainchain
 	mainchainTFuelTokenBankAddr common.Address
 	mainchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the mainchain
 	mainchainTNT20TokenBankAddr common.Address
@@ -77,10 +76,10 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	if err != nil {
 		logger.Fatalf("failed to get the chainID of the mainchain %v\n", err)
 	}
-	subchainRegistrarAddr := common.HexToAddress(viper.GetString(scom.CfgSubchainRegistrarContractAddress))
-	subchainRegistrar, err := scta.NewSubchainRegistrar(subchainRegistrarAddr, mainchainEthRpcClient)
+	chainRegistrarOnMainchainAddr := common.HexToAddress(viper.GetString(scom.CfgChainRegistrarOnMainchainContractAddress))
+	chainRegistrarOnMainchain, err := scta.NewChainRegistrarOnMainchain(chainRegistrarOnMainchainAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create SubchainRegistrar contract %v\n", err)
+		logger.Fatalf("failed to create ChainRegistrarOnMainchain contract %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
@@ -110,7 +109,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		mainchainEthRpcUrl:          mainchainEthRpcURL,
 		mainchainEthRpcClient:       mainchainEthRpcClient,
 		witnessedDynasty:            big.NewInt(0),
-		subchainRegistrar:           subchainRegistrar,
+		chainRegistrarOnMainchain:   chainRegistrarOnMainchain,
 		mainchainTFuelTokenBankAddr: mainchainTFuelTokenBankAddr,
 		mainchainTFuelTokenBank:     mainchainTFuelTokenBank,
 		mainchainTNT20TokenBankAddr: mainchainTNT20TokenBankAddr,
@@ -288,7 +287,7 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
-	vs, err := mw.subchainRegistrar.Getvalidatorset(nil, mw.subchainID, queryBlockHeight)
+	vs, err := mw.chainRegistrarOnMainchain.Getvalidatorset(nil, mw.subchainID, queryBlockHeight)
 	validatorAddrs := vs.Validators
 	validatorStakes := vs.Shareamounts
 

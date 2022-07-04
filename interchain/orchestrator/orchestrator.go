@@ -16,8 +16,8 @@ import (
 	"github.com/thetatoken/thetasubchain/interchain/witness"
 
 	scom "github.com/thetatoken/thetasubchain/common"
-	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 
 	"github.com/thetatoken/theta/common"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"

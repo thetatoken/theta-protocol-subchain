@@ -12,8 +12,8 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/rlp"
-	scta "github.com/thetatoken/thetasubchain/contracts/accessors"
 	"github.com/thetatoken/thetasubchain/eth/abi"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
 // var logger *log.Entry = log.WithFields(log.Fields{"prefix": "core"})

@@ -391,10 +391,11 @@ func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 	validators := validatorSet.Validators()
 	for _, val := range validators {
 		valAddrBytes := val.Address.Bytes()
-		valSetBytes = append(valSetBytes, valAddrBytes...)
+		valAddrBytes32 := common.LeftPadBytes(valAddrBytes[:], 32) // left pad with 0s, easier to decode with abi.decode() in smart contracts
+		valSetBytes = append(valSetBytes, valAddrBytes32...)
 
 		valStakeBytes := val.Stake.Bytes()
-		valStakeBytes32 := common.LeftPadBytes(valStakeBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
+		valStakeBytes32 := common.LeftPadBytes(valStakeBytes[:], 32)
 		valSetBytes = append(valSetBytes, valStakeBytes32...)
 	}
 

@@ -20,7 +20,7 @@ import (
 	"github.com/spf13/viper"
 	"github.com/thetatoken/theta/common"
 
-	// scta "github.com/thetatoken/thetasubchain/contracts/accessors"
+	// scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
 	// "github.com/thetatoken/thetasubchain/eth/abi"
 	// "github.com/thetatoken/theta/crypto"

@@ -140,7 +140,7 @@ const (
 	CfgDebugLogSelectedEENPs = "debug.logSelectedEENPs"
 
 	// CfgRegistrarContractAddress defines the subchain registrar contract address
-	CfgSubchainRegistrarContractAddress = "subchain.registrar"
+	CfgChainRegistrarOnMainchainContractAddress = "subchain.chainRegistrarOnMainchain"
 	// CfgMainchainTFuelTokenBankContractAddress defines the mainchain TFuel token bank contract address
 	CfgMainchainTFuelTokenBankContractAddress = "subchain.mainchainTFuelTB"
 	// CfgMainchainTNT20TokenBankContractAddress defines the mainchain TNT20 token bank contract address

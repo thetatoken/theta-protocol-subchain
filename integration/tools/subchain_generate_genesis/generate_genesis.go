@@ -20,8 +20,8 @@ import (
 	"github.com/thetatoken/theta/store/trie"
 
 	scom "github.com/thetatoken/thetasubchain/common"
-	"github.com/thetatoken/thetasubchain/contracts/predeployed"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/interchain/contracts/predeployed"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 )
