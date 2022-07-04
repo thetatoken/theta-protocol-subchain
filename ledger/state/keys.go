@@ -1,6 +1,8 @@
 package state
 
 import (
+	"math/big"
+
 	"github.com/thetatoken/theta/common"
 )
 
@@ -34,9 +36,18 @@ func CodeKey(codeHash common.Bytes) common.Bytes {
 	return append(common.Bytes("ls/ch/"), codeHash...)
 }
 
-// ValidatorSetKey returns the state key for the validator stake holder set
-func ValidatorSetKey() common.Bytes {
+// CurrentValidatorSetKey returns the state key for the current validator stake holder set
+func CurrentValidatorSetKey() common.Bytes {
 	return common.Bytes("ls/vs")
+}
+
+// ValidatorSetForChainDuringDynastyKey returns the key for the validator set for a chain during the given dynasty
+func ValidatorSetForChainDuringDynastyKey(chainID *big.Int, dynasty *big.Int) common.Bytes {
+	key := common.Bytes("ls/vscd/")
+	key = append(key, common.Bytes(chainID.String())...)
+	key = append(key, common.Bytes("/")...)
+	key = append(key, common.Bytes(dynasty.String())...)
+	return key
 }
 
 // // EventNonceKey returns the state key for the last processed event nonce

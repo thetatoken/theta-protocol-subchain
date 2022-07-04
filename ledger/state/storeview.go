@@ -220,7 +220,7 @@ func (sv *StoreView) DeleteAccount(addr common.Address) {
 
 // GetDynasty gets the dynasty associated with the view
 func (sv *StoreView) GetDynasty() *big.Int {
-	data := sv.Get(ValidatorSetKey())
+	data := sv.Get(CurrentValidatorSetKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -236,7 +236,7 @@ func (sv *StoreView) GetDynasty() *big.Int {
 
 // GetValidatorSet gets the validator set.
 func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
-	data := sv.Get(ValidatorSetKey())
+	data := sv.Get(CurrentValidatorSetKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -250,13 +250,28 @@ func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
 }
 
 // UpdateValidatorSet updates the validator set.
-func (sv *StoreView) UpdateValidatorSet(vs *score.ValidatorSet) {
+func (sv *StoreView) UpdateValidatorSet(chainID *big.Int, vs *score.ValidatorSet) {
 	vsBytes, err := types.ToBytes(vs)
 	if err != nil {
 		log.Panicf("Error writing validator set %v, error: %v",
 			vs, err.Error())
 	}
-	sv.Set(ValidatorSetKey(), vsBytes)
+	sv.Set(CurrentValidatorSetKey(), vsBytes)
+	sv.Set(ValidatorSetForChainDuringDynastyKey(chainID, vs.Dynasty()), vsBytes)
+}
+
+func (sv *StoreView) GetValidatorSetForChainDuringDynasty(chainID *big.Int, dynasty *big.Int) *score.ValidatorSet {
+	data := sv.Get(ValidatorSetForChainDuringDynastyKey(chainID, dynasty))
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	vs := &score.ValidatorSet{}
+	err := types.FromBytes(data, vs)
+	if err != nil {
+		log.Panicf("Error reading validator set %X, error: %v",
+			data, err.Error())
+	}
+	return vs
 }
 
 // GetTFuelTokenBankContractAddress gets the TFuel token bank contract address.

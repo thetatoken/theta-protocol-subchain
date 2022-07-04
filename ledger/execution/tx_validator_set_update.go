@@ -10,6 +10,7 @@ import (
 	"github.com/thetatoken/theta/store/database"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	"github.com/thetatoken/thetasubchain/interchain/witness"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
@@ -118,7 +119,8 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	}
 
 	// update the dynasty and the subchain validator set
-	view.UpdateValidatorSet(newValidatorSet)
+	selfChainIDInt := scom.MapChainID(chainID)
+	view.UpdateValidatorSet(selfChainIDInt, newValidatorSet)
 	view.SetSubchainValidatorSetTransactionProcessed(true)
 	txHash := types.TxID(chainID, tx)
 	return txHash, result.OK

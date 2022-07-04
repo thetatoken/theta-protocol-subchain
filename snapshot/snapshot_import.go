@@ -924,7 +924,7 @@ func checkGenesisBlock(block *score.BlockHeader, db database.Database) (*score.V
 }
 
 func getValidatorSetFromVSProof(stateHash common.Hash, recoverredVSP *score.ValidatorSetProof) (*score.ValidatorSet, error) {
-	serializedVS, _, err := trie.VerifyProof(stateHash, slst.ValidatorSetKey(), recoverredVSP)
+	serializedVS, _, err := trie.VerifyProof(stateHash, slst.CurrentValidatorSetKey(), recoverredVSP)
 	if err != nil {
 		return nil, err
 	}

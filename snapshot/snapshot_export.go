@@ -583,7 +583,7 @@ func ExportSnapshotV4(db database.Database, consensus *sconsensus.ConsensusEngin
 
 func proveValidatorSet(block *score.ExtendedBlock, db database.Database) (*score.ValidatorSetProof, error) {
 	sv := slst.NewStoreView(block.Height, block.StateHash, db)
-	vspKey := slst.ValidatorSetKey()
+	vspKey := slst.CurrentValidatorSetKey()
 	vsp := &score.ValidatorSetProof{}
 	err := sv.ProveValidatorSet(vspKey, vsp)
 	return vsp, err

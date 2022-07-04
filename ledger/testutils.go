@@ -19,6 +19,7 @@ import (
 	"github.com/thetatoken/theta/store/kvstore"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	score "github.com/thetatoken/thetasubchain/core"
 	sexec "github.com/thetatoken/thetasubchain/ledger/execution"
@@ -44,7 +45,8 @@ func newExecSim(chainID string, db database.Database, snapshot mockSnapshot, val
 	initHeight := snapshot.block.Height
 
 	sv := slst.NewStoreView(initHeight, common.Hash{}, db)
-	sv.UpdateValidatorSet(snapshot.vsp)
+	chainIDInt := scom.MapChainID(chainID)
+	sv.UpdateValidatorSet(chainIDInt, snapshot.vsp)
 
 	store := kvstore.NewKVStore(db)
 	chain := sbc.NewChain(chainID, store, snapshot.block)

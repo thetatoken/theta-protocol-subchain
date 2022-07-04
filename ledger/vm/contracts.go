@@ -47,6 +47,7 @@ var PrecompiledContracts = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 
+	common.BytesToAddress([]byte{181}): &validatorSet{},
 	common.BytesToAddress([]byte{182}): &mintTFuel{},
 	common.BytesToAddress([]byte{183}): &burnTFuel{},
 
@@ -368,7 +369,39 @@ func (c *bn256Pairing) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 	return false32Byte, nil
 }
 
-// mintTFuel mints TFuel for a given account when the current execution context has previledge access
+// validatorSet return the validator set of a chain for a given dynasty
+type validatorSet struct {
+}
+
+func (c *validatorSet) RequiredGas(input []byte, blockHeight uint64) uint64 {
+	const validatorSetGas = uint64(200)
+	return validatorSetGas
+}
+
+func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	chainID := new(big.Int).SetBytes(getData(input, 0, 32))
+	dynasty := new(big.Int).SetBytes(getData(input, 32, 32))
+
+	validatorSet := evm.StateDB.GetValidatorSetForChainDuringDynasty(chainID, dynasty)
+	if validatorSet == nil {
+		return common.Bytes{}, nil
+	}
+
+	valSetBytes := common.Bytes{}
+	validators := validatorSet.Validators()
+	for _, val := range validators {
+		valAddrBytes := val.Address.Bytes()
+		valSetBytes = append(valSetBytes, valAddrBytes...)
+
+		valStakeBytes := val.Stake.Bytes()
+		valStakeBytes32 := common.LeftPadBytes(valStakeBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
+		valSetBytes = append(valSetBytes, valStakeBytes32...)
+	}
+
+	return valSetBytes, nil
+}
+
+// mintTFuel mints TFuel for a given account if the caller contract has previledged access
 type mintTFuel struct {
 }
 

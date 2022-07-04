@@ -19,6 +19,7 @@ import (
 	"github.com/thetatoken/theta/store/database/backend"
 	"github.com/thetatoken/theta/store/trie"
 
+	scom "github.com/thetatoken/thetasubchain/common"
 	"github.com/thetatoken/thetasubchain/contracts/predeployed"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
@@ -92,7 +93,7 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 
 	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
 
-	setInitialValidatorSet(initValidatorSetFilePath, genesisHeight, sv)
+	setInitialValidatorSet(chainID, initValidatorSetFilePath, genesisHeight, sv)
 	setInitalEventNonce(sv)
 	deployInitialSmartContracts(chainID, sv)
 
@@ -115,7 +116,7 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 	return sv, metadata, nil
 }
 
-func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint64, sv *slst.StoreView) *score.ValidatorSet {
+func setInitialValidatorSet(chainID string, initValidatorSetFilePath string, genesisHeight uint64, sv *slst.StoreView) *score.ValidatorSet {
 	var validators []Validator
 	initValidatorSetFile, err := os.Open(initValidatorSetFilePath)
 	if err != nil {
@@ -140,7 +141,8 @@ func setInitialValidatorSet(initValidatorSetFilePath string, genesisHeight uint6
 		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
 	}
 
-	sv.UpdateValidatorSet(validatorSet)
+	chainIDInt := scom.MapChainID(chainID)
+	sv.UpdateValidatorSet(chainIDInt, validatorSet)
 
 	hl := &types.HeightList{}
 	hl.Append(genesisHeight)
@@ -182,7 +184,7 @@ func setInitalEventNonce(sv *slst.StoreView) *big.Int {
 
 func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	vp := &score.ValidatorSetProof{}
-	vsKey := slst.ValidatorSetKey()
+	vsKey := slst.CurrentValidatorSetKey()
 	err := sv.ProveValidatorSet(vsKey, vp)
 	return vp, err
 }
@@ -281,7 +283,7 @@ func sanityChecks(sv *slst.StoreView) error {
 
 	vsAnalyzed := false
 	sv.GetStore().Traverse(nil, func(key, val common.Bytes) bool {
-		if bytes.Equal(key, slst.ValidatorSetKey()) {
+		if bytes.Equal(key, slst.CurrentValidatorSetKey()) {
 			var vs score.ValidatorSet
 			err := rlp.DecodeBytes(val, &vs)
 			if err != nil {
@@ -332,7 +334,7 @@ func sanityChecks(sv *slst.StoreView) error {
 	if err != nil {
 		panic("Failed to get VS proof from storeview")
 	}
-	_, _, err = trie.VerifyProof(sv.Hash(), slst.ValidatorSetKey(), vsProof)
+	_, _, err = trie.VerifyProof(sv.Hash(), slst.CurrentValidatorSetKey(), vsProof)
 	if err != nil {
 		panic("Failed to verify VS proof in storeview")
 	}
