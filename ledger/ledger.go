@@ -750,43 +750,6 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 	logger.Debugf("Subchain validator set update transction bytes: %v", hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
 }
 
-// addInterChainMessageTx adds a cross-chain transaction
-func (ledger *Ledger) addInterChainMessageTx(view *slst.StoreView, proposer *score.Validator, nextInterChainMessageEvent *score.InterChainMessageEvent, rawTxs *[]common.Bytes) {
-	proposerAccount := view.GetAccount(proposer.Address)
-	if proposerAccount == nil {
-		// should not happen, since the the validator set update tx shouuld create the propser account if it does not exist
-		logger.Fatalf("Failed to get proposer account: %v", proposer.Address)
-	}
-
-	proposerAddress := proposer.Address
-	proposerTxIn := types.TxInput{
-		Address:  proposerAddress,
-		Sequence: proposerAccount.Sequence + 1,
-	}
-
-	crossChainTransferTx := &stypes.InterChainMessageTx{
-		Proposer:    proposerTxIn,
-		BlockNumber: nextInterChainMessageEvent.BlockHeight,
-		Event:       *nextInterChainMessageEvent,
-	}
-
-	signature, err := ledger.signTransaction(crossChainTransferTx)
-	if err != nil {
-		logger.Fatalf("Failed to add subchain validator set update transaction: %v", err) // do not expect this to happen
-		return
-	}
-	crossChainTransferTx.SetSignature(proposerAddress, signature)
-	crossChainTransferTxBytes, err := stypes.TxToBytes(crossChainTransferTx)
-	if err != nil {
-		logger.Fatalf("Failed to serialize subchain validator set update transaction: %v", err) // do not expect this to happen
-		return
-	}
-
-	*rawTxs = append(*rawTxs, crossChainTransferTxBytes)
-	logger.Infof("Added inter-chain message transction: tx: %v", crossChainTransferTx)
-	logger.Debugf("Inter-chain message transction bytes: %v", hex.EncodeToString(crossChainTransferTxBytes))
-}
-
 // signTransaction signs the given transaction
 func (ledger *Ledger) signTransaction(tx types.Tx) (*crypto.Signature, error) {
 	chainID := ledger.state.GetChainID()

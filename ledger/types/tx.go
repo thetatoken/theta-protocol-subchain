@@ -20,77 +20,7 @@ const maxTxSize = 8 * 1024 * 1024
 
 const (
 	TxSubchainValidatorSetUpdate types.TxType = 201
-	TxInterChainMessage          types.TxType = 202
 )
-
-//---------------------------------InterChainMessageTx--------------------------------------------
-
-type InterChainMessageTx struct {
-	Proposer    types.TxInput
-	BlockNumber *big.Int
-	Event       score.InterChainMessageEvent
-}
-
-type InterChainMessageTxJSON struct {
-	Proposer    types.TxInput                `json:"proposer"`
-	BlockNumber *big.Int                     `json:"block_number"`
-	Event       score.InterChainMessageEvent `json:"event"`
-}
-
-func NewInterChainMessageTxJSON(a InterChainMessageTx) InterChainMessageTxJSON {
-	return InterChainMessageTxJSON{
-		Proposer:    a.Proposer,
-		BlockNumber: a.BlockNumber,
-		Event:       a.Event,
-	}
-}
-
-func (a InterChainMessageTxJSON) CrossChainTransTx() InterChainMessageTx {
-	return InterChainMessageTx{
-		Proposer:    a.Proposer,
-		BlockNumber: a.BlockNumber,
-		Event:       a.Event,
-	}
-}
-
-func (a InterChainMessageTxJSON) MarshalJSON() ([]byte, error) {
-	return json.Marshal(InterChainMessageTxJSON(a))
-}
-
-func (a *InterChainMessageTx) UnmarshalJSON(data []byte) error {
-	var b InterChainMessageTxJSON
-	if err := json.Unmarshal(data, &b); err != nil {
-		return err
-	}
-	*a = b.CrossChainTransTx()
-	return nil
-}
-
-func (_ *InterChainMessageTx) AssertIsTx() {}
-
-func (tx *InterChainMessageTx) SignBytes(chainID string) []byte {
-	signBytes := encodeToBytes(chainID)
-	sig := tx.Proposer.Signature
-	tx.Proposer.Signature = nil
-	txBytes, _ := TxToBytes(tx)
-	signBytes = append(signBytes, txBytes...)
-	signBytes = addPrefixForSignBytes(signBytes)
-
-	tx.Proposer.Signature = sig
-	return signBytes
-}
-
-func (tx *InterChainMessageTx) SetSignature(addr common.Address, sig *crypto.Signature) bool {
-	if tx.Proposer.Address == addr {
-		tx.Proposer.Signature = sig
-		return true
-	}
-	return false
-}
-
-func (tx *InterChainMessageTx) String() string {
-	return fmt.Sprintf("InterChainMessageTx with Nonce {%v}", tx.Event.Nonce)
-}
 
 //---------------------------------SubchainValidatorSetUpdateTx--------------------------------------------
 
@@ -210,8 +140,6 @@ func TxToBytes(t types.Tx) ([]byte, error) {
 		txType = types.TxSmartContract
 	case *SubchainValidatorSetUpdateTx:
 		txType = TxSubchainValidatorSetUpdate
-	case *InterChainMessageTx:
-		txType = TxInterChainMessage
 	default:
 		return nil, errors.New("unsupported message type")
 	}
@@ -248,10 +176,6 @@ func TxFromBytes(raw []byte) (types.Tx, error) {
 		return data, err
 	} else if txType == TxSubchainValidatorSetUpdate {
 		data := &SubchainValidatorSetUpdateTx{}
-		err = s.Decode(data)
-		return data, err
-	} else if txType == TxInterChainMessage {
-		data := &InterChainMessageTx{}
 		err = s.Decode(data)
 		return data, err
 	} else {
