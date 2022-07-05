@@ -1000,7 +1000,7 @@ func (e *ConsensusEngine) shouldPropose(tip *score.ExtendedBlock, epoch uint64) 
 	return true
 }
 
-func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock) bool {
+func (e *ConsensusEngine) validatorMajorityInTheSameDynasty(tip *score.ExtendedBlock) bool {
 	// Check if majority has greater block height.
 	epochVotes, err := e.state.GetEpochVotes()
 	if err != nil {
@@ -1020,7 +1020,7 @@ func (e *ConsensusEngine) canIncludeValidatorUpdateTxs(tip *score.ExtendedBlock)
 			"tip":        tip.Hash().Hex(),
 			"tip.Height": tip.Height,
 			"votes":      votes.String(),
-		}).Debug("canIncludeValidatorUpdateTxs=false: tip height smaller than majority")
+		}).Debug("validatorMajorityInSameDynasty=false: tip height smaller than majority")
 		return false
 	}
 
@@ -1066,7 +1066,7 @@ func (e *ConsensusEngine) shouldProposeByID(previousBlock common.Hash, epoch uin
 	return true
 }
 
-func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool) (score.Proposal, error) {
+func (e *ConsensusEngine) createProposal(validatorMajorityInTheSameDynasty bool) (score.Proposal, error) {
 	tip := e.GetTipToExtend()
 	//result := e.ledger.ResetState(tip.Height, tip.StateHash)
 	result := e.ledger.ResetState(tip.Block)
@@ -1091,7 +1091,7 @@ func (e *ConsensusEngine) createProposal(canIncludeValidatorUpdateTxs bool) (sco
 	block.HCC.Votes = e.chain.FindVotesByHash(block.HCC.BlockHash).UniqueVoter().FilterByValidators(hccValidators)
 
 	// Add Txs.
-	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, canIncludeValidatorUpdateTxs)
+	newRoot, txs, result := e.ledger.ProposeBlockTxs(block, validatorMajorityInTheSameDynasty)
 	if result.IsError() || result.IsUndecided() { // the proposer should NOT propose a block that is either invalid or undecided
 		err := fmt.Errorf("Failed to collect Txs for block proposal: %v", result.String())
 		return score.Proposal{}, err
@@ -1133,7 +1133,7 @@ func (e *ConsensusEngine) propose() {
 		return
 	}
 
-	canIncludeValidatorUpdateTxs := e.canIncludeValidatorUpdateTxs(tip)
+	validatorMajorityInTheSameDynasty := e.validatorMajorityInTheSameDynasty(tip)
 	var proposal score.Proposal
 	var err error
 	lastProposal := e.state.GetLastProposal()
@@ -1141,7 +1141,7 @@ func (e *ConsensusEngine) propose() {
 		proposal = lastProposal
 		e.logger.WithFields(log.Fields{"proposal": proposal}).Info("Repeating proposal")
 	} else {
-		proposal, err = e.createProposal(canIncludeValidatorUpdateTxs)
+		proposal, err = e.createProposal(validatorMajorityInTheSameDynasty)
 		if err != nil {
 			e.logger.WithFields(log.Fields{"error": err}).Error("Failed to create proposal")
 			return

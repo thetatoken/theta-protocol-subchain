@@ -236,7 +236,7 @@ func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res re
 
 // ProposeBlockTxs collects and executes a list of transactions, which will be used to assemble the next blockl
 // It also clears these transactions from the mempool.
-func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
+func (ledger *Ledger) ProposeBlockTxs(block *score.Block, validatorMajorityInTheSameDynasty bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
 	// Must always acquire locks in following order to avoid deadlock: mempool, ledger.
 	// Otherwise, could cause deadlock since mempool.InsertTransaction() also first acquires the mempool, and then the ledger lock
 	logger.Debugf("ProposeBlockTxs: Propose block transactions, block.height = %v", block.Height)
@@ -259,7 +259,7 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 
 	// Add special transactions
 	rawTxCandidates := []common.Bytes{}
-	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs)
+	ledger.addSpecialTransactions(block, view, &rawTxCandidates, validatorMajorityInTheSameDynasty)
 
 	// Add regular transactions submitted by the clients
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
@@ -615,7 +615,7 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block
-func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool) {
+func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, validatorMajorityInTheSameDynasty bool) {
 	if block == nil {
 		logger.Warnf("addSpecialTransactions: block is nil")
 		return
@@ -628,18 +628,60 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	proposer := ledger.valMgr.GetNextProposer(parentBlkHash, block.Epoch)
 	currentValidatorSet := ledger.valMgr.GetNextValidatorSet(parentBlkHash)
 
-	// ------- Add coinbase transaction ------- //x
+	// ------- Add coinbase transaction ------- //
 	ledger.addCoinbaseTx(view, &proposer, currentValidatorSet, rawTxs)
 
 	// ------- Add subchain validator set update transaction ------- //
-	hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet, view)
-	logger.Debugf("Add special transactions: canIncludeValidatorUpdateTxs: %v, hasValidatorSetUpdate: %v, newDynasty: %v, newValidatorSet: %v",
-		canIncludeValidatorUpdateTxs, hasValidatorSetUpdate, newDynasty, newValidatorSet)
-	if canIncludeValidatorUpdateTxs && hasValidatorSetUpdate {
+
+	// Here we add the subchain validator set update tx regardless whether the validator set has changed, since
+	// the token bank contracts need to query the validator set of each dynasty
+	enteringNewDynasty, newDynasty, newValidatorSet := ledger.getNewDynastyAndValidatorSet(currentValidatorSet, view)
+	if enteringNewDynasty && validatorMajorityInTheSameDynasty {
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
 	}
+	logger.Debugf("Checking whether to add subchain validator update transactions: validatorMajorityInTheSameDynasty: %v, enteringNewDynasty: %v, newDynasty: %v, newValidatorSet: %v",
+		validatorMajorityInTheSameDynasty, enteringNewDynasty, newDynasty, newValidatorSet)
+
+	// hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet, view)
+	// logger.Debugf("Add special transactions: validatorMajorityInTheSameDynasty: %v, hasValidatorSetUpdate: %v, newDynasty: %v, newValidatorSet: %v",
+	// 	validatorMajorityInTheSameDynasty, hasValidatorSetUpdate, newDynasty, newValidatorSet)
+	// if validatorMajorityInTheSameDynasty && hasValidatorSetUpdate {
+	// 	ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
+	// }
 }
 
+func (ledger *Ledger) getNewDynastyAndValidatorSet(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (enteringNewDynasty bool, newDynasty *big.Int, newValidatorSet *score.ValidatorSet) {
+	currentDynasty := currentValidatorSet.Dynasty()
+	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockHeight()
+	if err != nil {
+		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
+		return false, nil, nil
+	}
+
+	witnessedDynasty := scom.CalculateDynasty(mainchainBlockHeight)
+	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
+	if err != nil {
+		logger.Warnf("Failed to get validator set by dynasty %v when checking validator set updates, err: %v", witnessedDynasty, err)
+		return false, nil, nil
+	}
+
+	if witnessedDynasty.Cmp(currentDynasty) <= 0 {
+		return false, nil, nil
+	}
+
+	// at this point: witnessedDynasty >= currentDynasty + 1, we are entering a new dynasty
+
+	validatorSetInView := view.GetValidatorSet()
+
+	logger.Debugf("block height: %v", view.GetBlockHeight())
+	logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet)
+	logger.Debugf("currentValidatorSet  : %v", currentValidatorSet)
+	logger.Debugf("validatorSetInView   : %v", validatorSetInView)
+
+	return true, witnessedDynasty, witnessedValidatorSet
+}
+
+// Not used
 func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) {
 	currentDynasty := currentValidatorSet.Dynasty()
 	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockHeight()
