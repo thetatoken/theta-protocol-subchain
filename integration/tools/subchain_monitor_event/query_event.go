@@ -22,6 +22,7 @@ import (
 
 	// scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 	score "github.com/thetatoken/thetasubchain/core"
+	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 	// "github.com/thetatoken/thetasubchain/eth/abi"
 	// "github.com/thetatoken/theta/crypto"
 )
@@ -50,14 +51,14 @@ type TransferEvent struct {
 	Nonce  *big.Int
 }
 
-func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType score.InterChainMessageEventType, interChainEveneCache *score.InterChainEventCache) {
+func queryEventLog(fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType score.InterChainMessageEventType, interChainEveneCache *siu.InterChainEventCache) {
 	url := viper.GetString(scomm.CfgSubchainEthRpcURL)
 	queryStr := fmt.Sprintf(`{
 		"jsonrpc":"2.0",
 		"method":"eth_getLogs",
 		"params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],
 		"id":74
-	}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), score.EventSelectors[imceType])
+	}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), siu.EventSelectors[imceType])
 	fmt.Println(queryStr)
 	var jsonData = []byte(queryStr)
 
@@ -132,7 +133,7 @@ func main() {
 	tbk := flag.Int("tbk", 0, "to block")
 	// stateHashPtr := flag.String("state_hash", "", "hash of state root")
 	flag.Parse()
-	s := score.NewInterChainEventCache(nil)
+	s := siu.NewInterChainEventCache(nil)
 	// fmt.Println(s.EventSelectors)
 	queryEventLog(big.NewInt(int64(*fbk)), big.NewInt(int64(*tbk)), common.HexToAddress("0xde9f866B980C3c1197b316d482D50F70b2854C95"), score.IMCEventTypeCrossChainTokenLockTFuel, s)
 	// fromBlock := oct(*fbk)

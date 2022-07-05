@@ -41,12 +41,12 @@ type Validator struct {
 //
 // Example:
 // cd $SUBCHAIN_HOME/integration/privatenet/node
-// subchain_generate_genesis -chainID=tsub_360777 -mainchainID=privatenet -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
+// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub_360777 -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
 //
 func main() {
-	chainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
+	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
 
-	sv, metadata, err := generateGenesisSnapshot(chainID, initValidatorSetPath, genesisSnapshotFilePath)
+	sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
@@ -73,13 +73,15 @@ func main() {
 	fmt.Println("")
 }
 
-func parseArguments() (chainID, initValidatorSetPath, genesisSnapshotFilePath string) {
-	chainIDPtr := flag.String("chainID", "tsub_360777", "the ID of the chain")
+func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string) {
+	mainchainIDPtr := flag.String("subchainID", "privatenet", "the ID of the mainchain")
+	subchainIDPtr := flag.String("subchainID", "tsub_360777", "the ID of the subchain")
 	initValidatorSetPathPtr := flag.String("initValidatorSet", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
 	flag.Parse()
 
-	chainID = *chainIDPtr
+	mainchainID = *mainchainIDPtr
+	subchainID = *subchainIDPtr
 	initValidatorSetPath = *initValidatorSetPathPtr
 	genesisSnapshotFilePath = *genesisSnapshotFilePathPtr
 
@@ -87,20 +89,19 @@ func parseArguments() (chainID, initValidatorSetPath, genesisSnapshotFilePath st
 }
 
 // generateGenesisSnapshot generates the genesis snapshot.
-func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotFilePath string) (*slst.StoreView, *score.SnapshotMetadata, error) {
+func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string) (*slst.StoreView, *score.SnapshotMetadata, error) {
 	metadata := &score.SnapshotMetadata{}
 	genesisHeight := score.GenesisBlockHeight
 
 	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
 
-	setInitialValidatorSet(chainID, initValidatorSetFilePath, genesisHeight, sv)
-	setInitalEventNonce(sv)
-	deployInitialSmartContracts(chainID, sv)
+	setInitialValidatorSet(subchainID, initValidatorSetFilePath, genesisHeight, sv)
+	deployInitialSmartContracts(mainchainID, subchainID, sv)
 
 	stateHash := sv.Hash()
 
 	genesisBlock := score.NewBlock()
-	genesisBlock.ChainID = chainID
+	genesisBlock.ChainID = subchainID
 	genesisBlock.Height = genesisHeight
 	genesisBlock.Epoch = genesisBlock.Height
 	genesisBlock.Parent = common.Hash{}
@@ -116,7 +117,7 @@ func generateGenesisSnapshot(chainID, initValidatorSetFilePath, genesisSnapshotF
 	return sv, metadata, nil
 }
 
-func setInitialValidatorSet(chainID string, initValidatorSetFilePath string, genesisHeight uint64, sv *slst.StoreView) *score.ValidatorSet {
+func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, genesisHeight uint64, sv *slst.StoreView) *score.ValidatorSet {
 	var validators []Validator
 	initValidatorSetFile, err := os.Open(initValidatorSetFilePath)
 	if err != nil {
@@ -141,8 +142,8 @@ func setInitialValidatorSet(chainID string, initValidatorSetFilePath string, gen
 		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
 	}
 
-	chainIDInt := scom.MapChainID(chainID)
-	sv.UpdateValidatorSet(chainIDInt, validatorSet)
+	subchainIDInt := scom.MapChainID(subchainID)
+	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
 
 	hl := &types.HeightList{}
 	hl.Append(genesisHeight)
@@ -165,23 +166,6 @@ func setInitialBalance(sv *slst.StoreView, address common.Address, tfuelBalance 
 	sv.SetAccount(acc.Address, acc)
 }
 
-func setInitalEventNonce(sv *slst.StoreView) *big.Int {
-
-	for _, imceType := range score.TransferTypes {
-		imceType := imceType
-		sv.UpdateLastProcessedEventNonce(imceType, big.NewInt(0))
-	}
-
-	for _, imceType := range score.VoucherBurnTypes {
-		imceType := imceType
-		sv.UpdateLastProcessedEventNonce(imceType, big.NewInt(0))
-	}
-
-	sv.Save()
-
-	return big.NewInt(0)
-}
-
 func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	vp := &score.ValidatorSetProof{}
 	vsKey := slst.CurrentValidatorSetKey()
@@ -189,36 +173,60 @@ func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	return vp, err
 }
 
-func deployInitialSmartContracts(chainID string, sv *slst.StoreView) {
+func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreView) {
+	mainchainIDInt := scom.MapChainID(mainchainID)
 	deployer := common.Address{}
-	contractBytecodes := []string{
+
+	//
+	// Deploy the ChainRegistrar contract
+	//
+
+	sequence := 0
+	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, predeployed.ChainRegistrarContractBytecode, deployer, sequence, slst.ChainRegistrarContractAddressKey())
+	if err != nil {
+		logger.Panicf("Failed to deploy the chain registrar smart contract (sequence = %v): %v", sequence, err)
+	}
+
+	tokenBankContractBytecodes := []string{
 		predeployed.TFuelTokenBankContractBytecode,
 		predeployed.TNT20TokenBankContractBytecode,
-		predeployed.TNT721TokenBankContractBytecode,
+		//predeployed.TNT721TokenBankContractBytecode,
 	}
 	contractAddressKeys := []common.Bytes{
 		slst.TFuelTokenBankContractAddressKey(),
 		slst.TNT20TokenBankContractAddressKey(),
-		slst.TNT721TokenBankContractAddressKey(),
+		//slst.TNT721TokenBankContractAddressKey(),
 	}
 
-	for sequence, contractBytecode := range contractBytecodes {
+	//
+	// Deploy the TokenBank contracts
+	//
+
+	for _, contractBytecode := range tokenBankContractBytecodes {
+		sequence += 1
+		tokenBankDeploymentBytecode := addConstructorArgumentForTokenBankBytecode(contractBytecode, mainchainIDInt, chainRegistrarContractAddr)
 		contractAddressKey := contractAddressKeys[sequence]
-		err := deploySmartContract(chainID, sv, contractBytecode, deployer, sequence, contractAddressKey)
+		_, err := deploySmartContract(subchainID, sv, tokenBankDeploymentBytecode, deployer, sequence, contractAddressKey)
 		if err != nil {
-			logger.Panicf("Failed to deploy smart contract (sequence = %v): %v", sequence, err)
+			logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
 		}
 	}
 }
 
-func deploySmartContract(chainID string, sv *slst.StoreView, contractBytecodeStr string, deployer common.Address, sequence int, contractAddressKey common.Bytes) error {
+// Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
+func addConstructorArgumentForTokenBankBytecode(contractBytecode string, mainchainIDInt *big.Int, chainRegistrarContractAddr common.Address) string {
+	// TODO: implementation
+	return ""
+}
+
+func deploySmartContract(subchainID string, sv *slst.StoreView, contractBytecodeStr string, deployer common.Address, sequence int, contractAddressKey common.Bytes) (common.Address, error) {
 	dummyGasLimit := uint64(10000000)
 	dummyGasPrice := big.NewInt(1)
 
 	// Token Bank contract
 	contractBytecode, err := hex.DecodeString(contractBytecodeStr)
 	if err != nil {
-		return err
+		return common.Address{}, err
 	}
 	deploySCTx := types.SmartContractTx{
 		From:     types.NewTxInput(common.Address{}, types.NewCoins(0, 0), sequence),
@@ -227,19 +235,19 @@ func deploySmartContract(chainID string, sv *slst.StoreView, contractBytecodeStr
 		GasPrice: dummyGasPrice,
 		Data:     contractBytecode,
 	}
-	parentBlockInfo := svm.NewBlockInfo(0, big.NewInt(0), chainID)
-	_, contractAddr, _, evmErr := svm.Execute(parentBlockInfo, &deploySCTx, sv, svm.NormalAccess)
+	parentBlockInfo := svm.NewBlockInfo(0, big.NewInt(0), subchainID)
+	_, contractAddr, _, evmErr := svm.Execute(parentBlockInfo, &deploySCTx, sv)
 	if evmErr != nil {
-		return evmErr
+		return common.Address{}, evmErr
 	}
 
 	tbcaBytes, err := types.ToBytes(contractAddr)
 	if err != nil {
-		return err
+		return common.Address{}, err
 	}
 	sv.Set(contractAddressKey, tbcaBytes)
 
-	return nil
+	return contractAddr, nil
 }
 
 // writeGenesisSnapshot writes genesis snapshot to file system.

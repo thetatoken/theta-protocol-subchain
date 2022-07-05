@@ -66,6 +66,12 @@ func StatePruningProgressKey() common.Bytes {
 	return common.Bytes("ls/spp")
 }
 
+// ChainRegistrarContractAddressKey returns the key for looking up the address of the
+// chain registrar contract deployed in the genesis block
+func ChainRegistrarContractAddressKey() common.Bytes {
+	return common.Bytes("ls/trca")
+}
+
 // TFuelTokenBankContractAddressKey returns the key for looking up the address of the
 // TFuel token bank contract deployed in the genesis block
 func TFuelTokenBankContractAddressKey() common.Bytes {
