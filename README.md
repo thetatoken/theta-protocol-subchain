@@ -1,4 +1,4 @@
-# theta-protocol-subchain-poc
+# theta-protocol-subchain
 
 ## Compilation
 
@@ -9,7 +9,7 @@ cd $THETA_HOME
 git checkout sc-privatenet
 git pull origin sc-privatenet
 
-git clone https://github.com/thetatoken/theta-protocol-subchain-poc $GOPATH/src/github.com/thetatoken/thetasubchain
+git clone https://github.com/thetatoken/theta-protocol-subchain $GOPATH/src/github.com/thetatoken/thetasubchain
 export SUBCHAIN_HOME=$GOPATH/src/github.com/thetatoken/thetasubchain
 cd $SUBCHAIN_HOME
 
