@@ -74,7 +74,7 @@ func main() {
 }
 
 func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string) {
-	mainchainIDPtr := flag.String("subchainID", "privatenet", "the ID of the mainchain")
+	mainchainIDPtr := flag.String("mainchainID", "privatenet", "the ID of the mainchain")
 	subchainIDPtr := flag.String("subchainID", "tsub_360777", "the ID of the subchain")
 	initValidatorSetPathPtr := flag.String("initValidatorSet", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
@@ -202,10 +202,10 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	// Deploy the TokenBank contracts
 	//
 
-	for _, contractBytecode := range tokenBankContractBytecodes {
+	for idx, contractBytecode := range tokenBankContractBytecodes {
 		sequence += 1
 		tokenBankDeploymentBytecode := addConstructorArgumentForTokenBankBytecode(contractBytecode, mainchainIDInt, chainRegistrarContractAddr)
-		contractAddressKey := contractAddressKeys[sequence]
+		contractAddressKey := contractAddressKeys[idx]
 		_, err := deploySmartContract(subchainID, sv, tokenBankDeploymentBytecode, deployer, sequence, contractAddressKey)
 		if err != nil {
 			logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
@@ -329,11 +329,11 @@ func sanityChecks(sv *slst.StoreView) error {
 	}
 	logger.Infof("TNT20 Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
 
-	tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
-	if tnt721TokenBankContractAddr == nil {
-		panic("TNT721 token bank contract is not set")
-	}
-	logger.Infof("TNT721 Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
+	// tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
+	// if tnt721TokenBankContractAddr == nil {
+	// 	panic("TNT721 token bank contract is not set")
+	// }
+	// logger.Infof("TNT721 Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
 
 	logger.Infof("------------------------------------------------------------------------------")
 
