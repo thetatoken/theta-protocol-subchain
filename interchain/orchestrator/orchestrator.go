@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"math/big"
+	"strings"
 	"sync"
 	"time"
 
@@ -11,6 +12,7 @@ import (
 	"github.com/thetatoken/theta/crypto"
 	ts "github.com/thetatoken/theta/store"
 	"github.com/thetatoken/theta/store/database"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 	"github.com/thetatoken/thetasubchain/interchain/witness"
@@ -331,17 +333,44 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 }
 
 func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	// TODO: implementation
+	se, err := score.ParseToCrossChainTNT20VoucherMintedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
+	var tma score.CrossChainTNT20TokenLockedEvent
+	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", sourceEvent.Data)
+	_, err = TNT20TokenBank.Mintvouchers(txOpts, se.Denom, tma.Name, tma.Symbol, tma.Decimals, se.TargetChainVoucherReceiver, se.MintedAmount, dynasty, se.SourceChainTokenLockNonce)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	// TODO: implementation
+	se, err := score.ParseToCrossChainTFuelTokenUnlockedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
+	_, err = tfuelTokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.UnlockedAmount, dynasty, se.SourceChainVoucherBurnNonce)
+	if err != nil {
+		return err
+	}
 	return nil
 }
 
 func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	// TODO: implementation
+	se, err := score.ParseToCrossChainTNT20TokenUnlockedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
+	_, err = TNT20TokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.LockedAmount, dynasty, se.SourceChainVoucherBurnNonce)
 	return nil
 }
 

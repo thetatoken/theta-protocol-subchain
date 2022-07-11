@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"os"
+	"strings"
 	"time"
 
 	log "github.com/sirupsen/logrus"
@@ -21,6 +22,7 @@ import (
 
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/interchain/contracts/predeployed"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
@@ -215,8 +217,34 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 
 // Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
 func addConstructorArgumentForTokenBankBytecode(contractBytecode string, mainchainIDInt *big.Int, chainRegistrarContractAddr common.Address) string {
-	// TODO: implementation
-	return ""
+	RawABI := `[
+    {
+      "inputs": [
+        {
+          "internalType": "uint256",
+          "name": "mainchainID_",
+          "type": "uint256"
+        },
+        {
+          "internalType": "contract ChainRegistrar",
+          "name": "chainRegistrar_",
+          "type": "address"
+        }
+      ],
+      "stateMutability": "nonpayable",
+      "type": "constructor"
+    }
+]`
+	parsed, err := abi.JSON(strings.NewReader(RawABI))
+	if err != nil {
+		panic(err)
+	}
+	encodedConstructorArgument, err := parsed.Pack("", mainchainIDInt, chainRegistrarContractAddr)
+	if err != nil {
+		panic(err)
+	}
+	encodedConstructorArgumentString := hex.EncodeToString(encodedConstructorArgument)
+	return contractBytecode + encodedConstructorArgumentString
 }
 
 func deploySmartContract(subchainID string, sv *slst.StoreView, contractBytecodeStr string, deployer common.Address, sequence int, contractAddressKey common.Bytes) (common.Address, error) {
