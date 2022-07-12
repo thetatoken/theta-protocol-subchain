@@ -92,7 +92,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
 	}
 
-	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
+	subchainID := big.NewInt(9988)//change,viper.GetInt64(scom.CfgSubchainID)
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {

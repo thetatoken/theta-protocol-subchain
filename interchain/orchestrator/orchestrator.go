@@ -290,7 +290,6 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 	if err != nil {
 		return err
 	}
-
 	switch targetEventType {
 	// Voucher Mint events
 	case score.IMCEventTypeCrossChainVoucherMintTFuel:

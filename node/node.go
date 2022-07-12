@@ -112,8 +112,7 @@ func NewNode(params *Params) *Node {
 	validatorManager.SetConsensusEngine(consensus)
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
-	metachainWitness.SetSubchainTokenBanks(ledger)
-	orchestrator.SetLedgerAndSubchainTokenBanks(ledger)
+
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
 
 	if !reflect.ValueOf(params.Network).IsNil() {
@@ -141,7 +140,8 @@ func NewNode(params *Params) *Node {
 			state.SetLastProposal(score.Proposal{})
 		}
 	}
-
+	metachainWitness.SetSubchainTokenBanks(ledger)
+	orchestrator.SetLedgerAndSubchainTokenBanks(ledger)
 	node := &Node{
 		Store:                store,
 		Chain:                chain,
