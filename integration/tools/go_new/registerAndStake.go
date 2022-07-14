@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	// rg "chainRegistrarOnMainchain" // for demo
-	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/contract"
 )
 
 type accounts struct {
@@ -93,7 +93,7 @@ func chooseAccount(client *ethclient.Client, id int) (*ethclient.Client, *bind.T
 	auth.GasPrice = gasPrice
 	return client, auth
 }
-func main1() {
+func main() {
 	accountsInit()
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
@@ -128,7 +128,7 @@ func main1() {
 		log.Fatal(err)
 	}
 	clientNew, auth = chooseAccount(client, 7)
-	tx, err = instanceChainRegistrar.Registersubchain(auth, subchainID, GovernanceTokenAddress, num, "111")
+	tx, err = instanceChainRegistrar.RegisterSubchain(auth, subchainID, GovernanceTokenAddress, num, "111")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -156,7 +156,7 @@ func main1() {
 	}
 	clientValidator1, authValidator1 = chooseAccount(client, 1) //Validator1
 	instanceChainRegistrarValidator1, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, clientValidator1)
-	tx, err = instanceChainRegistrarValidator1.Depositcollateral(authValidator1, subchainID, validator1, validatorCollateral)
+	tx, err = instanceChainRegistrarValidator1.DepositCollateral(authValidator1, subchainID, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -180,7 +180,7 @@ func main1() {
 	}
 	clientValidator2, authValidator2 = chooseAccount(client, 2) //Validator2
 	instanceChainRegistrarValidator2, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, clientValidator2)
-	tx, err = instanceChainRegistrarValidator2.Depositcollateral(authValidator2, subchainID, validator2, validatorCollateral)
+	tx, err = instanceChainRegistrarValidator2.DepositCollateral(authValidator2, subchainID, validator2, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -204,7 +204,7 @@ func main1() {
 	}
 	clientValidator3, authValidator3 = chooseAccount(client, 3) //Validator3
 	instanceChainRegistrarValidator3, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, clientValidator3)
-	tx, err = instanceChainRegistrarValidator3.Depositcollateral(authValidator3, subchainID, validator3, validatorCollateral)
+	tx, err = instanceChainRegistrarValidator3.DepositCollateral(authValidator3, subchainID, validator3, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -248,17 +248,17 @@ func main1() {
 		log.Fatal(err)
 	}
 	clientValidator1, authValidator1 = chooseAccount(client, 1) //Validator1
-	tx, err = instanceChainRegistrarValidator1.Depositstake(authValidator1, subchainID, validator1, validatorStakingAmount)
+	tx, err = instanceChainRegistrarValidator1.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
 	clientValidator2, authValidator2 = chooseAccount(client, 2) //Validator2
-	tx, err = instanceChainRegistrarValidator2.Depositstake(authValidator2, subchainID, validator2, validatorStakingAmount)
+	tx, err = instanceChainRegistrarValidator2.DepositStake(authValidator2, subchainID, validator2, validatorStakingAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
 	clientValidator3, authValidator3 = chooseAccount(client, 3) //Validator3
-	tx, err = instanceChainRegistrarValidator2.Depositstake(authValidator3, subchainID, validator3, validatorStakingAmount)
+	tx, err = instanceChainRegistrarValidator2.DepositStake(authValidator3, subchainID, validator3, validatorStakingAmount)
 	if err != nil {
 		log.Fatal(err)
 	}

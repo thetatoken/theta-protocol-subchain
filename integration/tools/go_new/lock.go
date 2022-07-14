@@ -14,7 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	// rg "chainRegistrarOnMainchain" // for demo
-	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/contract"
 )
 
 type accounts struct {
@@ -105,8 +105,8 @@ func main() {
 	// GovernanceTokenAddress := common.HexToAddress("0xD323FbDE9D287A288d22F9F4B30E61d2500aa962")
 	clientNew, _ := chooseAccount(client, 3) //chainGuarantor
 	instance, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, clientNew)
-	//subchainID := big.NewInt(9988)
-	tx, err := instance.Getallsubchainids(nil)
+	subchainID := big.NewInt(9988)
+	tx, err := instance.GetValidatorSet()
 	if err != nil {
 		log.Fatal(err)
 	}
