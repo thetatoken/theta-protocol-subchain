@@ -332,16 +332,13 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 }
 
 func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	se, err := score.ParseToCrossChainTNT20VoucherMintedEvent(sourceEvent)
+	se, err := score.ParseToCrossChainTNT20TokenLockedEvent(sourceEvent)
 	if err != nil {
 		return err
 	}
 	dynasty := oc.getDynasty()
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	var tma score.CrossChainTNT20TokenLockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", sourceEvent.Data)
-	_, err = TNT20TokenBank.Mintvouchers(txOpts, se.Denom, tma.Name, tma.Symbol, tma.Decimals, se.TargetChainVoucherReceiver, se.MintedAmount, dynasty, se.SourceChainTokenLockNonce)
+	_, err = TNT20TokenBank.Mintvouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
@@ -349,13 +346,13 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 }
 
 func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	se, err := score.ParseToCrossChainTFuelTokenUnlockedEvent(sourceEvent)
+	se, err := score.ParseToCrossChainTNT20VoucherBurnedEvent(sourceEvent)
 	if err != nil {
 		return err
 	}
 	dynasty := oc.getDynasty()
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.UnlockedAmount, dynasty, se.SourceChainVoucherBurnNonce)
+	_, err = tfuelTokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
@@ -363,13 +360,13 @@ func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChain
 }
 
 func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	se, err := score.ParseToCrossChainTNT20TokenUnlockedEvent(sourceEvent)
+	se, err := score.ParseToCrossChainTNT20VoucherBurnedEvent(sourceEvent)
 	if err != nil {
 		return err
 	}
 	dynasty := oc.getDynasty()
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.LockedAmount, dynasty, se.SourceChainVoucherBurnNonce)
+	_, err = TNT20TokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	return nil
 }
 
