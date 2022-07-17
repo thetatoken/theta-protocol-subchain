@@ -1,19 +1,19 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package accessors
+package contract
 
 import (
 	"errors"
 	"math/big"
 	"strings"
 
-	ethereum "github.com/thetatoken/thetasubchain/eth"
-	"github.com/thetatoken/thetasubchain/eth/abi"
-	"github.com/thetatoken/thetasubchain/eth/abi/bind"
-	"github.com/thetatoken/theta/common"
-	"github.com/thetatoken/thetasubchain/eth/core/types"
-	"github.com/thetatoken/thetasubchain/eth/event"
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
 
 // Reference imports to suppress errors if they are not otherwise used.

@@ -3,7 +3,6 @@ package orchestrator
 import (
 	"context"
 	"math/big"
-	"strings"
 	"sync"
 	"time"
 
@@ -12,7 +11,6 @@ import (
 	"github.com/thetatoken/theta/crypto"
 	ts "github.com/thetatoken/theta/store"
 	"github.com/thetatoken/theta/store/database"
-	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 	"github.com/thetatoken/thetasubchain/interchain/witness"
@@ -175,20 +173,20 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 			oc.processNextTokenLockEvent(oc.subchainID, oc.mainchainID) // send token from the subchain to the mainchain
 
 			// Handle voucher burn events
-			oc.processNextVoucherBurnEvent(oc.mainchainID, oc.subchainID) // burn voucher to send token from the mainchain back to the subchain
-			oc.processNextVoucherBurnEvent(oc.subchainID, oc.mainchainID) // burn voucher to send token from the subchain back to the mainchain
+			//oc.processNextVoucherBurnEvent(oc.mainchainID, oc.subchainID) // burn voucher to send token from the mainchain back to the subchain
+			//oc.processNextVoucherBurnEvent(oc.subchainID, oc.mainchainID) // burn voucher to send token from the subchain back to the mainchain
 		}
 	}
 }
 
 func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
-	oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
+	//oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
 }
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
-	maxProcessedTokenLockNonce, err := targetChainTokenBank.Getmaxprocessedtokenlocknonce(nil, sourceChainID)
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TFuel token lock nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -199,7 +197,7 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 
 func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
-	maxProcessedTokenLockNonce, err := targetChainTokenBank.Getmaxprocessedtokenlocknonce(nil, sourceChainID)
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -215,7 +213,7 @@ func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targ
 
 func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
-	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.Getmaxprocessedvoucherburnnonce(nil, sourceChainID)
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TFuel voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -226,7 +224,7 @@ func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int,
 
 func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
-	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.Getmaxprocessedvoucherburnnonce(nil, sourceChainID)
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -323,7 +321,7 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 
 	dynasty := oc.getDynasty()
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.Mintvouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	_, err = tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
@@ -338,7 +336,7 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.Mintvouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
@@ -352,7 +350,7 @@ func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	_, err = tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
@@ -366,7 +364,7 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.Unlocktokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	_, err = TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	return nil
 }
 

@@ -16,8 +16,7 @@ subchain:
   subchainEthRpcURL: "http://localhost:19888/rpc"
   chainRegistrarOnMainchain: "0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa"
   mainchainTFuelTB: "0x59AF421cB35fc23aB6C8ee42743e6176040031f4"
-  mainchainTNT20TB: "0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9"
+  mainchainTNT20TB: "0xc7253857256391E518c4aF60aDa5Eb5972Dd6Dbc"
   updateInterval: 3000
-
 
 

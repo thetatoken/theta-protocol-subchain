@@ -18,10 +18,13 @@ import (
 	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
+	//"github.com/ethereum/go-ethereum/common"
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/store"
 	"github.com/thetatoken/theta/store/database"
+
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
+	//ec "github.com/ethereum/go-ethereum/ethclient"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
@@ -92,7 +95,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
 	}
 
-	subchainID := big.NewInt(9988)//change,viper.GetInt64(scom.CfgSubchainID)
+	subchainID := big.NewInt(9988) //change,viper.GetInt64(scom.CfgSubchainID)
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
@@ -100,6 +103,8 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	}
 
 	witnessState := newMetachainWitnessState(db)
+	var validatorSet map[string]*score.ValidatorSet
+	validatorSet = make(map[string]*score.ValidatorSet)
 
 	mw := &MetachainWitness{
 		updateInterval: updateInterval,
@@ -120,7 +125,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		subchainID:           subchainID,
 		subchainEthRpcUrl:    subchainEthRpcURL,
 		subchainEthRpcClient: subchainEthRpcClient,
-
+		validatorSetCache:    validatorSet,
 		interChainEventCache: interChainEventCache,
 
 		wg: &sync.WaitGroup{},
@@ -287,9 +292,9 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
-	vs, err := mw.chainRegistrarOnMainchain.Getvalidatorset(nil, mw.subchainID, queryBlockHeight)
+	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
 	validatorAddrs := vs.Validators
-	validatorStakes := vs.Shareamounts
+	validatorStakes := vs.ShareAmounts
 
 	if err != nil {
 		return nil, err
