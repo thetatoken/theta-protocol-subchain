@@ -1,13 +1,19 @@
 package main
 
 import (
+	"encoding/hex"
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
+	"time"
 
-	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
-
+	"github.com/thetatoken/theta/common"
+	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
+	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 	// rg "chainRegistrarOnMainchain" // for demo
 )
 
@@ -81,11 +87,13 @@ import (
 func main2() {
 	//registerAndStake()
 	AccountsInit()
-	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	//client, err := ethclient.Dial("http://localhost:18888/rpc")
+	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	//subchainAddress:=common.
 	if err != nil {
 		log.Fatal(err)
 	}
-	//subchainID := big.NewInt(9988)
+	subchainID := big.NewInt(9988)
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
 	user := accountList[6].fromAddress
@@ -94,7 +102,7 @@ func main2() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	//instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(TNT20TokenBankAddress, client)
+	instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(TNT20TokenBankAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -106,21 +114,66 @@ func main2() {
 	}
 	authAccount0 = SelectAccount(client, 0)
 	fmt.Println(instanceTNT20VoucherContract.BalanceOf(nil, accountList[6].fromAddress))
-	// authUser := SelectAccount(client, 6)
-	// _, err = instanceTNT20VoucherContract.Approve(authUser, TNT20TokenBankAddress, big.NewInt(30))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// authUser = SelectAccount(client, 6)
-	// _, err = instanceTNT20TokenBank.LockTokens(authUser, subchainID, TNT20VoucherContractAddress, user, big.NewInt(20))
+
+	authUser := SelectAccount(client, 6)
+	_, err = instanceTNT20VoucherContract.Approve(authUser, TNT20TokenBankAddress, big.NewInt(30))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(instanceTNT20TokenBank.GetMaxProcessedTokenLockNonce(nil, subchainID))
+	authUser = SelectAccount(client, 6)
+	_, err = instanceTNT20TokenBank.LockTokens(authUser, subchainID, TNT20VoucherContractAddress, user, big.NewInt(20))
 	// height, _ := client.BlockNumber(context.Background())
+	time.Sleep(2 * time.Second)
+	fmt.Println(instanceTNT20TokenBank.GetMaxProcessedTokenLockNonce(nil, subchainID))
+	fmt.Println(instanceTNT20VoucherContract.BalanceOf(nil, accountList[6].fromAddress))
+
 	// if err != nil {
 	// 	log.Fatal(err)
 	// }
 	// fmt.Println("ok!")
 	// fmt.Println(height)
 }
+func extract() {
+	Data := "0x0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000ae72a48c1a36bd18af168541c53037965d26e4a80000000000000000000000000000000000000000000000000000000000002704000000000000000000000000ae72a48c1a36bd18af168541c53037965d26e4a80000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000313336362f32302f3078353766346230386530623363633561396362633838383633396462653231373162313430383732320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002323000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000023230000000000000000000000000000000000000000000000000000000000000"
+	data, _ := hex.DecodeString(Data[2:])
+	var tma score.CrossChainTNT20TokenLockedEvent
+	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", data)
 
+	fmt.Println(tma.TargetChainID)
+}
+func extract2() {
+	RawABI := scta.TNT20TokenBankABI
+	parsed, _ := abi.JSON(strings.NewReader(RawABI))
+	// var res struct {
+	// 	Receiver []common.Address // 返回值名称
+	// 	Values   []*big.Int       // 返回值名称
+	// }
+	var tma score.CrossChainTNT20TokenLockedEvent
+	// {"Receiver":["0x80819b3f30e9d77de6be3df9d6efaa88261dff9c"],"Values":[10]}
+	raw := common.Hex2Bytes("0x0000000000000000000000000000000000000000000000000000000000000120000000000000000000000000ae72a48c1a36bd18af168541c53037965d26e4a80000000000000000000000000000000000000000000000000000000000002704000000000000000000000000ae72a48c1a36bd18af168541c53037965d26e4a80000000000000000000000000000000000000000000000000000000000000014000000000000000000000000000000000000000000000000000000000000018000000000000000000000000000000000000000000000000000000000000001c00000000000000000000000000000000000000000000000000000000000000001000000000000000000000000000000000000000000000000000000000000000d00000000000000000000000000000000000000000000000000000000000000313336362f32302f3078353766346230386530623363633561396362633838383633396462653231373162313430383732320000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000002323000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000023230000000000000000000000000000000000000000000000000000000000000")
+	parsed.UnpackIntoInterface(&tma, "TNT20TokenLocked", raw)
+	fmt.Println(tma.TokenLockNonce)
+
+}
+
+func main3() {
+	//registerAndStake()
+	AccountsInit()
+	//client, err := ethclient.Dial("http://localhost:18888/rpc")
+	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	subchainAddress := common.HexToAddress("0x47e9fbef8c83a1714f1951f142132e6e90f5fa5d")
+	if err != nil {
+		log.Fatal(err)
+	}
+	instance, err := ct.NewTNT20TokenBank(subchainAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(instance.GetMaxProcessedTokenLockNonce(nil, big.NewInt(11)))
+}
 func main() {
-	main2()
+	main3()
+	//extract()
 }

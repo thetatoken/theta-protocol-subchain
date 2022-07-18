@@ -84,7 +84,7 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
 	}
 
-	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
+	subchainID := big.NewInt(9988) //big.NewInt(viper.GetInt64(scom.CfgSubchainID))
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
@@ -198,6 +198,7 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -336,7 +337,7 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}

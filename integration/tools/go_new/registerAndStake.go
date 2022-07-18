@@ -14,6 +14,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
+	
 	// rg "chainRegistrarOnMainchain" // for demo
 )
 
