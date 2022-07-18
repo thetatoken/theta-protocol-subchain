@@ -292,6 +292,7 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
 func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
+	fmt.Println(mw.chainRegistrarOnMainchain.GetAllSubchainIDs(nil))
 	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
 	validatorAddrs := vs.Validators
 	validatorStakes := vs.ShareAmounts

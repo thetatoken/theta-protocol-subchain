@@ -198,7 +198,6 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
-
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
 		return // ignore
