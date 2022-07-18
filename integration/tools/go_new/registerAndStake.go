@@ -3,7 +3,6 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
-	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -14,7 +13,6 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
-	
 	// rg "chainRegistrarOnMainchain" // for demo
 )
 
@@ -73,7 +71,7 @@ func AccountsInit() {
 		}
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
-		fmt.Println(value, "-----", fromAddress)
+		//fmt.Println(value, "-----", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 

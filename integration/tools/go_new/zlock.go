@@ -87,8 +87,8 @@ import (
 func main2() {
 	//registerAndStake()
 	AccountsInit()
-	//client, err := ethclient.Dial("http://localhost:18888/rpc")
-	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	//client, err := ethclient.Dial("http://localhost:19888/rpc")
 	//subchainAddress:=common.
 	if err != nil {
 		log.Fatal(err)
@@ -173,7 +173,21 @@ func main3() {
 	}
 	fmt.Println(instance.GetMaxProcessedTokenLockNonce(nil, big.NewInt(11)))
 }
+func main4() {
+	AccountsInit()
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	//client, err := ethclient.Dial("http://localhost:19888/rpc")
+	//subchainAddress:=common.
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainID := big.NewInt(9988)
+	instance, _ := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, client)
+	tx, _ := instance.GetValidatorSet(nil, subchainID, big.NewInt(36))
+	fmt.Println(tx)
+}
 func main() {
-	main3()
+	main4()
+
 	//extract()
 }

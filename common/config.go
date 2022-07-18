@@ -225,7 +225,7 @@ func init() {
 	viper.SetDefault(CfgSubchainUpdateIntervalInMilliseconds, 1000)
 	viper.SetDefault(CfgSubchainMainchainBlockIntervalInSeconds, 6)
 	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
-	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:18889")
+	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 }
 
 // WriteInitialConfig writes initial config file to file system.
