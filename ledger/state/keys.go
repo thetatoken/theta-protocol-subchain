@@ -84,6 +84,19 @@ func TNT20TokenBankContractAddressKey() common.Bytes {
 	return common.Bytes("ls/tbca/tnt20")
 }
 
+func TestAddressKeyA() common.Bytes {
+	return common.Bytes("ls/tbca/testa")
+}
+func TestAddressKeyB() common.Bytes {
+	return common.Bytes("ls/tbca/testb")
+}
+func TestAddressKeyBase() common.Bytes {
+	return common.Bytes("ls/tbca/testbase")
+}
+func TestAddressKeyC() common.Bytes {
+	return common.Bytes("ls/tbca/testc")
+}
+
 // TNT721TokenBankContractAddressKey returns the key for looking up the address of the
 // TNT721 token bank contract deployed in the genesis block
 func TNT721TokenBankContractAddressKey() common.Bytes {
