@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"log"
 	"math/big"
 	"time"
@@ -13,6 +14,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
+	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
 	// rg "chainRegistrarOnMainchain" // for demo
 )
 
@@ -75,11 +77,11 @@ func AccountsInit() {
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
-	WthetaAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
-	RegisterOnMainchainAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
-	GovernanceTokenAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
+	WthetaAddress = common.HexToAddress("0x6D67C233dDf4CE6D05CE1510E31054931E9D2829")
+	RegisterOnMainchainAddress = common.HexToAddress("0x98CF278a29EB4788E17725E9dd14150408817c42")
+	GovernanceTokenAddress = common.HexToAddress("0x6Bce05BF05E8776B2958E9AD830e0AA9dA749937")
 	TNT20VoucherContractAddress = common.HexToAddress("0x57F4B08e0b3CC5a9CBC888639DbE2171B1408722")
-	TNT20TokenBankAddress = common.HexToAddress("0xc7253857256391E518c4aF60aDa5Eb5972Dd6Dbc")
+	TNT20TokenBankAddress = common.HexToAddress("0x59B4C2Abe9F4c68A8950ccEB7bD03DcAD76A637e")
 }
 func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
@@ -112,205 +114,205 @@ func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	return auth
 }
 
-// func registerAndStake() {
-// 	//func main() {
-// 	AccountsInit()
-// 	client, err := ethclient.Dial("http://localhost:18888/rpc")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+func registerAndStake() {
+	//func main() {
+	AccountsInit()
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	subchainID := big.NewInt(9988)
+	subchainID := big.NewInt(9988)
 
-// 	//TNT20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
-// 	validator1 := accountList[1].fromAddress
-// 	validator2 := accountList[2].fromAddress
-// 	validator3 := accountList[3].fromAddress
-// 	chainGuarantor := accountList[7].fromAddress
+	//TNT20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
+	validator1 := accountList[1].fromAddress
+	validator2 := accountList[2].fromAddress
+	validator3 := accountList[3].fromAddress
+	chainGuarantor := accountList[7].fromAddress
 
-// 	instanceWrappedTheta, err := ct.NewMockWrappedTheta(WthetaAddress, client)
-// 	if err != nil {
-// 		log.Fatal("hhh", err)
-// 	}
-// 	instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(GovernanceTokenAddress, client)
-// 	if err != nil {
-// 		log.Fatal("hhh", err)
-// 	}
-// 	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, client)
-// 	if err != nil {
-// 		log.Fatal("hhh", err)
-// 	}
-// 	var dec18 = new(big.Int)
-// 	dec18.SetString("1000000000000000000", 10)
-// 	amount := new(big.Int).Mul(dec18, big.NewInt(200000))
+	instanceWrappedTheta, err := ct.NewMockWrappedTheta(WthetaAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(GovernanceTokenAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	amount := new(big.Int).Mul(dec18, big.NewInt(200000))
 
-// 	auth := SelectAccount(client, 7) //chainGuarantor
-// 	tx, err := instanceWrappedTheta.Mint(auth, chainGuarantor, amount)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	auth := SelectAccount(client, 7) //chainGuarantor
+	tx, err := instanceWrappedTheta.Mint(auth, chainGuarantor, amount)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	approveAmount := new(big.Int).Mul(dec18, big.NewInt(50000))
-// 	authchainGuarantor := SelectAccount(client, 7)
-// 	fmt.Println(instanceWrappedTheta.BalanceOf(nil, chainGuarantor))
-// 	tx, err = instanceWrappedTheta.Approve(authchainGuarantor, RegisterOnMainchainAddress, approveAmount)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	approveAmount := new(big.Int).Mul(dec18, big.NewInt(50000))
+	authchainGuarantor := SelectAccount(client, 7)
+	fmt.Println(instanceWrappedTheta.BalanceOf(nil, chainGuarantor))
+	tx, err = instanceWrappedTheta.Approve(authchainGuarantor, RegisterOnMainchainAddress, approveAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	registerAmount := new(big.Int).Mul(dec18, big.NewInt(40000))
-// 	authchainGuarantor = SelectAccount(client, 7)
-// 	tx, err = instanceChainRegistrar.RegisterSubchain(authchainGuarantor, subchainID, GovernanceTokenAddress, registerAmount, "111111")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	time.Sleep(1 * time.Second)
-// 	x, _ := instanceChainRegistrar.GetAllSubchainIDs(nil)
-// 	fmt.Println(x)
+	registerAmount := new(big.Int).Mul(dec18, big.NewInt(40000))
+	authchainGuarantor = SelectAccount(client, 7)
+	tx, err = instanceChainRegistrar.RegisterSubchain(authchainGuarantor, subchainID, GovernanceTokenAddress, registerAmount, "111111")
+	if err != nil {
+		log.Fatal(err)
+	}
+	time.Sleep(1 * time.Second)
+	x, _ := instanceChainRegistrar.GetAllSubchainIDs(nil)
+	fmt.Println(x)
 
-// 	validatorCollateralManagerAddr, _ := instanceChainRegistrar.Vcm(nil)
-// 	validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
+	validatorCollateralManagerAddr, _ := instanceChainRegistrar.Vcm(nil)
+	validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
 
-// 	//Deposit wTHETA collateral to validators
-// 	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
-// 	authValidator1 := SelectAccount(client, 1) //Validator1
+	//Deposit wTHETA collateral to validators
+	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
+	authValidator1 := SelectAccount(client, 1) //Validator1
 
-// 	tx, err = instanceWrappedTheta.Mint(authValidator1, validator1, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authValidator1 = SelectAccount(client, 1) //Validator1
-// 	tx, err = instanceWrappedTheta.Approve(authValidator1, validatorCollateralManagerAddr, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	// fmt.Println("validator1 collateral")
-// 	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[1].fromAddress))
-// 	authValidator1 = SelectAccount(client, 1) //Validator1
-// 	tx, err = instanceChainRegistrar.DepositCollateral(authValidator1, subchainID, validator1, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	tx, err = instanceWrappedTheta.Mint(authValidator1, validator1, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authValidator1 = SelectAccount(client, 1) //Validator1
+	tx, err = instanceWrappedTheta.Approve(authValidator1, validatorCollateralManagerAddr, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println("validator1 collateral")
+	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[1].fromAddress))
+	authValidator1 = SelectAccount(client, 1) //Validator1
+	tx, err = instanceChainRegistrar.DepositCollateral(authValidator1, subchainID, validator1, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	//Validator2
-// 	authValidator2 := SelectAccount(client, 2) //Validator2
-// 	// fmt.Println("validator1 collateral")
-// 	// fmt.Println(instanceWrappedThetaValidator1.BalanceOf(nil, accountList[1].fromAddress))
-// 	// fmt.Println("validator2 collateral")
-// 	// fmt.Println(instanceWrappedThetaValidator1.BalanceOf(nil, accountList[2].fromAddress))
-// 	tx, err = instanceWrappedTheta.Mint(authValidator2, validator2, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authValidator2 = SelectAccount(client, 2) //Validator2
-// 	tx, err = instanceWrappedTheta.Approve(authValidator2, validatorCollateralManagerAddr, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	// fmt.Println("validator2 collateral")
-// 	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[2].fromAddress))
-// 	authValidator2 = SelectAccount(client, 2) //Validator2
-// 	tx, err = instanceChainRegistrar.DepositCollateral(authValidator2, subchainID, validator2, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	//Validator2
+	authValidator2 := SelectAccount(client, 2) //Validator2
+	// fmt.Println("validator1 collateral")
+	// fmt.Println(instanceWrappedThetaValidator1.BalanceOf(nil, accountList[1].fromAddress))
+	// fmt.Println("validator2 collateral")
+	// fmt.Println(instanceWrappedThetaValidator1.BalanceOf(nil, accountList[2].fromAddress))
+	tx, err = instanceWrappedTheta.Mint(authValidator2, validator2, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authValidator2 = SelectAccount(client, 2) //Validator2
+	tx, err = instanceWrappedTheta.Approve(authValidator2, validatorCollateralManagerAddr, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println("validator2 collateral")
+	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[2].fromAddress))
+	authValidator2 = SelectAccount(client, 2) //Validator2
+	tx, err = instanceChainRegistrar.DepositCollateral(authValidator2, subchainID, validator2, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	//Validator3
-// 	authValidator3 := SelectAccount(client, 3) //Validator3
-// 	tx, err = instanceWrappedTheta.Mint(authValidator3, validator3, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authValidator3 = SelectAccount(client, 3) //Validator3
-// 	tx, err = instanceWrappedTheta.Approve(authValidator3, validatorCollateralManagerAddr, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authValidator3 = SelectAccount(client, 3) //Validator3
-// 	tx, err = instanceChainRegistrar.DepositCollateral(authValidator3, subchainID, validator3, validatorCollateral)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	//-------------------------------------
-// 	//Stake to the validators
-// 	validatorStakingAmount := new(big.Int).Mul(dec18, big.NewInt(100000))
-// 	validatorStakingAmountMint := new(big.Int)
-// 	validatorStakingAmountMint.Mul(validatorStakingAmount, big.NewInt(10))
-// 	//govTokenInitDistrWalletAddress:=accountList[6].fromAddress
+	//Validator3
+	authValidator3 := SelectAccount(client, 3) //Validator3
+	tx, err = instanceWrappedTheta.Mint(authValidator3, validator3, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authValidator3 = SelectAccount(client, 3) //Validator3
+	tx, err = instanceWrappedTheta.Approve(authValidator3, validatorCollateralManagerAddr, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authValidator3 = SelectAccount(client, 3) //Validator3
+	tx, err = instanceChainRegistrar.DepositCollateral(authValidator3, subchainID, validator3, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//-------------------------------------
+	//Stake to the validators
+	validatorStakingAmount := new(big.Int).Mul(dec18, big.NewInt(100000))
+	validatorStakingAmountMint := new(big.Int)
+	validatorStakingAmountMint.Mul(validatorStakingAmount, big.NewInt(10))
+	//govTokenInitDistrWalletAddress:=accountList[6].fromAddress
 
-// 	// fmt.Println("validator1 deposit")
-// 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
-// 	authGovTokenInitDistrWallet := SelectAccount(client, 6)
-// 	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator1, validatorStakingAmountMint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authGovTokenInitDistrWallet = SelectAccount(client, 6)
-// 	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator2, validatorStakingAmountMint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authGovTokenInitDistrWallet = SelectAccount(client, 6)
-// 	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator3, validatorStakingAmountMint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	// fmt.Println("validator1 deposit")
-// 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
-// 	authValidator1 = SelectAccount(client, 1) //Validator1
-// 	tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmountMint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authValidator2 = SelectAccount(client, 2) //Validator2
-// 	tx, err = instanceGovernanceToken.Approve(authValidator2, validatorStakeManagerAddr, validatorStakingAmountMint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	authValidator3 = SelectAccount(client, 3) //Validator3
-// 	tx, err = instanceGovernanceToken.Approve(authValidator3, validatorStakeManagerAddr, validatorStakingAmountMint)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	// fmt.Println("validator1 deposit")
+	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
+	authGovTokenInitDistrWallet := SelectAccount(client, 6)
+	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator1, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authGovTokenInitDistrWallet = SelectAccount(client, 6)
+	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator2, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authGovTokenInitDistrWallet = SelectAccount(client, 6)
+	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator3, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// fmt.Println("validator1 deposit")
+	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
+	authValidator1 = SelectAccount(client, 1) //Validator1
+	tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authValidator2 = SelectAccount(client, 2) //Validator2
+	tx, err = instanceGovernanceToken.Approve(authValidator2, validatorStakeManagerAddr, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	authValidator3 = SelectAccount(client, 3) //Validator3
+	tx, err = instanceGovernanceToken.Approve(authValidator3, validatorStakeManagerAddr, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	// fmt.Println("validator1 allowance")
-// 	// fmt.Println(instanceGovernanceToken.Allowance(nil, accountList[1].fromAddress, validatorStakeManagerAddr))
-// 	// fmt.Println("wallet deposited")
-// 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validatorStakeManagerAddr))
+	// fmt.Println("validator1 allowance")
+	// fmt.Println(instanceGovernanceToken.Allowance(nil, accountList[1].fromAddress, validatorStakeManagerAddr))
+	// fmt.Println("wallet deposited")
+	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validatorStakeManagerAddr))
 
-// 	authValidator1 = SelectAccount(client, 1) //Validator1
-// 	tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	authValidator1 = SelectAccount(client, 1) //Validator1
+	tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	// fmt.Println("validator2 deposited")
-// 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, accountList[2].fromAddress))
+	// fmt.Println("validator2 deposited")
+	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, accountList[2].fromAddress))
 
-// 	//height1 := big.NewInt(int64(height))
-// 	authValidator2 = SelectAccount(client, 2) //Validator2
-// 	tx, err = instanceChainRegistrar.DepositStake(authValidator2, subchainID, validator2, validatorStakingAmount)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
+	//height1 := big.NewInt(int64(height))
+	authValidator2 = SelectAccount(client, 2) //Validator2
+	tx, err = instanceChainRegistrar.DepositStake(authValidator2, subchainID, validator2, validatorStakingAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
 
-// 	authValidator3 = SelectAccount(client, 3) //Validator3
-// 	tx, err = instanceChainRegistrar.DepositStake(authValidator3, subchainID, validator3, validatorStakingAmount)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Println(tx)
+	authValidator3 = SelectAccount(client, 3) //Validator3
+	tx, err = instanceChainRegistrar.DepositStake(authValidator3, subchainID, validator3, validatorStakingAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tx)
 
-// 	time.Sleep(5 * time.Second)
-// 	// height, _ := client.BlockNumber(context.Background())
-// 	// fmt.Println(big.NewInt(int64(height)))
-// 	// dynasty := big.NewInt(int64(height/100 + 1))
-// 	// tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
-// 	// fmt.Println(tx1)
-// 	// fmt.Println(tx2)
-// 	tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Println(tx3)
-// }
+	time.Sleep(5 * time.Second)
+	// height, _ := client.BlockNumber(context.Background())
+	// fmt.Println(big.NewInt(int64(height)))
+	// dynasty := big.NewInt(int64(height/100 + 1))
+	// tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
+	// fmt.Println(tx1)
+	// fmt.Println(tx2)
+	tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tx3)
+}

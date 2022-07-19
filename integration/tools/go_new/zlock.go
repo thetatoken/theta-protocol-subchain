@@ -193,7 +193,8 @@ func main5() {
 	fmt.Println(height)
 }
 func main() {
-	main5()
+	registerAndStake()
+	AccountsInit()
 
 	//extract()
 }
