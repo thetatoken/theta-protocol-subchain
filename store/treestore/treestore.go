@@ -14,6 +14,7 @@ import (
 func NewTreeStore(root common.Hash, db database.Database) *TreeStore {
 	var tr *trie.Trie
 	var err error
+
 	tr, err = trie.New(root, trie.NewDatabase(db))
 	if err != nil {
 		log.Errorf("Failed to create tree store for: %v: %v", root.Hex(), err)

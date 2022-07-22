@@ -20,12 +20,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"math/big"
+	"strings"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/math"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/crypto/bn256"
 	"github.com/thetatoken/theta/ledger/vm/params"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -379,6 +381,42 @@ func (c *validatorSet) RequiredGas(input []byte, blockHeight uint64) uint64 {
 }
 
 func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	const RawABI = `
+[
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "validator",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "shareAmount",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct TestRegister.ValidatorAddrSharePair[]",
+				"name": "a",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+	}
+]`
+	type hhh struct {
+		Validator   common.Address
+		ShareAmount *big.Int
+	}
+	parsed, err := abi.JSON(strings.NewReader(RawABI))
+	if err != nil {
+		panic(err)
+	}
+	var a []hhh
+
 	chainID := new(big.Int).SetBytes(getData(input, 0, 32))
 	dynasty := new(big.Int).SetBytes(getData(input, 32, 32))
 
@@ -387,18 +425,19 @@ func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 		return common.Bytes{}, nil
 	}
 
-	valSetBytes := common.Bytes{}
+	//valSetBytes := common.Bytes{}
 	validators := validatorSet.Validators()
 	for _, val := range validators {
-		valAddrBytes := val.Address.Bytes()
-		valAddrBytes32 := common.LeftPadBytes(valAddrBytes[:], 32) // left pad with 0s, easier to decode with abi.decode() in smart contracts
-		valSetBytes = append(valSetBytes, valAddrBytes32...)
-
-		valStakeBytes := val.Stake.Bytes()
-		valStakeBytes32 := common.LeftPadBytes(valStakeBytes[:], 32)
-		valSetBytes = append(valSetBytes, valStakeBytes32...)
+		c := &hhh{
+			Validator:   val.Address,
+			ShareAmount: val.Stake,
+		}
+		a = append(a, *c)
 	}
-
+	valSetBytes, err := parsed.Pack("", a)
+	if err != nil {
+		panic(err)
+	}
 	return valSetBytes, nil
 }
 

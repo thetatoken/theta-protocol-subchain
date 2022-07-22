@@ -1,7 +1,7 @@
 # Theta configuration
 # chainID: tsub_3610001
 genesis:
-  hash: "0xdc2dff2b8c58dd5f015e29359231c8ede84c4378d7b3375960fc9eea8f448127"
+  hash: "0xb1b7d31d52309bdc4d4d2d8c4b2fb9e79f3fade2e3eca3a8bbf8aedee352e2bf"
 p2p:
   port: 12100
 rpc:
@@ -14,8 +14,9 @@ consensus:
 subchain:
   mainchainEthRpcURL: "http://localhost:18888/rpc"
   subchainEthRpcURL: "http://localhost:19888/rpc"
-  chainRegistrarOnMainchain: "0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa"
+  chainRegistrarOnMainchain: "0x560A0c0CA6B0A67895024dae77442C5fd3DC473e"
   mainchainTFuelTB: "0x5a443704dd4B594B382c22a083e2BD3090A6feF3"
-  mainchainTNT20TB: "0x2Ce636d6240f8955d085a896e12429f8B3c7db26"
+  mainchainTNT20TB: "0x57F4B08e0b3CC5a9CBC888639DbE2171B1408722"
   updateInterval: 3000
+  #ID: 360777
 

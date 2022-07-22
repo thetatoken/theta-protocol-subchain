@@ -30,7 +30,7 @@ var RegisterOnMainchainAddress common.Address
 var GovernanceTokenAddress common.Address
 var TNT20VoucherContractAddress common.Address
 var TNT20TokenBankAddress common.Address
-
+var SubchainTNT20TokenBankAddress common.Address
 var accountList []accounts
 
 func keccak256(data ...[]byte) []byte {
@@ -48,7 +48,7 @@ func AccountsInit() {
 	var map1 []string
 
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
-	map1 = append(map1, "2dad160420b1e9b6fc152cd691a686a7080a0cee41b98754597a2ce57cc5dab1")
+	map1 = append(map1, "93a90ea508331dfdf27fb79757d4250b4e84954927ba0073cd67454ac432c737")
 	map1 = append(map1, "3333333333333333333333333333333333333333333333333333333333333333")
 	map1 = append(map1, "4444444444444444444444444444444444444444444444444444444444444444")
 	map1 = append(map1, "5555555555555555555555555555555555555555555555555555555555555555")
@@ -74,15 +74,16 @@ func AccountsInit() {
 		}
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
-		fmt.Println(value, "-----", fromAddress)
+		//fmt.Println(value, "-----", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
-	WthetaAddress = common.HexToAddress("0x7d73424a8256C0b2BA245e5d5a3De8820E45F390")
-	RegisterOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
-	GovernanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
-	TNT20VoucherContractAddress = common.HexToAddress("0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9")
-	TNT20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
+	WthetaAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
+	RegisterOnMainchainAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
+	GovernanceTokenAddress = common.HexToAddress("0xc7253857256391E518c4aF60aDa5Eb5972Dd6Dbc")
+	TNT20VoucherContractAddress = common.HexToAddress("0x709E8cf0fDFeD987f57AF8Ce0103562cF6832d41")
+	TNT20TokenBankAddress = common.HexToAddress("0x57F4B08e0b3CC5a9CBC888639DbE2171B1408722")
+	SubchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 }
 func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
@@ -90,6 +91,7 @@ func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	if err != nil {
 		log.Fatal(err)
 	}
+	//chainID := big.NewInt(360777)
 	fromAddress := accountList[id].fromAddress
 	privateKey := accountList[id].privateKey
 	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
@@ -114,7 +116,37 @@ func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 
 	return auth
 }
+func SubchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
+	time.Sleep(1 * time.Second)
+	// chainID, err := client.ChainID(context.Background())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	chainID := big.NewInt(360777)
+	fromAddress := accountList[id].fromAddress
+	privateKey := accountList[id].privateKey
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
 
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	auth, err := bind.NewKeyedTransactorWithChainID(crypto.ECDSAToPrivKey(privateKey), chainID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)
+	// auth.Value = big.NewInt(20000000000000000000) // in wei
+	auth.GasLimit = uint64(3000000) // in units
+	auth.GasPrice = gasPrice
+
+	return auth
+}
 func oneAccountRegister() {
 	//func main() {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
@@ -122,7 +154,7 @@ func oneAccountRegister() {
 		log.Fatal(err)
 	}
 
-	subchainID := big.NewInt(9988)
+	subchainID := big.NewInt(360777)
 
 	//TNT20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
 
@@ -175,7 +207,7 @@ func oneAcoountStake() {
 	}
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
-	subchainID := big.NewInt(9988)
+	subchainID := big.NewInt(360777)
 	instanceWrappedTheta, err := ct.NewMockWrappedTheta(WthetaAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)

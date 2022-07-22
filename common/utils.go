@@ -7,7 +7,7 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 )
 
-const NumMainchainBlocksPerDynasty int64 = 100
+const NumMainchainBlocksPerDynasty int64 = 10
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "common"})
 

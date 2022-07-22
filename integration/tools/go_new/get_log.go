@@ -10,7 +10,7 @@ import (
 
 func getlog() {
 
-	url := "http://127.0.0.1:18888/rpc"
+	url := "http://127.0.0.1:19888/rpc"
 
 	type LogData struct {
 		LogIndex         string   `json:"logIndex"`
@@ -30,7 +30,7 @@ func getlog() {
 		Result  []LogData `json:"result"`
 	}
 
-	queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"1b68","toBlock":"1b70", "address":"0xc7253857256391E518c4aF60aDa5Eb5972Dd6Dbc","topics":["0xe5d8852bc02bf44f2a49b2d7722fa497ff83b689a28de1253304d2bc43d7b1cb"]}],"id":74}`
+	queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"20", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`
 	var jsonData = []byte(queryStr)
 	fmt.Println(queryStr)
 

@@ -143,7 +143,10 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 
 		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
 	}
-
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	amount := new(big.Int).Mul(dec18, big.NewInt(2000000))
+	setInitialBalance(sv, common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"), amount)
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
 
@@ -185,7 +188,7 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 
 	sequence := 0
 	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, predeployed.ChainRegistrarContractBytecode, deployer, sequence, slst.ChainRegistrarContractAddressKey())
-	fmt.Println(hex.EncodeToString(chainRegistrarContractAddr[:]))
+	fmt.Println(chainRegistrarContractAddr.Hex())
 	if err != nil {
 		logger.Panicf("Failed to deploy the chain registrar smart contract (sequence = %v): %v", sequence, err)
 	}
@@ -204,11 +207,11 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	//
 	// Deploy the TokenBank contracts
 	//
-	sequence += 1
-	_, err = deploySmartContract(subchainID, sv, predeployed.TestByteCodeA, deployer, sequence, slst.TestAddressKeyA())
-	if err != nil {
-		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
-	}
+	// sequence += 1
+	// _, err = deploySmartContract(subchainID, sv, predeployed.TestByteCodeA, deployer, sequence, slst.TestAddressKeyA())
+	// if err != nil {
+	// 	logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
+	// }
 	// for idx, contractBytecode := range tokenBankContractBytecodes {
 	// 	sequence += 1
 	// 	tokenBankDeploymentBytecode := addConstructorArgumentForTokenBankBytecode(contractBytecode, mainchainIDInt, chainRegistrarContractAddr)
@@ -227,12 +230,13 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	if err != nil {
 		logger.Panicf("Failed to deploy TokenBank1 smart contract (sequence = %v): %v", sequence, err)
 	}
+
 	sequence += 1
-	_, err = deploySmartContract(subchainID, sv, predeployed.TNT20TokenBankContractBytecode, deployer, sequence, slst.TNT20TokenBankContractAddressKey())
+	TNT20TokenBankContractAddr, err := deploySmartContract(subchainID, sv, predeployed.TNT20TokenBankContractBytecode, deployer, sequence, slst.TNT20TokenBankContractAddressKey())
 	if err != nil {
 		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
 	}
-
+	fmt.Println(TNT20TokenBankContractAddr.Hex())
 	sequence += 1
 	_, err = deploySmartContract(subchainID, sv, predeployed.TestByteCodeB, deployer, sequence, slst.TestAddressKeyB())
 	if err != nil {
@@ -386,17 +390,16 @@ func sanityChecks(sv *slst.StoreView) error {
 	// 	panic("TFuel token bank contract is not set")
 	// }
 	// logger.Infof("TFuel Token Bank Contract Address: %v", tfuelTokenBankContractAddr.Hex())
-
 	tnt20TokenBankContractAddr := sv.GetTNT20TokenBankContractAddress()
 	if tnt20TokenBankContractAddr == nil {
 		panic("TNT20 token bank contract is not set")
 	}
 	logger.Infof("TNT20 Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
-	testContractAddrA := sv.GetTestContractAddressA()
-	if tnt20TokenBankContractAddr == nil {
-		panic("TNT20 token bank contract is not set")
-	}
-	logger.Infof("TestToken Bank Contract Address: %v", testContractAddrA.Hex())
+	// testContractAddrA := sv.GetTestContractAddressA()
+	// if tnt20TokenBankContractAddr == nil {
+	// 	panic("TNT20 token bank contract is not set")
+	// }
+	// logger.Infof("TestToken Bank Contract Address: %v", testContractAddrA.Hex())
 	testContractAddrB := sv.GetTestContractAddressB()
 	if tnt20TokenBankContractAddr == nil {
 		panic("TNT20 token bank contract is not set")
