@@ -82,14 +82,12 @@ func NewNode(params *Params) *Node {
 
 	interChainEventCache := siu.NewInterChainEventCache(params.DB)
 
-	// For testing...
-	// metachainWitness := witness.NewSimulatedMainchainWitness(
-	// 	viper.GetString(scom.CfgMainchainEthRpcURL),
+	// // For testing...
+	// metachainWitness := witness.NewSimulatedMetachainWitness(
+	// 	"privatenet",
 	// 	params.ChainID,
-	// 	common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
-	// 	common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
 	// 	interChainEventCache,
-	// 	viper.GetInt(scom.CfgSubchainTestID))
+	// 	0)
 	metachainWitness := witness.NewMetachainWitness(
 		params.DB,
 		viper.GetInt(scom.CfgSubchainUpdateIntervalInMilliseconds),
