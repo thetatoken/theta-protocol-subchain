@@ -204,7 +204,7 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	//oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
-	//oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
+	oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
 }
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
@@ -369,6 +369,8 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 		err = oc.mintTFuelVouchers(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainVoucherMintTNT20:
 		err = oc.mintTNT20Vouchers(txOpts, targetChainID, sourceEvent)
+	case score.IMCEventTypeCrossChainVoucherMintTNT721:
+		err = oc.mintTN721Vouchers(txOpts, targetChainID, sourceEvent)
 
 	// Token Unlock events
 	case score.IMCEventTypeCrossChainTokenUnlockTFuel:
@@ -438,6 +440,27 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
 	//txOpts.Value = big.NewInt(1)
 	tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	if err != nil {
+		return err
+	}
+	fmt.Println(tx.Hash().Hex())
+	return nil
+}
+
+func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	se, err := score.ParseToCrossChainTNT721TokenLockedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	if dynasty == nil {
+		return nil
+	}
+
+	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
+	fmt.Println(TNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
+	//txOpts.Value = big.NewInt(1)
+	tx, err := TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol,se.TargetChainVoucherReceiver,se.TokenID,se.TokenURI,dynasty,se.TokenLockNonce)
 	if err != nil {
 		return err
 	}

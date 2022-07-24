@@ -292,32 +292,32 @@ type CrossChainTNT721TokenLockedEvent struct { // corresponding to the "TNT721To
 }
 
 func ParseToCrossChainTNT721TokenLockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT721TokenLockedEvent, error) {
-	// if icme.Type != IMCEventTypeCrossChainTokenLockTNT721 {
-	// 	return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
-	// }
+	if icme.Type != IMCEventTypeCrossChainTokenLockTNT721 {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
 
-	// var event CrossChainTNT721TokenLockedEvent
-	// contractAbi, err := abi.JSON(strings.NewReader(string(scta.MainchainTNT721TokenBankABI)))
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// contractAbi.UnpackIntoInterface(&event, "TNT721TokenLocked", icme.Data)
-	// event.Denom = strings.ToLower(event.Denom)
-	// if err := ValidateDenom(event.Denom); err != nil {
-	// 	return nil, err
-	// }
-	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if icme.SourceChainID.Cmp(originatedChainID) != 0 {
-	// 	// Token Lock events can only happen on the chain where the authenic token was deployed. Thus, the "source chain", i.e. where the token is sending from
-	// 	// needs to be the same as the "originated chain".
-	// 	return nil, fmt.Errorf("source chain ID mismatch for TNT721 lock: %v vs %v", icme.SourceChainID, originatedChainID)
-	// }
+	var event CrossChainTNT721TokenLockedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TNT721TokenLocked", icme.Data)
+	event.Denom = strings.ToLower(event.Denom)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
+		// Token Lock events can only happen on the chain where the authenic token was deployed. Thus, the "source chain", i.e. where the token is sending from
+		// needs to be the same as the "originated chain".
+		return nil, fmt.Errorf("source chain ID mismatch for TNT721 lock: %v vs %v", icme.SourceChainID, originatedChainID)
+	}
 
-	// return &event, nil
-	return nil, nil // TODO: implementation
+	return &event, nil
+	//return nil, nil // TODO: implementation
 }
 
 // ------------------------------------ Cross-Chain: Voucher Mint --------------------------------------------

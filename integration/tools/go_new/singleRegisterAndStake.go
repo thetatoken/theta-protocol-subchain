@@ -32,6 +32,8 @@ var TNT20VoucherContractAddress common.Address
 var TNT20TokenBankAddress common.Address
 var SubchainTNT20TokenBankAddress common.Address
 var accountList []accounts
+var TNT721TokenBankAddress common.Address
+var TNT721VoucherContractAddress common.Address
 
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
@@ -84,6 +86,9 @@ func AccountsInit() {
 	TNT20VoucherContractAddress = common.HexToAddress("0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9")
 	TNT20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
 	SubchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
+
+	TNT721TokenBankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
+	TNT721VoucherContractAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
 }
 func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
