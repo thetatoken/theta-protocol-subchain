@@ -51,6 +51,7 @@ type MetachainWitness struct {
 	subchainID                 *big.Int
 	subchainEthRpcUrl          string
 	subchainEthRpcClient       *ec.Client
+	subchainBlockHeight        *big.Int
 	subchainTFuelTokenBankAddr common.Address
 	subchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the subchain
 	subchainTNT20TokenBankAddr common.Address
@@ -125,6 +126,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		subchainID:           subchainID,
 		subchainEthRpcUrl:    subchainEthRpcURL,
 		subchainEthRpcClient: subchainEthRpcClient,
+		subchainBlockHeight:  nil,
 		validatorSetCache:    validatorSet,
 		interChainEventCache: interChainEventCache,
 
@@ -183,6 +185,13 @@ func (mw *MetachainWitness) GetMainchainBlockHeight() (*big.Int, error) {
 	return mw.mainchainBlockHeight, nil
 }
 
+func (mw *MetachainWitness) GetSubchainBlockHeight() (*big.Int, error) {
+	if mw.subchainBlockHeight == nil {
+		return nil, fmt.Errorf("mainchain block height not been updated yet")
+	}
+	return mw.subchainBlockHeight, nil
+}
+
 func (mw *MetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
 	validatorSet, ok := mw.validatorSetCache[dynasty.String()]
 	if ok && validatorSet != nil && validatorSet.Dynasty() == dynasty {
@@ -222,6 +231,7 @@ func (mw *MetachainWitness) update() {
 
 	// Subchain
 	mw.collectInterChainMessageEventsOnSubchain()
+	mw.updateSubchainBlockHeight()
 }
 
 func (mw *MetachainWitness) updateMainchainBlockHeight() {
@@ -231,6 +241,14 @@ func (mw *MetachainWitness) updateMainchainBlockHeight() {
 		return
 	}
 	mw.mainchainBlockHeight = big.NewInt(int64(mbh))
+}
+
+func (mw *MetachainWitness) updateSubchainBlockHeight() {
+	sbh, err := mw.subchainEthRpcClient.BlockNumber(context.Background())
+	if err != nil {
+		return
+	}
+	mw.subchainBlockHeight = big.NewInt(int64(sbh))
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnMainchain() {
@@ -249,10 +267,11 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
-	toBlock := mw.calculateToBlock(fromBlock)
-	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", queriedChainID.String(), fromBlock.String(), toBlock.String())
+	toBlock := mw.calculateToBlock(fromBlock, queriedChainID)
+	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", fromBlock.String(), toBlock.String(), queriedChainID.String())
 
 	queryTypes := append(siu.LockTypes, siu.UnlockTypes...)
+	queryTypes = append(queryTypes, siu.VoucherBurnTypes...)
 	for _, imceType := range queryTypes {
 		var events []*score.InterChainMessageEvent
 		switch imceType {
@@ -272,8 +291,14 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
 }
 
-func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int) *big.Int {
-	toBlock, err := mw.GetMainchainBlockHeight()
+func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID *big.Int) *big.Int {
+	var toBlock *big.Int
+	var err error
+	if queriedChainID == mw.mainchainID {
+		toBlock, err = mw.GetMainchainBlockHeight()
+	} else {
+		toBlock, err = mw.GetSubchainBlockHeight()
+	}
 	if err != nil {
 		return fromBlock
 	}

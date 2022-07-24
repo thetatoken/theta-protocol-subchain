@@ -176,8 +176,8 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 			oc.processNextTokenLockEvent(oc.subchainID, oc.mainchainID) // send token from the subchain to the mainchain
 
 			// Handle voucher burn events
-			//oc.processNextVoucherBurnEvent(oc.mainchainID, oc.subchainID) // burn voucher to send token from the mainchain back to the subchain
-			//oc.processNextVoucherBurnEvent(oc.subchainID, oc.mainchainID) // burn voucher to send token from the subchain back to the mainchain
+			oc.processNextVoucherBurnEvent(oc.mainchainID, oc.subchainID) // burn voucher to send token from the mainchain back to the subchain
+			oc.processNextVoucherBurnEvent(oc.subchainID, oc.mainchainID) // burn voucher to send token from the subchain back to the mainchain
 		}
 	}
 }
@@ -224,7 +224,7 @@ func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, t
 }
 
 func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
-	oc.processNextTFuelVoucherBurnEvent(sourceChainID, targetChainID)
+	//oc.processNextTFuelVoucherBurnEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20VoucherBurnEvent(sourceChainID, targetChainID)
 }
 
@@ -368,19 +368,36 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 }
 
 func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	//se, err := score.ParseToCrossChainTNT20TokenLockedEvent(sourceEvent)
-	// if err != nil {
-	// 	return err
-	// }
-	//dynasty := oc.getDynasty()
-	TNT20TokenBank := oc.subchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
-	fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
-	txOpts.Value = big.NewInt(1)
-	//_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
-	// if err != nil {
-	// 	return err
-	// }
-	return nil
+	se, err := score.ParseToCrossChainTNT20TokenLockedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	if dynasty == nil {
+		return nil
+	}
+	if targetChainID == oc.subchainID {
+		TNT20TokenBank := oc.subchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
+		fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
+		//txOpts.Value = big.NewInt(1)
+		tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+		if err != nil {
+			return err
+		}
+		fmt.Println(tx.Hash().Hex())
+		return nil
+	} else {
+		TNT20TokenBank := oc.mainchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
+		fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
+		//txOpts.Value = big.NewInt(1)
+		tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+		if err != nil {
+			return err
+		}
+		fmt.Println(tx.Hash().Hex())
+		return nil
+	}
+
 }
 
 func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
@@ -403,10 +420,24 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 		return err
 	}
 	dynasty := oc.getDynasty()
+	if targetChainID == oc.mainchainID {
+		TNT20TokenBank := oc.mainchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
+		tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+		if err != nil {
+			return err
+		}
+		fmt.Println(tx.Hash().Hex())
+		return nil
+	} else {
+		TNT20TokenBank := oc.subchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
+		tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+		if err != nil {
+			return err
+		}
+		fmt.Println(tx.Hash().Hex())
+		return nil
+	}
 
-	TNT20TokenBank := oc.mainchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
-	return nil
 }
 
 func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bind.TransactOpts, error) {

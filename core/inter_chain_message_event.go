@@ -246,7 +246,7 @@ type CrossChainTNT20TokenLockedEvent struct { // corresponding to the "TNT20Toke
 	LockedAmount               *big.Int
 	Name                       string
 	Symbol                     string
-	Decimal                   uint8//gai
+	Decimal                    uint8 //gai
 	TokenLockNonce             *big.Int
 }
 
@@ -455,7 +455,7 @@ func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 
 	var event CrossChainTNT20VoucherBurnedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TestSubchainTNT20TokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
@@ -463,13 +463,13 @@ func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-	if err != nil {
-		return nil, err
-	}
-	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
-		return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
-	}
+	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+	// 	return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
+	// }
 
 	return &event, nil
 }

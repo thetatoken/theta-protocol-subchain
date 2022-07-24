@@ -78,11 +78,11 @@ func AccountsInit() {
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
-	WthetaAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
-	RegisterOnMainchainAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
-	GovernanceTokenAddress = common.HexToAddress("0xc7253857256391E518c4aF60aDa5Eb5972Dd6Dbc")
-	TNT20VoucherContractAddress = common.HexToAddress("0x709E8cf0fDFeD987f57AF8Ce0103562cF6832d41")
-	TNT20TokenBankAddress = common.HexToAddress("0x57F4B08e0b3CC5a9CBC888639DbE2171B1408722")
+	WthetaAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
+	RegisterOnMainchainAddress = common.HexToAddress("0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af")
+	GovernanceTokenAddress = common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4")
+	TNT20VoucherContractAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
+	TNT20TokenBankAddress = common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
 	SubchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 }
 func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
