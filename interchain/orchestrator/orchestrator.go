@@ -204,7 +204,7 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	//oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
-	oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
+	//oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
 }
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
