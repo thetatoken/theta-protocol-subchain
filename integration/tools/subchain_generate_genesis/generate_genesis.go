@@ -17,6 +17,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
 	"github.com/thetatoken/theta/rlp"
+	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/theta/store/database/backend"
 	"github.com/thetatoken/theta/store/trie"
 
@@ -26,6 +27,7 @@ import (
 	"github.com/thetatoken/thetasubchain/interchain/contracts/predeployed"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
+	ststore "github.com/thetatoken/thetasubchain/store/treestore"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "genesis"})
@@ -48,7 +50,7 @@ type Validator struct {
 func main() {
 	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
 
-	sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath)
+	db, sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
@@ -60,7 +62,7 @@ func main() {
 		logger.Infof("Sanity checks all passed.")
 	}
 
-	err = writeGenesisSnapshot(sv, metadata, genesisSnapshotFilePath)
+	err = writeGenesisSnapshot(db, sv, metadata, genesisSnapshotFilePath)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to write genesis snapshot: %v", err))
 	}
@@ -91,11 +93,12 @@ func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSna
 }
 
 // generateGenesisSnapshot generates the genesis snapshot.
-func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string) (*slst.StoreView, *score.SnapshotMetadata, error) {
+func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string) (database.Database, *slst.StoreView, *score.SnapshotMetadata, error) {
 	metadata := &score.SnapshotMetadata{}
 	genesisHeight := score.GenesisBlockHeight
 
-	sv := slst.NewStoreView(0, common.Hash{}, backend.NewMemDatabase())
+	db := backend.NewMemDatabase()
+	sv := slst.NewStoreView(0, common.Hash{}, db)
 
 	setInitialValidatorSet(subchainID, initValidatorSetFilePath, genesisHeight, sv)
 	deployInitialSmartContracts(mainchainID, subchainID, sv)
@@ -116,7 +119,7 @@ func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, 
 		Third:  score.SnapshotThirdBlock{},
 	}
 
-	return sv, metadata, nil
+	return db, sv, metadata, nil
 }
 
 func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, genesisHeight uint64, sv *slst.StoreView) *score.ValidatorSet {
@@ -297,7 +300,7 @@ func deploySmartContract(subchainID string, sv *slst.StoreView, contractBytecode
 		return common.Address{}, err
 	}
 	deploySCTx := types.SmartContractTx{
-		From:     types.NewTxInput(common.Address{}, types.NewCoins(0, 0), sequence),
+		From:     types.NewTxInput(deployer, types.NewCoins(0, 0), sequence),
 		To:       types.TxOutput{Address: common.Address{}}, // deploy contract
 		GasLimit: dummyGasLimit,
 		GasPrice: dummyGasPrice,
@@ -319,7 +322,7 @@ func deploySmartContract(subchainID string, sv *slst.StoreView, contractBytecode
 }
 
 // writeGenesisSnapshot writes genesis snapshot to file system.
-func writeGenesisSnapshot(sv *slst.StoreView, metadata *score.SnapshotMetadata, genesisSnapshotFilePath string) error {
+func writeGenesisSnapshot(db database.Database, sv *slst.StoreView, metadata *score.SnapshotMetadata, genesisSnapshotFilePath string) error {
 	file, err := os.Create(genesisSnapshotFilePath)
 	if err != nil {
 		return err
@@ -330,11 +333,11 @@ func writeGenesisSnapshot(sv *slst.StoreView, metadata *score.SnapshotMetadata, 
 	if err != nil {
 		return err
 	}
-	writeStoreView(sv, true, writer)
+	writeStoreView(db, sv, true, writer)
 	return err
 }
 
-func writeStoreView(sv *slst.StoreView, needAccountStorage bool, writer *bufio.Writer) {
+func writeStoreView(db database.Database, sv *slst.StoreView, needAccountStorage bool, writer *bufio.Writer) {
 	height := score.Itobytes(sv.Height())
 	err := score.WriteRecord(writer, []byte{score.SVStart}, height)
 	if err != nil {
@@ -345,6 +348,34 @@ func writeStoreView(sv *slst.StoreView, needAccountStorage bool, writer *bufio.W
 		if err != nil {
 			panic(err)
 		}
+
+		if needAccountStorage && bytes.HasPrefix(k, []byte("ls/a")) {
+			account := &types.Account{}
+			err := types.FromBytes([]byte(v), account)
+			if err != nil {
+				logger.Errorf("Failed to parse account for %v", []byte(v))
+				panic(err)
+			}
+			if account.Root != (common.Hash{}) {
+				err = score.WriteRecord(writer, []byte{score.SVStart}, height)
+				if err != nil {
+					panic(err)
+				}
+				storage := ststore.NewTreeStore(account.Root, db)
+				storage.Traverse(nil, func(ak, av common.Bytes) bool {
+					err = score.WriteRecord(writer, ak, av)
+					if err != nil {
+						panic(err)
+					}
+					return true
+				})
+				err = score.WriteRecord(writer, []byte{score.SVEnd}, height)
+				if err != nil {
+					panic(err)
+				}
+			}
+		}
+
 		return true
 	})
 	err = score.WriteRecord(writer, []byte{score.SVEnd}, height)
