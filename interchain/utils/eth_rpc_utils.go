@@ -63,24 +63,24 @@ var UnlockTypes = []score.InterChainMessageEventType{
 
 var EventSelectors = map[score.InterChainMessageEventType]string{
 	// TokenLock events
-	score.IMCEventTypeCrossChainTokenLockTFuel: crypto.Keccak256Hash([]byte("TFuelTokenLocked(string,address,uint256,address,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainTokenLockTNT20: crypto.Keccak256Hash([]byte("TNT20TokenLocked(string,address,uint256,address,uint256,string,string,uint8,uint256)")).Hex(),
-	//score.IMCEventTypeCrossChainTokenLockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenLocked()")).Hex(),
+	score.IMCEventTypeCrossChainTokenLockTFuel:  crypto.Keccak256Hash([]byte("TFuelTokenLocked(string,address,uint256,address,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainTokenLockTNT20:  crypto.Keccak256Hash([]byte("TNT20TokenLocked(string,address,uint256,address,uint256,string,string,uint8,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainTokenLockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenLocked(string,address,uint256,address,uint256,string,string,string,uint256)")).Hex(),
 
 	// VoucherMint events
-	score.IMCEventTypeCrossChainVoucherMintTFuel: crypto.Keccak256Hash([]byte("TFuelVoucherMinted(string,address,uint256,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainVoucherMintTNT20: crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex(),
-	// score.IMCEventTypeCrossChainVoucherMintTNT721: crypto.Keccak256Hash([]byte("TNT721VoucherMinted()")).Hex(),
+	score.IMCEventTypeCrossChainVoucherMintTFuel:  crypto.Keccak256Hash([]byte("TFuelVoucherMinted(string,address,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherMintTNT20:  crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherMintTNT721: crypto.Keccak256Hash([]byte("TNT721VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex(),
 
 	// VoucherBurn events
-	score.IMCEventTypeCrossChainVoucherBurnTFuel: crypto.Keccak256Hash([]byte("TFuelVoucherBurned(string,address,address,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainVoucherBurnTNT20: crypto.Keccak256Hash([]byte("TNT20VoucherBurned(string,address,address,uint256,uint256)")).Hex(),
-	//score.IMCEventTypeCrossChainVoucherBurnTNT721: crypto.Keccak256Hash([]byte("TNT721VoucherBurned()")).Hex(),
+	score.IMCEventTypeCrossChainVoucherBurnTFuel:  crypto.Keccak256Hash([]byte("TFuelVoucherBurned(string,address,address,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherBurnTNT20:  crypto.Keccak256Hash([]byte("TNT20VoucherBurned(string,address,address,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherBurnTNT721: crypto.Keccak256Hash([]byte("TNT721VoucherBurned(string,address,address,uint256,uint256)")).Hex(),
 
 	// TokenUnlock events
-	score.IMCEventTypeCrossChainTokenUnlockTFuel: crypto.Keccak256Hash([]byte("TFuelTokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainTokenUnlockTNT20: crypto.Keccak256Hash([]byte("TNT20TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
-	//score.IMCEventTypeCrossChainTokenUnlockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenUnlocked()")).Hex(),
+	score.IMCEventTypeCrossChainTokenUnlockTFuel:  crypto.Keccak256Hash([]byte("TFuelTokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainTokenUnlockTNT20:  crypto.Keccak256Hash([]byte("TNT20TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainTokenUnlockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
 }
 
 func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType score.InterChainMessageEventType, url string) []*score.InterChainMessageEvent {
@@ -196,23 +196,23 @@ func extractTNT20TokenLockedEvent(sourceChainID *big.Int, logData LogData, event
 }
 
 func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	// data, _ := hex.DecodeString(logData.Data[2:])
-	// var tma CrossChainTNT721TokenLockedEvent
-	// contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
-	// contractAbi.UnpackIntoInterface(&tma, "TNT721TokenLocked", data)
-	// blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
-	// event := &InterChainMessageEvent{
-	// 	Type:          IMCEventTypeCrossChainTokenLockTNT20,
-	// 	SourceChainID: sourceChainID,
-	// 	TargetChainID: tma.TargetChainID,
-	// 	Sender:        tma.SourceChainTokenSender,
-	// 	Receiver:      tma.TargetChainVoucherReceiver,
-	// 	Data:          data,
-	// 	Nonce:         tma.Nonce,
-	// 	BlockHeight:   blockHeight,
-	// }
-	// logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
-	// *events = append(*events, event)
+	data, _ := hex.DecodeString(logData.Data[2:])
+	var tma score.CrossChainTNT721TokenLockedEvent
+	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	contractAbi.UnpackIntoInterface(&tma, "TNT721TokenLocked", data)
+	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	event := &score.InterChainMessageEvent{
+		Type:          IMCEventTypeCrossChainTokenLockTNT20,
+		SourceChainID: sourceChainID,
+		TargetChainID: tma.TargetChainID,
+		Sender:        tma.SourceChainTokenSender,
+		Receiver:      tma.TargetChainVoucherReceiver,
+		Data:          data,
+		Nonce:         tma.Nonce,
+		BlockHeight:   blockHeight,
+	}
+	logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
+	*events = append(*events, event)
 }
 
 func extractTFuelVoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
@@ -264,7 +264,27 @@ func extractTNT20VoucherMintedEvent(targetChainID *big.Int, logData LogData, eve
 }
 
 func extractTNT721VoucherMintedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-
+	data, _ := hex.DecodeString(logData.Data[2:])
+	var tma score.CrossChainTNT721TokenLockedEvent
+	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherMinted", data)
+	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
+	if err != nil {
+		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+	}
+	event := &score.InterChainMessageEvent{
+		Type:          score.IMCEventTypeCrossChainVoucherMintTNT20,
+		SourceChainID: originatedChainID,
+		TargetChainID: targetChainID,
+		Sender:        common.Address{}, // don't care
+		Receiver:      tma.TargetChainVoucherReceiver,
+		Data:          data,
+		Nonce:         tma.VoucherMintNonce,
+		BlockHeight:   blockHeight,
+	}
+	logger.Infof("got tfuel voucher mint event : %v, logdata : %v", tma, logData)
+	*events = append(*events, event)
 }
 
 func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {

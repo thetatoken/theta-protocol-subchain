@@ -235,7 +235,7 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	}
 
 	sequence += 1
-	TNT20TokenBankContractAddr, err := deploySmartContract(subchainID, sv, predeployed.TNT20TokenBankContractBytecode, deployer, sequence, slst.TNT20TokenBankContractAddressKey())
+	TNT20TokenBankContractAddr, err := deploySmartContract(subchainID, sv, addConstructorArgumentForTokenBankBytecode(predeployed.TNT20TokenBankContractBytecode, mainchainIDInt, chainRegistrarContractAddr), deployer, sequence, slst.TNT20TokenBankContractAddressKey())
 	if err != nil {
 		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
 	}

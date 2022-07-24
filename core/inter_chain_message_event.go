@@ -285,9 +285,9 @@ type CrossChainTNT721TokenLockedEvent struct { // corresponding to the "TNT721To
 	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	TargetChainVoucherReceiver common.Address
 	TokenID                    *big.Int
-	TokenURI                   string
 	Name                       string
 	Symbol                     string
+	TokenURI                   string
 	TokenLockNonce             *big.Int
 }
 
@@ -389,6 +389,39 @@ func ParseToCrossChainTNT20VoucherMintedEvent(icme *InterChainMessageEvent) (*Cr
 	return &event, nil
 }
 
+type CrossChainTNT721VoucherMintedEvent struct { // corresponding to the "TNT721TokenLocked" event
+	Denom                      string
+	TargetChainVoucherReceiver common.Address
+	VoucherContract            common.Address
+	MintedAmount               *big.Int
+	SourceChainTokenLockNonce  *big.Int
+	VoucherMintNonce           *big.Int
+}
+
+// func ParseToCrossChainTNT20VoucherMintedEvent(icme *InterChainMessageEvent) (*CrossChainTNT20VoucherMintedEvent, error) {
+// 	if icme.Type != IMCEventTypeCrossChainVoucherMintTNT20 {
+// 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+// 	}
+
+// 	var event CrossChainTNT20VoucherMintedEvent
+// 	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	contractAbi.UnpackIntoInterface(&event, "TNT20VoucherMinted", icme.Data)
+// 	if err := ValidateDenom(event.Denom); err != nil {
+// 		return nil, err
+// 	}
+// 	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
+// 		return nil, fmt.Errorf("source chain ID mismatch for TNT20 voucher mint: %v vs %v", icme.SourceChainID, originatedChainID)
+// 	}
+
+// 	return &event, nil
+// }
 // ------------------------------------ Cross-Chain: Voucher Burn --------------------------------------------
 
 type VoucherBurnEventStatus byte

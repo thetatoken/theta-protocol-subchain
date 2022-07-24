@@ -15,7 +15,7 @@ import (
 	"github.com/thetatoken/thetasubchain/eth/abi"
 )
 
-func getMintlog(fromBlock, toBlock int, contractAddr common.Address) {
+func getMintlog(fromBlock, toBlock int, contractAddr common.Address, receiver common.Address) *common.Address {
 	const RawABI = `
 [
 	{
@@ -140,10 +140,11 @@ func getMintlog(fromBlock, toBlock int, contractAddr common.Address) {
 		if err != nil {
 			fmt.Println(err)
 		}
-		fmt.Println(event.VoucherContact)
-		fmt.Println(event.MintedAmount)
-		fmt.Println(event.TargetChainVoucherReceiver)
+		if event.TargetChainVoucherReceiver == receiver {
+			return &(event.VoucherContact)
+		}
 	}
+	return nil
 }
 
 func getMainchainMintlog(fromBlock, toBlock int, contractAddr common.Address) {
