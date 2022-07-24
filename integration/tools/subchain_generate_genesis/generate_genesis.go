@@ -241,6 +241,11 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	}
 	fmt.Println(TNT20TokenBankContractAddr.Hex())
 	sequence += 1
+	_, err = deploySmartContract(subchainID, sv, addConstructorArgumentForTokenBankBytecode(predeployed.TNT721TokenBankContractBytecode, mainchainIDInt, chainRegistrarContractAddr), deployer, sequence, slst.TNT721TokenBankContractAddressKey())
+	if err != nil {
+		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
+	}
+	sequence += 1
 	_, err = deploySmartContract(subchainID, sv, predeployed.TestByteCodeB, deployer, sequence, slst.TestAddressKeyB())
 	if err != nil {
 		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
@@ -426,26 +431,26 @@ func sanityChecks(sv *slst.StoreView) error {
 		panic("TNT20 token bank contract is not set")
 	}
 	logger.Infof("TNT20 Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
-	// testContractAddrA := sv.GetTestContractAddressA()
-	// if tnt20TokenBankContractAddr == nil {
-	// 	panic("TNT20 token bank contract is not set")
-	// }
-	// logger.Infof("TestToken Bank Contract Address: %v", testContractAddrA.Hex())
+	tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
+	if tnt20TokenBankContractAddr == nil {
+		panic("TNT721 token bank contract is not set")
+	}
+	logger.Infof("TNT721Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
 	testContractAddrB := sv.GetTestContractAddressB()
 	if tnt20TokenBankContractAddr == nil {
-		panic("TNT20 token bank contract is not set")
+		panic("B contract is not set")
 	}
 	logger.Infof("B Token Bank Contract Address: %v", testContractAddrB.Hex())
 	testContractAddrBase := sv.GetTestContractAddressBase()
 	if tnt20TokenBankContractAddr == nil {
 		panic("BASE token bank contract is not set")
 	}
-	logger.Infof("hhh3 Token Bank Contract Address: %v", testContractAddrBase.Hex())
+	logger.Infof("BASE Contract Address: %v", testContractAddrBase.Hex())
 	testContractAddrC := sv.GetTestContractAddressC()
 	if tnt20TokenBankContractAddr == nil {
 		panic("C token bank contract is not set")
 	}
-	logger.Infof("hhh3 Token Bank Contract Address: %v", testContractAddrC.Hex())
+	logger.Infof("C Contract Address: %v", testContractAddrC.Hex())
 	// tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
 	// if tnt721TokenBankContractAddr == nil {
 	// 	panic("TNT721 token bank contract is not set")
