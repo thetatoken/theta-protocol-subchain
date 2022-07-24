@@ -35,23 +35,26 @@ type Orchestrator struct {
 	eventProcessedTime    map[string]time.Time
 
 	// The mainchain
-	mainchainID                 *big.Int
-	mainchainEthRpcURL          string
-	mainchainEthRpcClient       *ec.Client
-	mainchainTFuelTokenBankAddr common.Address
-	mainchainTFuelTokenBank     *scta.TFuelTokenBank
-	mainchainTNT20TokenBankAddr common.Address
-	mainchainTNT20TokenBank     *scta.TNT20TokenBank
+	mainchainID                  *big.Int
+	mainchainEthRpcURL           string
+	mainchainEthRpcClient        *ec.Client
+	mainchainTFuelTokenBankAddr  common.Address
+	mainchainTFuelTokenBank      *scta.TFuelTokenBank
+	mainchainTNT20TokenBankAddr  common.Address
+	mainchainTNT20TokenBank      *scta.TNT20TokenBank
+	mainchainTNT721TokenBankAddr common.Address
+	mainchainTNT721TokenBank     *scta.TNT721TokenBank
 
 	// The subchain
-	subchainID                 *big.Int
-	subchainEthRpcURL          string
-	subchainEthRpcClient       *ec.Client
-	subchainTFuelTokenBankAddr common.Address
-	subchainTFuelTokenBank     *scta.TFuelTokenBank
-	subchainTNT20TokenBankAddr common.Address
-	subchainTNT20TokenBank     *scta.TNT20TokenBank
-
+	subchainID                  *big.Int
+	subchainEthRpcURL           string
+	subchainEthRpcClient        *ec.Client
+	subchainTFuelTokenBankAddr  common.Address
+	subchainTFuelTokenBank      *scta.TFuelTokenBank
+	subchainTNT20TokenBankAddr  common.Address
+	subchainTNT20TokenBank      *scta.TNT20TokenBank
+	subchainTNT721TokenBankAddr common.Address
+	subchainTNT721TokenBank     *scta.TNT721TokenBank
 	// Inter-chain messaging
 	interChainEventCache *siu.InterChainEventCache
 
@@ -84,7 +87,11 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	if err != nil {
 		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
 	}
-
+	mainchainTNT721TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT721TokenBankContractAddress))
+	mainchainTNT721TokenBank, err := scta.NewTNT721TokenBank(mainchainTNT721TokenBankAddr, mainchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to create MainchainTNT721TokenBank contract %v\n", err)
+	}
 	subchainID := big.NewInt(360777) //gai big.NewInt(viper.GetInt64(scom.CfgSubchainID))
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
@@ -99,13 +106,15 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 		metachainWitness:   metachainWitness,
 		eventProcessedTime: eventProcessedTime,
 
-		mainchainID:                 mainchainID,
-		mainchainEthRpcURL:          mainchainEthRpcURL,
-		mainchainEthRpcClient:       mainchainEthRpcClient,
-		mainchainTFuelTokenBankAddr: mainchainTFuelTokenBankAddr,
-		mainchainTFuelTokenBank:     mainchainTFuelTokenBank,
-		mainchainTNT20TokenBankAddr: mainchainTNT20TokenBankAddr,
-		mainchainTNT20TokenBank:     mainchainTNT20TokenBank,
+		mainchainID:                  mainchainID,
+		mainchainEthRpcURL:           mainchainEthRpcURL,
+		mainchainEthRpcClient:        mainchainEthRpcClient,
+		mainchainTFuelTokenBankAddr:  mainchainTFuelTokenBankAddr,
+		mainchainTFuelTokenBank:      mainchainTFuelTokenBank,
+		mainchainTNT20TokenBankAddr:  mainchainTNT20TokenBankAddr,
+		mainchainTNT20TokenBank:      mainchainTNT20TokenBank,
+		mainchainTNT721TokenBankAddr: mainchainTNT721TokenBankAddr,
+		mainchainTNT721TokenBank:     mainchainTNT721TokenBank,
 
 		subchainID:           subchainID,
 		subchainEthRpcURL:    subchainEthRpcURL,
@@ -162,6 +171,16 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
+
+	subchainTNT721TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
+	if subchainTNT20TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	}
+	oc.subchainTNT721TokenBankAddr = *subchainTNT721TokenBankAddr
+	oc.subchainTNT721TokenBank, err = scta.NewTNT721TokenBank(*subchainTNT721TokenBankAddr, oc.subchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
+	}
 }
 
 func (oc *Orchestrator) mainloop(ctx context.Context) {
@@ -185,6 +204,7 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	//oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
+	oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
 }
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
@@ -228,6 +248,16 @@ func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, t
 		return // ignore
 	}
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT20, maxProcessedTokenLockNonce)
+}
+
+func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+	if err != nil {
+		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
+		return // ignore
+	}
+	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT721, maxProcessedTokenLockNonce)
 }
 
 func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
@@ -520,6 +550,14 @@ func (oc *Orchestrator) getTNT20TokenBank(chainID *big.Int) *scta.TNT20TokenBank
 		return oc.mainchainTNT20TokenBank
 	} else {
 		return oc.subchainTNT20TokenBank
+	}
+}
+
+func (oc *Orchestrator) getTNT721TokenBank(chainID *big.Int) *scta.TNT721TokenBank {
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		return oc.mainchainTNT721TokenBank
+	} else {
+		return oc.subchainTNT721TokenBank
 	}
 }
 

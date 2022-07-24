@@ -202,13 +202,13 @@ func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, even
 	contractAbi.UnpackIntoInterface(&tma, "TNT721TokenLocked", data)
 	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
 	event := &score.InterChainMessageEvent{
-		Type:          IMCEventTypeCrossChainTokenLockTNT20,
+		Type:          score.IMCEventTypeCrossChainTokenLockTNT721,
 		SourceChainID: sourceChainID,
 		TargetChainID: tma.TargetChainID,
 		Sender:        tma.SourceChainTokenSender,
 		Receiver:      tma.TargetChainVoucherReceiver,
 		Data:          data,
-		Nonce:         tma.Nonce,
+		Nonce:         tma.TokenLockNonce,
 		BlockHeight:   blockHeight,
 	}
 	logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
@@ -264,27 +264,27 @@ func extractTNT20VoucherMintedEvent(targetChainID *big.Int, logData LogData, eve
 }
 
 func extractTNT721VoucherMintedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
-	var tma score.CrossChainTNT721TokenLockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherMinted", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
-	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
-	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
-	}
-	event := &score.InterChainMessageEvent{
-		Type:          score.IMCEventTypeCrossChainVoucherMintTNT20,
-		SourceChainID: originatedChainID,
-		TargetChainID: targetChainID,
-		Sender:        common.Address{}, // don't care
-		Receiver:      tma.TargetChainVoucherReceiver,
-		Data:          data,
-		Nonce:         tma.VoucherMintNonce,
-		BlockHeight:   blockHeight,
-	}
-	logger.Infof("got tfuel voucher mint event : %v, logdata : %v", tma, logData)
-	*events = append(*events, event)
+	// data, _ := hex.DecodeString(logData.Data[2:])
+	// var tma score.CrossChainTNT721TokenLockedEvent
+	// contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	// contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherMinted", data)
+	// blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	// originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
+	// if err != nil {
+	// 	logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+	// }
+	// event := &score.InterChainMessageEvent{
+	// 	Type:          score.IMCEventTypeCrossChainVoucherMintTNT20,
+	// 	SourceChainID: originatedChainID,
+	// 	TargetChainID: targetChainID,
+	// 	Sender:        common.Address{}, // don't care
+	// 	Receiver:      tma.TargetChainVoucherReceiver,
+	// 	Data:          data,
+	// 	Nonce:         tma.VoucherMintNonce,
+	// 	BlockHeight:   blockHeight,
+	// }
+	// logger.Infof("got tnt721 voucher mint event : %v, logdata : %v", tma, logData)
+	// *events = append(*events, event)
 }
 
 func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
