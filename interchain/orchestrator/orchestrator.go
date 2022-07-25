@@ -202,7 +202,7 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 }
 
 func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
-	//oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
+	oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
 }
@@ -261,7 +261,7 @@ func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, 
 }
 
 func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
-	//oc.processNextTFuelVoucherBurnEvent(sourceChainID, targetChainID)
+	oc.processNextTFuelVoucherBurnEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20VoucherBurnEvent(sourceChainID, targetChainID)
 	oc.processNextTNT721VoucherBurnEvent(sourceChainID, targetChainID)
 }
@@ -503,16 +503,17 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 }
 
 func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
-	se, err := score.ParseToCrossChainTNT20VoucherBurnedEvent(sourceEvent)
+	se, err := score.ParseToCrossChainTFuelVoucherBurnedEvent(sourceEvent)
 	if err != nil {
 		return err
 	}
 	dynasty := oc.getDynasty()
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	tx, err := tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
+	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
