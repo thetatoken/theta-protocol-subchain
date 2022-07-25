@@ -393,7 +393,7 @@ type CrossChainTNT721VoucherMintedEvent struct { // corresponding to the "TNT721
 	Denom                      string
 	TargetChainVoucherReceiver common.Address
 	VoucherContract            common.Address
-	MintedAmount               *big.Int
+	TokenID                    *big.Int
 	SourceChainTokenLockNonce  *big.Int
 	VoucherMintNonce           *big.Int
 }
@@ -512,7 +512,7 @@ type CrossChainTNT721VoucherBurnedEvent struct { // corresponding to the "TNT721
 	Denom                    string
 	SourceChainVoucherOwner  common.Address
 	TargetChainTokenReceiver common.Address
-	BurnedAmount             *big.Int
+	TokenID                  *big.Int
 	VoucherBurnNonce         *big.Int
 }
 
@@ -618,7 +618,7 @@ func ParseToCrossChainTNT20TokenUnlockedEvent(icme *InterChainMessageEvent) (*Cr
 type CrossChainTNT721TokenUnlockedEvent struct { // corresponding to the "TNT721TokenUnlocked" event
 	Denom                       string
 	TargetChainTokenReceiver    common.Address
-	UnlockedAmount              *big.Int
+	TokenID                     *big.Int
 	SourceChainVoucherBurnNonce *big.Int
 	TokenUnlockNonce            *big.Int
 }

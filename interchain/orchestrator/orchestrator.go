@@ -572,7 +572,7 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	// 	return nil
 	// }
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
-	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
