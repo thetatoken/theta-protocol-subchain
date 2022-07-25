@@ -211,7 +211,7 @@ func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, even
 		Nonce:         tma.TokenLockNonce,
 		BlockHeight:   blockHeight,
 	}
-	logger.Infof("got tnt20 event : %v, logdata : %v", tma, logData)
+	logger.Infof("got tnt721 event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
 }
 

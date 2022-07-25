@@ -421,11 +421,11 @@ func sanityChecks(sv *slst.StoreView) error {
 		return true
 	})
 
-	// tfuelTokenBankContractAddr := sv.GetTFuelTokenBankContractAddress()
-	// if tfuelTokenBankContractAddr == nil {
-	// 	panic("TFuel token bank contract is not set")
-	// }
-	// logger.Infof("TFuel Token Bank Contract Address: %v", tfuelTokenBankContractAddr.Hex())
+	tfuelTokenBankContractAddr := sv.GetTFuelTokenBankContractAddress()
+	if tfuelTokenBankContractAddr == nil {
+		panic("TFuel token bank contract is not set")
+	}
+	logger.Infof("TFuel Token Bank Contract Address: %v", tfuelTokenBankContractAddr.Hex())
 	tnt20TokenBankContractAddr := sv.GetTNT20TokenBankContractAddress()
 	if tnt20TokenBankContractAddr == nil {
 		panic("TNT20 token bank contract is not set")
