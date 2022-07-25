@@ -255,8 +255,10 @@ func mainchainBurnTNT20() {
 }
 func main() {
 	AccountsInit()
-	//oneAccountRegister()
-	//oneAcoountStake()
+	mainchainTfuelLock()
+	//tnt721Lock()
+	// oneAccountRegister()
+	// oneAcoountStake()
 	//subchainBurnTNT20()
 	//getMintlog(30, 50, SubchainTNT20TokenBankAddress)
 	// res := get721Mintlog(0, 100, common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA"), common.HexToAddress("2E833968E5bB786Ae419c4d13189fB081Cc43bab"))
@@ -266,8 +268,9 @@ func main() {
 
 	//mint()
 	//subchainLockTNT20()
-	//tokenLocked()
+	// tokenLocked()
 	// tnt721Lock()
+	//mainchainTfuelLock()
 	//getMainchainMintlog(18770, 18780, TNT20TokenBankAddress)
 	//mainchainBurnTNT20()
 	//tokenLocked()
