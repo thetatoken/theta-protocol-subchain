@@ -21,7 +21,7 @@ func mainchainTfuelLock() {
 
 	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(TfuelTokenbankAddress, client)
 	auth := SelectAccount(client, 3)
-	auth.Value = new(big.Int).Mul(dec18, big.NewInt(200000))
+	auth.Value = big.NewInt(2000000)//new(big.Int).Mul(dec18, big.NewInt(200000))
 	tx, err := tfuelTokenBankInstance.LockTokens(auth, subchainID, user)
 	if err != nil {
 		log.Fatal(err)

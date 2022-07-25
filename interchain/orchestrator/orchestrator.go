@@ -202,7 +202,7 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 }
 
 func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
-	//oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
+	oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
 }
@@ -398,11 +398,11 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 
 	dynasty := oc.getDynasty()
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	tx, err := tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
-
+	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -460,7 +460,7 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	fmt.Println(TNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
 	//txOpts.Value = big.NewInt(1)
-	tx, err := TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol,se.TargetChainVoucherReceiver,se.TokenID,se.TokenURI,dynasty,se.TokenLockNonce)
+	tx, err := TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
