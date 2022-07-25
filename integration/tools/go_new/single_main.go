@@ -147,7 +147,11 @@ func mainchainBurnTNT20() {
 func main() {
 	AccountsInit()
 	//fmt.Println(crypto.Keccak256Hash([]byte("TNT721VoucherBurned(string,address,address,uint256,uint256)")).Hex())
-	tnt721Lock()
+	//tokenID := big.NewInt(770)
+
+	//tnt721Lock(tokenID)
+	//subchainLockTNT721(tokenID)
+	//mainchainBurnTNT721(tokenID)
 	subchainTNT721Burn()
 	//mainchainTNT20Locked()
 	//subchainTNT20Lock()

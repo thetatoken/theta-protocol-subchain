@@ -79,7 +79,7 @@ func AccountsInit() {
 		}
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
-		//fmt.Println(value, "-----", fromAddress)
+		fmt.Println(value, "-----", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
