@@ -87,7 +87,7 @@ func AccountsInit() {
 	TNT20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
 	SubchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 
-	TNT721TokenBankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
+	TNT721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
 	TNT721VoucherContractAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
 }
 func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
