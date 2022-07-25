@@ -277,7 +277,7 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnMainchain() {
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
-	mw.collectInterChainMessageEventsOnChain(mw.subchainID, mw.subchainEthRpcUrl, mw.subchainTFuelTokenBankAddr, mw.subchainTNT20TokenBankAddr,mw.mainchainTNT721TokenBankAddr)
+	mw.collectInterChainMessageEventsOnChain(mw.subchainID, mw.subchainEthRpcUrl, mw.subchainTFuelTokenBankAddr, mw.subchainTNT20TokenBankAddr,mw.subchainTNT721TokenBankAddr)
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,

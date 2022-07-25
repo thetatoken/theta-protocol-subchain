@@ -168,13 +168,13 @@ func get721Mintlog(fromBlock, toBlock int, contractAddr common.Address, receiver
 			{
 				"indexed": false,
 				"internalType": "address",
-				"name": "voucherContact",
+				"name": "voucherContract",
 				"type": "address"
 			},
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "mintedAmount",
+				"name": "tokenID",
 				"type": "uint256"
 			},
 			{
@@ -261,8 +261,8 @@ func get721Mintlog(fromBlock, toBlock int, contractAddr common.Address, receiver
 		type TransferEvt struct {
 			Denom                      string
 			TargetChainVoucherReceiver common.Address
-			VoucherContact             common.Address
-			MintedAmount               *big.Int
+			VoucherContract             common.Address
+			TokenID               *big.Int
 			SourceChainTokenLockNonce  *big.Int
 			VoucherMintNonce           *big.Int
 		}
@@ -274,7 +274,7 @@ func get721Mintlog(fromBlock, toBlock int, contractAddr common.Address, receiver
 			fmt.Println(err)
 		}
 		if event.TargetChainVoucherReceiver == receiver {
-			return &(event.VoucherContact)
+			return &(event.VoucherContract)
 		}
 	}
 	return nil

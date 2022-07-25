@@ -36,6 +36,7 @@ var TNT721TokenBankAddress common.Address
 var TNT721VoucherContractAddress common.Address
 var TfuelTokenbankAddress common.Address
 var subchainTfuelTokenBank common.Address
+var SubchainTNT721TokenBankAddress common.Address
 
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
@@ -91,6 +92,7 @@ func AccountsInit() {
 
 	TNT721TokenBankAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
 	TNT721VoucherContractAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
+	SubchainTNT721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
 
 	TfuelTokenbankAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
 	subchainTfuelTokenBank = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
