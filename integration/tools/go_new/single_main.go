@@ -224,7 +224,7 @@ func mainchainBurnTNT20() {
 }
 func main() {
 	AccountsInit()
-	mainchainTfuelLock()
+	//mainchainTfuelLock()
 	//tnt721Lock()
 	// oneAccountRegister()
 	// oneAcoountStake()
@@ -232,7 +232,7 @@ func main() {
 	//getMintlog(30, 50, SubchainTNT20TokenBankAddress)
 	//mint()
 	//subchainLockTNT20()
-	// tokenLocked()
+	tokenLocked()
 	// tnt721Lock()
 	//mainchainTfuelLock()
 	//getMainchainMintlog(18770, 18780, TNT20TokenBankAddress)
