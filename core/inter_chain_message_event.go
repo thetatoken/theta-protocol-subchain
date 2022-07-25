@@ -464,13 +464,13 @@ func ParseToCrossChainTFuelVoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-	if err != nil {
-		return nil, err
-	}
-	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
-		return nil, fmt.Errorf("target chain ID mismatch for TFuel voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
-	}
+	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+	// 	return nil, fmt.Errorf("target chain ID mismatch for TFuel voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
+	// }
 
 	return &event, nil
 }
