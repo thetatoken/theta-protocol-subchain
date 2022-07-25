@@ -398,30 +398,31 @@ type CrossChainTNT721VoucherMintedEvent struct { // corresponding to the "TNT721
 	VoucherMintNonce           *big.Int
 }
 
-// func ParseToCrossChainTNT20VoucherMintedEvent(icme *InterChainMessageEvent) (*CrossChainTNT20VoucherMintedEvent, error) {
-// 	if icme.Type != IMCEventTypeCrossChainVoucherMintTNT20 {
-// 		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
-// 	}
+func ParseToCrossChainTNT721VoucherMintedEvent(icme *InterChainMessageEvent) (*CrossChainTNT721VoucherMintedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainVoucherMintTNT721 {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
 
-// 	var event CrossChainTNT20VoucherMintedEvent
-// 	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	contractAbi.UnpackIntoInterface(&event, "TNT20VoucherMinted", icme.Data)
-// 	if err := ValidateDenom(event.Denom); err != nil {
-// 		return nil, err
-// 	}
-// 	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
-// 		return nil, fmt.Errorf("source chain ID mismatch for TNT20 voucher mint: %v vs %v", icme.SourceChainID, originatedChainID)
-// 	}
+	var event CrossChainTNT721VoucherMintedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TNT721VoucherMinted", icme.Data)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.SourceChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("source chain ID mismatch for TNT721 voucher mint: %v vs %v", icme.SourceChainID, originatedChainID)
+	}
 
-// 	return &event, nil
-// }
+	return &event, nil
+}
+
 // ------------------------------------ Cross-Chain: Voucher Burn --------------------------------------------
 
 type VoucherBurnEventStatus byte
@@ -488,11 +489,44 @@ func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 
 	var event CrossChainTNT20VoucherBurnedEvent
-	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TestSubchainTNT20TokenBankABI)))
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
 	if err != nil {
 		return nil, err
 	}
 	contractAbi.UnpackIntoInterface(&event, "TNT20VoucherBurned", icme.Data)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+	// 	return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
+	// }
+
+	return &event, nil
+}
+
+type CrossChainTNT721VoucherBurnedEvent struct { // corresponding to the "TNT721VoucherBurned" event
+	Denom                    string
+	SourceChainVoucherOwner  common.Address
+	TargetChainTokenReceiver common.Address
+	BurnedAmount             *big.Int
+	VoucherBurnNonce         *big.Int
+}
+
+func ParseToCrossChainTNT721VoucherBurnedEvent(icme *InterChainMessageEvent) (*CrossChainTNT721VoucherBurnedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainVoucherBurnTNT721 {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var event CrossChainTNT721VoucherBurnedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TNT721VoucherBurned", icme.Data)
 	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
@@ -549,7 +583,7 @@ func ParseToCrossChainTFuelTokenUnlockedEvent(icme *InterChainMessageEvent) (*Cr
 type CrossChainTNT20TokenUnlockedEvent struct { // corresponding to the "TNT20TokenUnlocked" event
 	Denom                       string
 	TargetChainTokenReceiver    common.Address
-	LockedAmount                *big.Int
+	UnlockedAmount              *big.Int
 	SourceChainVoucherBurnNonce *big.Int
 	TokenUnlockNonce            *big.Int
 }
@@ -575,6 +609,41 @@ func ParseToCrossChainTNT20TokenUnlockedEvent(icme *InterChainMessageEvent) (*Cr
 	}
 	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
 		return nil, fmt.Errorf("target chain ID mismatch for TNT20 unlock: %v vs %v", icme.TargetChainID, originatedChainID)
+	}
+	return &event, nil
+}
+
+// Cross-Chain TNT721 Unlock
+
+type CrossChainTNT721TokenUnlockedEvent struct { // corresponding to the "TNT721TokenUnlocked" event
+	Denom                       string
+	TargetChainTokenReceiver    common.Address
+	UnlockedAmount              *big.Int
+	SourceChainVoucherBurnNonce *big.Int
+	TokenUnlockNonce            *big.Int
+}
+
+func ParseToCrossChainTNT721TokenUnlockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT721TokenUnlockedEvent, error) {
+	if icme.Type != IMCEventTypeCrossChainTokenUnlockTNT721 {
+		return nil, fmt.Errorf("invalid inter-chain message event type: %v", icme.Type)
+	}
+
+	var event CrossChainTNT721TokenUnlockedEvent
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return nil, err
+	}
+	contractAbi.UnpackIntoInterface(&event, "TNT721TokenUnlocked", icme.Data)
+	event.Denom = strings.ToLower(event.Denom)
+	if err := ValidateDenom(event.Denom); err != nil {
+		return nil, err
+	}
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("target chain ID mismatch for TNT721 unlock: %v vs %v", icme.TargetChainID, originatedChainID)
 	}
 	return &event, nil
 }

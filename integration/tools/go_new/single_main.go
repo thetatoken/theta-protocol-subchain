@@ -160,6 +160,37 @@ func subchainBurnTNT20() {
 	//fmt.Println(tx)
 	fmt.Println(tx.Hash().Hex())
 }
+
+func subchainBurnTNT721() {
+	AccountsInit()
+	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	authUser := SubchainSelectAccount(client, 1)
+	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
+	TNT721TokenBankInstance, err := ct.NewTNT721TokenBank(TNT721TokenBankAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainTNT721VoucherAddressInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, client)
+	// tx, err := subchainTNT721VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
+	//await TNT721Token.approve(TNT721TokenBank1.address, 20, { from: valGuarantor1 })
+	tx, err := subchainTNT721VoucherAddressInstance.Approve(authUser, TNT721TokenBankAddress, big.NewInt(1))
+	fmt.Println("721 apporve: ", tx.Hash().Hex())
+	if err != nil {
+		log.Fatal(err)
+	}
+	authUser = SubchainSelectAccount(client, 1)
+	tx, err = TNT721TokenBankInstance.BurnVouchers(authUser, subchainTNT721VoucherAddress, accountList[6].fromAddress, big.NewInt(1))
+	//tx, err := testSubchainTNT721TokenBankInstance.GetDenom(nil, subchainTNT721VoucherAddress)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//fmt.Println(tx)
+	fmt.Println(tx.Hash().Hex())
+}
+
 func subchainLockTNT20() {
 	AccountsInit()
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
@@ -230,6 +261,11 @@ func main() {
 	// oneAcoountStake()
 	//subchainBurnTNT20()
 	//getMintlog(30, 50, SubchainTNT20TokenBankAddress)
+	// res := get721Mintlog(0, 100, common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA"), common.HexToAddress("2E833968E5bB786Ae419c4d13189fB081Cc43bab"))
+	// fmt.Println("voucher address", *res)
+
+	subchainBurnTNT721()
+
 	//mint()
 	//subchainLockTNT20()
 	tokenLocked()
