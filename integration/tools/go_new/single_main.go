@@ -1,5 +1,7 @@
 package main
 
+import "math/big"
+
 // rg "chainRegistrarOnMainchain" // for demo
 // func main1() {
 // 	client, err := ethclient.Dial("http://localhost:18888/rpc")
@@ -130,61 +132,7 @@ package main
 
 // }
 func main() {
-
-	//fmt.Println(crypto.Keccak256Hash([]byte("TNT721VoucherBurned(string,address,address,uint256,uint256)")).Hex())
-	//tokenID := big.NewInt(900)
-
-	//tnt721Lock(tokenID)
-	//subchainLockTNT721(tokenID)
-	//mainchainBurnTNT721(tokenID)
-	//subchainTNT721Burn(tokenID)
-	//mainchainTNT20Locked()
-	//subchainTNT20Lock()
-	//mainchainTNT20Burn()
-	//subchainTNT20Burn()
-	//subchainTfuelBurn()
-	//mainchainTfuelLock()
-
-	// oneAccountRegister()
-	// oneAcoountStake()
-	//subchainBurnTNT20()
-	//getMintlog(30, 50, subchaintnt20TokenBankAddress)
-	// res := get721Mintlog(0, 50, common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA"), common.HexToAddress("2E833968E5bB786Ae419c4d13189fB081Cc43bab"))
-	// fmt.Println("voucher address", *res)
-
-	//subchainBurnTNT721()
-
-	//mint()
-	//subchainLockTNT20()
-	//tokenLocked()
-	// tnt721Lock()
-	//mainchainTfuelLock()
-	//getMainchainMintlog(18770, 18780, tnt20TokenBankAddress)
-	//mainchainBurnTNT20()
-	//tokenLocked()
-	//subchainBurnTNT20()
-	// parsed, err := abi.JSON(strings.NewReader(RawABI))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// var a []hhh
-	// c := &hhh{
-	// 	Validator:   common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895"),
-	// 	ShareAmount: big.NewInt(2),
-	// }
-	// a = append(a, *c)
-	// valueInput, err := parsed.Pack("", a)
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println(hex.EncodeToString(valueInput))
-	//mint()
-	// 	if err != nil {
-	// 		log.Fatal(err)
-	// 	}
-	// 	fmt.Println("ok!")
-
-	//fmt.Println(common.BytesToAddress([]byte("ZD7\x04\xddKYK8,\"\xa0\x83\xe2\xbd0\x90\xa6\xfe\xf3")))
-	//00000000000000000000000000000000000000b7
+	mainchainTNT721Lock(big.NewInt(33))
+	subchainTNT721Burn(big.NewInt(33))
 
 }

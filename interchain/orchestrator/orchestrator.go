@@ -2,7 +2,6 @@ package orchestrator
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -92,14 +91,14 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	if err != nil {
 		logger.Fatalf("failed to create MainchainTNT721TokenBank contract %v\n", err)
 	}
-	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))//big.NewInt(360777) //gai 
+	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID)) //big.NewInt(360777) //gai
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
 		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
 	}
-	var eventProcessedTime map[string]time.Time //gai
-	eventProcessedTime = make(map[string]time.Time)
+	//var eventProcessedTime map[string]time.Time //gai
+	eventProcessedTime := make(map[string]time.Time)
 	oc := &Orchestrator{
 		updateInterval:     updateInterval,
 		privateKey:         privateKey,
@@ -219,28 +218,6 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 }
 
 func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
-	//gai targetChainTokenBank := oc.getTNT20TokenBank(targetChainID) gai
-	// if targetChainID.Cmp(oc.mainchainID) == 0 {
-	// 	targetChainTokenBank := oc.mainchainTNT20TokenBank
-	// 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
-	// 		return // ignore
-	// 	}
-
-	// 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT20, maxProcessedTokenLockNonce)
-
-	// } else {
-	// 	targetChainTokenBank := oc.subchainTNT20TokenBank
-	// 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
-	// 		return // ignore
-	// 	}
-
-	// 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT20, maxProcessedTokenLockNonce)
-
-	// }
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
@@ -284,27 +261,6 @@ func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int,
 		logger.Warnf("Failed to query the max processed TNT20 voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
 	}
-	// if targetChainID.Cmp(oc.mainchainID) == 0 {
-	// 	targetChainTokenBank := oc.mainchainTNT20TokenBank
-	// 	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
-	// 		return // ignore
-	// 	}
-
-	// 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT20, maxProcessedVoucherBurnNonce)
-
-	// } else {
-	// 	targetChainTokenBank := oc.subchainTNT20TokenBank
-	// 	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
-	// 		return // ignore
-	// 	}
-
-	// 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT20, maxProcessedVoucherBurnNonce)
-
-	// }
 
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT20, maxProcessedVoucherBurnNonce)
 }
@@ -316,27 +272,6 @@ func (oc *Orchestrator) processNextTNT721VoucherBurnEvent(sourceChainID *big.Int
 		logger.Warnf("Failed to query the max processed TNT721 voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
 	}
-	// if targetChainID.Cmp(oc.mainchainID) == 0 {
-	// 	targetChainTokenBank := oc.mainchainTNT721TokenBank
-	// 	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to query the max processed TNT721 token lock nonce for chain: %v", targetChainID.String())
-	// 		return // ignore
-	// 	}
-
-	// 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT721, maxProcessedVoucherBurnNonce)
-
-	// } else {
-	// 	targetChainTokenBank := oc.subchainTNT721TokenBank
-	// 	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
-	// 	if err != nil {
-	// 		logger.Warnf("Failed to query the max processed TNT721 token lock nonce for chain: %v", targetChainID.String())
-	// 		return // ignore
-	// 	}
-
-	// 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT721, maxProcessedVoucherBurnNonce)
-
-	// }
 
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT721, maxProcessedVoucherBurnNonce)
 }
@@ -431,12 +366,14 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 	}
 
 	dynasty := oc.getDynasty()
+	if dynasty == nil {
+		return nil
+	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	tx11, err := tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	_, err = tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
-	fmt.Println(tx11.Hash().Hex())
 	return nil
 }
 
@@ -449,35 +386,11 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	if dynasty == nil {
 		return nil
 	}
-	// if targetChainID == oc.subchainID {
-	// 	TNT20TokenBank := oc.subchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
-	// 	fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
-	// 	//txOpts.Value = big.NewInt(1)
-	// 	tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(tx.Hash().Hex())
-	// 	return nil
-	// } else {
-	// 	TNT20TokenBank := oc.mainchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
-	// 	fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
-	// 	//txOpts.Value = big.NewInt(1)
-	// 	tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(tx.Hash().Hex())
-	// 	return nil
-	// }
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	fmt.Println(TNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
-	//txOpts.Value = big.NewInt(1)
-	tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimal, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
-	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -490,15 +403,11 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 	if dynasty == nil {
 		return nil
 	}
-
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
-	fmt.Println(TNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, targetChainID))
-	//txOpts.Value = big.NewInt(1)
-	tx, err := TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
+	_, err = TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
-	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -508,12 +417,14 @@ func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChain
 		return err
 	}
 	dynasty := oc.getDynasty()
+	if dynasty == nil {
+		return nil
+	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	tx, err := tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	_, err = tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
-	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -523,29 +434,14 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 		return err
 	}
 	dynasty := oc.getDynasty()
-	// if targetChainID == oc.mainchainID {
-	// 	TNT20TokenBank := oc.mainchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
-	// 	tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(tx.Hash().Hex())
-	// 	return nil
-	// } else {
-	// 	TNT20TokenBank := oc.subchainTNT20TokenBank //gai oc.getTNT20TokenBank(targetChainID)
-	// 	tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(tx.Hash().Hex())
-	// 	return nil
-	// }
+	if dynasty == nil {
+		return nil
+	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	_, err = TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
-	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -555,29 +451,14 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 		return err
 	}
 	dynasty := oc.getDynasty()
-	// if targetChainID == oc.mainchainID {
-	// 	TNT721TokenBank := oc.mainchainTNT721TokenBank //gai oc.getTNT721TokenBank(targetChainID)
-	// 	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(tx.Hash().Hex())
-	// 	return nil
-	// } else {
-	// 	TNT721TokenBank := oc.subchainTNT721TokenBank //gai oc.getTNT721TokenBank(targetChainID)
-	// 	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
-	// 	if err != nil {
-	// 		return err
-	// 	}
-	// 	fmt.Println(tx.Hash().Hex())
-	// 	return nil
-	// }
+	if dynasty == nil {
+		return nil
+	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
-	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
+	_, err = TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
-	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -590,7 +471,6 @@ func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bin
 	if err != nil {
 		return nil, err
 	}
-	//cid, _ := ecClient.ChainID(context.Background())
 	txOpts, err := bind.NewKeyedTransactorWithChainID(oc.privateKey, chainID) //chainID)
 	if err != nil {
 		return nil, err

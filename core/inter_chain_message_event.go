@@ -152,11 +152,12 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 	}
 	c.SourceChainID = sourceChainID
 
-	targetChainID := ""
+	targetChainID := big.NewInt(0) //gai
 	err = stream.Decode(&targetChainID)
 	if err != nil {
 		return err
 	}
+	c.TargetChainID = targetChainID
 
 	sender := &common.Address{}
 	err = stream.Decode(sender)
@@ -246,7 +247,7 @@ type CrossChainTNT20TokenLockedEvent struct { // corresponding to the "TNT20Toke
 	LockedAmount               *big.Int
 	Name                       string
 	Symbol                     string
-	Decimal                    uint8 //gai
+	Decimal                    uint8
 	TokenLockNonce             *big.Int
 }
 
@@ -464,13 +465,13 @@ func ParseToCrossChainTFuelVoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if icme.TargetChainID.Cmp(originatedChainID) != 0 {
-	// 	return nil, fmt.Errorf("target chain ID mismatch for TFuel voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
-	// }
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("target chain ID mismatch for TFuel voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
+	}
 
 	return &event, nil
 }
@@ -497,13 +498,13 @@ func ParseToCrossChainTNT20VoucherBurnedEvent(icme *InterChainMessageEvent) (*Cr
 	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if icme.TargetChainID.Cmp(originatedChainID) != 0 {
-	// 	return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
-	// }
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
+	}
 
 	return &event, nil
 }
@@ -530,13 +531,13 @@ func ParseToCrossChainTNT721VoucherBurnedEvent(icme *InterChainMessageEvent) (*C
 	if err := ValidateDenom(event.Denom); err != nil {
 		return nil, err
 	}
-	// originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
-	// if err != nil {
-	// 	return nil, err
-	// }
-	// if icme.TargetChainID.Cmp(originatedChainID) != 0 {
-	// 	return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
-	// }
+	originatedChainID, err := ExtractOriginatedChainIDFromDenom(event.Denom)
+	if err != nil {
+		return nil, err
+	}
+	if icme.TargetChainID.Cmp(originatedChainID) != 0 {
+		return nil, fmt.Errorf("target chain ID mismatch for TNT20 voucher burn: %v vs %v", icme.TargetChainID, originatedChainID)
+	}
 
 	return &event, nil
 }

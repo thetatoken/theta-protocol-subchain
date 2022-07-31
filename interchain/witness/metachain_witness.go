@@ -113,8 +113,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	}
 
 	witnessState := newMetachainWitnessState(db)
-	var validatorSet map[string]*score.ValidatorSet
-	validatorSet = make(map[string]*score.ValidatorSet)
+	validatorSet := make(map[string]*score.ValidatorSet)
 
 	mw := &MetachainWitness{
 		updateInterval: updateInterval,

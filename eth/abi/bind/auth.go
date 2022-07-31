@@ -47,8 +47,6 @@ func NewKeyedTransactorWithChainID(key *crypto.PrivateKey, chainID *big.Int) (*T
 				return nil, ErrNotAuthorized
 			}
 			signature, err := crypto.Sign(signer.Hash(tx).Bytes(), crypto.PrivKeyToECDSA(key))
-			//signature, err := key.Sign(signer.Hash(tx).Bytes())
-			//sigBytes := signature.ToBytes()
 			if err != nil {
 				return nil, err
 			}

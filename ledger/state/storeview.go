@@ -289,59 +289,6 @@ func (sv *StoreView) GetTFuelTokenBankContractAddress() *common.Address {
 	return tbca
 }
 
-func (sv *StoreView) GetTestContractAddressA() *common.Address {
-	data := sv.Get(TestAddressKeyA())
-	if len(data) == 0 {
-		return nil
-	}
-	tbca := &common.Address{}
-	err := types.FromBytes(data, tbca)
-	if err != nil {
-		log.Panicf("Error reading TFuel token bank contract address %X, error: %v",
-			data, err.Error())
-	}
-	return tbca
-}
-func (sv *StoreView) GetTestContractAddressB() *common.Address {
-	data := sv.Get(TestAddressKeyB())
-	if len(data) == 0 {
-		return nil
-	}
-	tbca := &common.Address{}
-	err := types.FromBytes(data, tbca)
-	if err != nil {
-		log.Panicf("Error reading TFuel token bank contract address %X, error: %v",
-			data, err.Error())
-	}
-	return tbca
-}
-func (sv *StoreView) GetTestContractAddressBase() *common.Address {
-	data := sv.Get(TestAddressKeyBase())
-	if len(data) == 0 {
-		return nil
-	}
-	tbca := &common.Address{}
-	err := types.FromBytes(data, tbca)
-	if err != nil {
-		log.Panicf("Error reading TFuel token bank contract address %X, error: %v",
-			data, err.Error())
-	}
-	return tbca
-}
-func (sv *StoreView) GetTestContractAddressC() *common.Address {
-	data := sv.Get(TestAddressKeyC())
-	if len(data) == 0 {
-		return nil
-	}
-	tbca := &common.Address{}
-	err := types.FromBytes(data, tbca)
-	if err != nil {
-		log.Panicf("Error reading TFuel token bank contract address %X, error: %v",
-			data, err.Error())
-	}
-	return tbca
-}
-
 // GetTNT20TokenBankContractAddress gets the TFuel token bank contract address.
 func (sv *StoreView) GetTNT20TokenBankContractAddress() *common.Address {
 	data := sv.Get(TNT20TokenBankContractAddressKey())

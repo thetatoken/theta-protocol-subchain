@@ -407,7 +407,7 @@ func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 		"type": "constructor"
 	}
 ]`
-	type hhh struct {
+	type validatorSetInfo struct {
 		Validator   common.Address
 		ShareAmount *big.Int
 	}
@@ -415,7 +415,7 @@ func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 	if err != nil {
 		panic(err)
 	}
-	var a []hhh
+	var infoSet []validatorSetInfo
 
 	chainID := new(big.Int).SetBytes(getData(input, 0, 32))
 	dynasty := new(big.Int).SetBytes(getData(input, 32, 32))
@@ -425,16 +425,15 @@ func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 		return common.Bytes{}, nil
 	}
 
-	//valSetBytes := common.Bytes{}
 	validators := validatorSet.Validators()
 	for _, val := range validators {
-		c := &hhh{
+		c := &validatorSetInfo{
 			Validator:   val.Address,
 			ShareAmount: val.Stake,
 		}
-		a = append(a, *c)
+		infoSet = append(infoSet, *c)
 	}
-	valSetBytes, err := parsed.Pack("", a)
+	valSetBytes, err := parsed.Pack("", infoSet)
 	if err != nil {
 		panic(err)
 	}
