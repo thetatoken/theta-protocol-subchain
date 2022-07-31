@@ -25,18 +25,18 @@ type accounts struct {
 	fromAddress common.Address
 }
 
-var WthetaAddress common.Address
-var RegisterOnMainchainAddress common.Address
-var GovernanceTokenAddress common.Address
-var TNT20VoucherContractAddress common.Address
-var TNT20TokenBankAddress common.Address
-var SubchainTNT20TokenBankAddress common.Address
+var wthetaAddress common.Address
+var registerOnMainchainAddress common.Address
+var governanceTokenAddress common.Address
+var tnt20VoucherContractAddress common.Address
+var tnt20TokenBankAddress common.Address
+var subchaintnt20TokenBankAddress common.Address
 var accountList []accounts
-var TNT721TokenBankAddress common.Address
-var TNT721VoucherContractAddress common.Address
-var TfuelTokenbankAddress common.Address
+var tnt721TokenBankAddress common.Address
+var tnt721VoucherContractAddress common.Address
+var tfuelTokenbankAddress common.Address
 var subchainTfuelTokenBank common.Address
-var SubchainTNT721TokenBankAddress common.Address
+var Subchaintnt721TokenBankAddress common.Address
 
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
@@ -49,7 +49,7 @@ func pubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := crypto.FromECDSAPub(&p)
 	return common.BytesToAddress(keccak256(pubBytes[1:])[12:])
 }
-func AccountsInit() {
+func init() {
 	var map1 []string
 
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
@@ -83,21 +83,21 @@ func AccountsInit() {
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
-	WthetaAddress = common.HexToAddress("0x7d73424a8256C0b2BA245e5d5a3De8820E45F390")
-	RegisterOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
-	GovernanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
-	TNT20VoucherContractAddress = common.HexToAddress("0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9")
-	TNT20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
-	SubchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
+	wthetaAddress = common.HexToAddress("0x7d73424a8256C0b2BA245e5d5a3De8820E45F390")
+	registerOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
+	governanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
+	tnt20VoucherContractAddress = common.HexToAddress("0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9")
+	tnt20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
+	subchaintnt20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 
-	TNT721TokenBankAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
-	TNT721VoucherContractAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
-	SubchainTNT721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
+	tnt721TokenBankAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
+	tnt721VoucherContractAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
+	Subchaintnt721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
 
-	TfuelTokenbankAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
+	tfuelTokenbankAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
 	subchainTfuelTokenBank = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
 }
-func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
+func mainchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
 	chainID, err := client.ChainID(context.Background())
 	if err != nil {
@@ -128,7 +128,7 @@ func SelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 
 	return auth
 }
-func SubchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
+func subchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
 	// chainID, err := client.ChainID(context.Background())
 	// if err != nil {
@@ -168,18 +168,18 @@ func oneAccountRegister() {
 
 	subchainID := big.NewInt(360777)
 
-	//TNT20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
+	//tnt20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
 
 	chainGuarantor := accountList[7].fromAddress
 
-	instanceWrappedTheta, err := ct.NewMockWrappedTheta(WthetaAddress, client)
+	instanceWrappedTheta, err := ct.NewMockWrappedTheta(wthetaAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
-	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, client)
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(registerOnMainchainAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
@@ -187,23 +187,23 @@ func oneAccountRegister() {
 	dec18.SetString("1000000000000000000", 10)
 	amount := new(big.Int).Mul(dec18, big.NewInt(200000))
 
-	auth := SelectAccount(client, 7) //chainGuarantor
+	auth := mainchainSelectAccount(client, 7) //chainGuarantor
 	tx, err := instanceWrappedTheta.Mint(auth, chainGuarantor, amount)
 	if err != nil {
 		log.Fatal(err)
 	}
 	fmt.Println(tx)
 	approveAmount := new(big.Int).Mul(dec18, big.NewInt(50000))
-	authchainGuarantor := SelectAccount(client, 7)
+	authchainGuarantor := mainchainSelectAccount(client, 7)
 	fmt.Println(instanceWrappedTheta.BalanceOf(nil, chainGuarantor))
-	tx, err = instanceWrappedTheta.Approve(authchainGuarantor, RegisterOnMainchainAddress, approveAmount)
+	tx, err = instanceWrappedTheta.Approve(authchainGuarantor, registerOnMainchainAddress, approveAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	registerAmount := new(big.Int).Mul(dec18, big.NewInt(40000))
-	authchainGuarantor = SelectAccount(client, 7)
-	tx, err = instanceChainRegistrar.RegisterSubchain(authchainGuarantor, subchainID, GovernanceTokenAddress, registerAmount, "111111")
+	authchainGuarantor = mainchainSelectAccount(client, 7)
+	tx, err = instanceChainRegistrar.RegisterSubchain(authchainGuarantor, subchainID, governanceTokenAddress, registerAmount, "111111")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -220,15 +220,15 @@ func oneAcoountStake() {
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
 	subchainID := big.NewInt(360777)
-	instanceWrappedTheta, err := ct.NewMockWrappedTheta(WthetaAddress, client)
+	instanceWrappedTheta, err := ct.NewMockWrappedTheta(wthetaAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
-	instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(GovernanceTokenAddress, client)
+	instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(governanceTokenAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
-	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(RegisterOnMainchainAddress, client)
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(registerOnMainchainAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
@@ -238,20 +238,20 @@ func oneAcoountStake() {
 
 	//Deposit wTHETA collateral to validators
 	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
-	authValidator1 := SelectAccount(client, 1) //Validator1
+	authValidator1 := mainchainSelectAccount(client, 1) //Validator1
 
 	tx, err := instanceWrappedTheta.Mint(authValidator1, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authValidator1 = SelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
 	tx, err = instanceWrappedTheta.Approve(authValidator1, validatorCollateralManagerAddr, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// fmt.Println("validator1 collateral")
 	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[1].fromAddress))
-	authValidator1 = SelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
 	tx, err = instanceChainRegistrar.DepositCollateral(authValidator1, subchainID, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
@@ -265,14 +265,14 @@ func oneAcoountStake() {
 
 	// fmt.Println("validator1 deposit")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
-	authGovTokenInitDistrWallet := SelectAccount(client, 6)
+	authGovTokenInitDistrWallet := mainchainSelectAccount(client, 6)
 	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator1, validatorStakingAmountMint)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// fmt.Println("validator1 deposit")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
-	authValidator1 = SelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
 	tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmountMint)
 	if err != nil {
 		log.Fatal(err)
@@ -283,7 +283,7 @@ func oneAcoountStake() {
 	// fmt.Println("wallet deposited")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validatorStakeManagerAddr))
 
-	authValidator1 = SelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
 	tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
 	if err != nil {
 		log.Fatal(err)

@@ -229,7 +229,7 @@ func init() {
 	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
 	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 
-	//viper.SetDefault(CfgSubchainID, big.NewInt(360777))
+	viper.SetDefault(CfgSubchainID, 360777)
 }
 
 // WriteInitialConfig writes initial config file to file system.

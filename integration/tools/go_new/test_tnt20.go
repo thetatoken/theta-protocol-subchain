@@ -12,8 +12,7 @@ import (
 	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
 )
 
-func mainchainTNT20Locked() {
-	AccountsInit()
+func mainchainTNT20Locked(mintLockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -23,27 +22,27 @@ func mainchainTNT20Locked() {
 	dec18.SetString("1000000000000000000", 10)
 	user := accountList[1].fromAddress
 
-	instanceTNT20VoucherContract, err := ct.NewTNT20VoucherContract(TNT20VoucherContractAddress, client)
+	instanceTNT20VoucherContract, err := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}
-	instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(TNT20TokenBankAddress, client)
+	instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(tnt20TokenBankAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authAccount0 := SelectAccount(client, 0)
-	_, err = instanceTNT20VoucherContract.Mint(authAccount0, user, big.NewInt(30))
+	authAccount0 := mainchainSelectAccount(client, 0)
+	_, err = instanceTNT20VoucherContract.Mint(authAccount0, user,mintLockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authUser := SelectAccount(client, 1)
-	_, err = instanceTNT20VoucherContract.Approve(authUser, TNT20TokenBankAddress, big.NewInt(30))
+	authUser := mainchainSelectAccount(client, 1)
+	_, err = instanceTNT20VoucherContract.Approve(authUser, tnt20TokenBankAddress, mintLockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	authUser = SelectAccount(client, 1)
-	LockTx, err := instanceTNT20TokenBank.LockTokens(authUser, subchainID, TNT20VoucherContractAddress, user, big.NewInt(25))
+	authUser = mainchainSelectAccount(client, 1)
+	LockTx, err := instanceTNT20TokenBank.LockTokens(authUser, subchainID, tnt20VoucherContractAddress, user, mintLockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -62,7 +61,7 @@ func mainchainTNT20Locked() {
 	for {
 		time.Sleep(2 * time.Second)
 		toHeight, _ := subchainClient.BlockNumber(context.Background())
-		result := getMintlog(int(fromHeight), int(toHeight), SubchainTNT20TokenBankAddress, user)
+		result := getMintlog(int(fromHeight), int(toHeight), subchaintnt20TokenBankAddress, user)
 		if result != nil {
 			subchainVoucherAddress = *result
 			break
@@ -79,15 +78,15 @@ func subchainTNT20Lock() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(SubchainTNT20TokenBankAddress, client)
+	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)
 	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
-	authUser := SubchainSelectAccount(client, 1)
-	tx2, err := subchainTNT20VoucherAddressInstance.Approve(authUser, SubchainTNT20TokenBankAddress, big.NewInt(20))
+	authUser := subchainSelectAccount(client, 1)
+	tx2, err := subchainTNT20VoucherAddressInstance.Approve(authUser, subchaintnt20TokenBankAddress, big.NewInt(20))
 
-	authUser = SubchainSelectAccount(client, 1)
+	authUser = subchainSelectAccount(client, 1)
 	tx2, err = testSubchainTNT20TokenBankInstance.LockTokens(authUser, big.NewInt(366), subchainTNT20VoucherAddress, accountList[6].fromAddress, big.NewInt(20))
 	//tx, err := testSubchainTNT20TokenBankInstance.GetDenom(nil, subchainTNT20VoucherAddress)
 	if err != nil {
@@ -110,7 +109,7 @@ func subchainTNT20Lock() {
 		fmt.Println("subchain_account_balance is", tx)
 		time.Sleep(2 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
-		result := getMainchainTNT20Mintlog(int(fromHeight), int(toHeight), TNT20TokenBankAddress, accountList[6].fromAddress)
+		result := getMainchainTNT20Mintlog(int(fromHeight), int(toHeight), tnt20TokenBankAddress, accountList[6].fromAddress)
 		if result != nil {
 			mainchainVoucherAddress = *result
 			break
@@ -125,7 +124,7 @@ func mainchainTNT20Burn() {
 	}
 
 	mainchainTNT20VoucherAddress := common.HexToAddress("0xb0DBBcba1Be5B71Dcb42aB1935773B3675e645e8")
-	mainchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(TNT20TokenBankAddress, client)
+	mainchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(tnt20TokenBankAddress, client)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -133,10 +132,10 @@ func mainchainTNT20Burn() {
 	tx, err := mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[6].fromAddress)
 	fmt.Println("mainchain account 6 tnt20 balance is", tx)
 	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
-	authUser := SelectAccount(client, 6)
-	tx1, err := mainchainTNT20VoucherAddressInstance.Approve(authUser, TNT20TokenBankAddress, big.NewInt(11))
+	authUser := mainchainSelectAccount(client, 6)
+	tx1, err := mainchainTNT20VoucherAddressInstance.Approve(authUser, tnt20TokenBankAddress, big.NewInt(11))
 
-	authUser = SelectAccount(client, 6)
+	authUser = mainchainSelectAccount(client, 6)
 	tx1, err = mainchainTNT20TokenBankInstance.BurnVouchers(authUser, mainchainTNT20VoucherAddress, accountList[1].fromAddress, big.NewInt(10))
 	//tx, err := testSubchainTNT20TokenBankInstance.GetDenom(nil, subchainTNT20VoucherAddress)
 	if err != nil {
@@ -179,15 +178,15 @@ func subchainTNT20Burn() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(SubchainTNT20TokenBankAddress, client)
+	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)
 	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
-	authUser := SubchainSelectAccount(client, 1)
-	tx1, err := subchainTNT20VoucherAddressInstance.Approve(authUser, SubchainTNT20TokenBankAddress, big.NewInt(11))
+	authUser := subchainSelectAccount(client, 1)
+	tx1, err := subchainTNT20VoucherAddressInstance.Approve(authUser, subchaintnt20TokenBankAddress, big.NewInt(11))
 
-	authUser = SubchainSelectAccount(client, 1)
+	authUser = subchainSelectAccount(client, 1)
 	tx1, err = testSubchainTNT20TokenBankInstance.BurnVouchers(authUser, subchainTNT20VoucherAddress, accountList[1].fromAddress, big.NewInt(10))
 	//tx, err := testSubchainTNT20TokenBankInstance.GetDenom(nil, subchainTNT20VoucherAddress)
 	if err != nil {
@@ -207,7 +206,7 @@ func subchainTNT20Burn() {
 	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
-	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(TNT20VoucherContractAddress, mainchainClient)
+	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, mainchainClient)
 	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("mainchain_account_balance is", tx)
 	for {
