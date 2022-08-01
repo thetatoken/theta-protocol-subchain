@@ -30,7 +30,7 @@ func mainchainTfuelLock(lockAmount *big.Int) {
 
 }
 
-func subchainTfuelBurn() {
+func subchainTfuelBurn(burnAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -43,7 +43,7 @@ func subchainTfuelBurn() {
 	}
 
 	authUser = subchainSelectAccount(client, 1)
-	authUser.Value = big.NewInt(11111)
+	authUser.Value = burnAmount
 	tx, err := TfuelTokenBankInstance.BurnVouchers(authUser, accountList[1].fromAddress)
 	//tx, err := testSubchainTNT721TokenBankInstance.GetDenom(nil, subchainTNT721VoucherAddress)
 	if err != nil {

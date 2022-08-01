@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -370,10 +371,11 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 		return nil
 	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	tx, err := tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
+	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
