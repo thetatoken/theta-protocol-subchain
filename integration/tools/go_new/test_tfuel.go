@@ -9,7 +9,7 @@ import (
 	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
 )
 
-func mainchainTfuelLock() {
+func mainchainTfuelLock(lockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -21,7 +21,7 @@ func mainchainTfuelLock() {
 
 	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(tfuelTokenbankAddress, client)
 	auth := mainchainSelectAccount(client, 3)
-	auth.Value = big.NewInt(2000000) //new(big.Int).Mul(dec18, big.NewInt(200000))
+	auth.Value =lockAmount// big.NewInt(2000000) //new(big.Int).Mul(dec18, big.NewInt(200000))
 	tx, err := tfuelTokenBankInstance.LockTokens(auth, subchainID, user)
 	if err != nil {
 		log.Fatal(err)

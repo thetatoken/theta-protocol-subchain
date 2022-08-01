@@ -1,7 +1,7 @@
 # Theta configuration
 # chainID: tsub_3610001
 genesis:
-  hash: "0x63ca311e3328df2b00c3db3f5817d49a36ea4dbfbf0a547481e257a2a3674b8e"
+  hash: "0x2c1cad4ea49541998bacf92213f64136b0f02a8db82f5da1f61f34089c21df9d"
 p2p:
   port: 12100
 rpc:
