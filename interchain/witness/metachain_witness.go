@@ -35,20 +35,20 @@ type MetachainWitness struct {
 	witnessState   *metachainWitnessState
 
 	// The mainchain
-	mainchainID                 *big.Int
-	mainchainEthRpcUrl          string
-	mainchainEthRpcClient       *ec.Client
-	witnessedDynasty            *big.Int
-	chainRegistrarOnMainchain   *scta.ChainRegistrarOnMainchain // the ChainRegistrarOnMainchain contract deployed on the mainchain
-	mainchainTFuelTokenBankAddr common.Address
-	mainchainTFuelTokenBank     *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the mainchain
-	mainchainTNT20TokenBankAddr common.Address
-	mainchainTNT20TokenBank     *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the mainchain
+	mainchainID                  *big.Int
+	mainchainEthRpcUrl           string
+	mainchainEthRpcClient        *ec.Client
+	witnessedDynasty             *big.Int
+	chainRegistrarOnMainchain    *scta.ChainRegistrarOnMainchain // the ChainRegistrarOnMainchain contract deployed on the mainchain
+	mainchainTFuelTokenBankAddr  common.Address
+	mainchainTFuelTokenBank      *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the mainchain
+	mainchainTNT20TokenBankAddr  common.Address
+	mainchainTNT20TokenBank      *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the mainchain
 	mainchainTNT721TokenBankAddr common.Address
 	mainchainTNT721TokenBank     *scta.TNT721TokenBank // the TNT721TokenBank contract deployed on the mainchain
 
-	mainchainBlockHeight        *big.Int
-	lastQueryedMainChainHeight  *big.Int
+	mainchainBlockHeight       *big.Int
+	lastQueryedMainChainHeight *big.Int
 
 	// The subchain
 	subchainID                  *big.Int
@@ -119,19 +119,19 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		updateInterval: updateInterval,
 		witnessState:   witnessState,
 
-		mainchainID:                 mainchainID,
-		mainchainEthRpcUrl:          mainchainEthRpcURL,
-		mainchainEthRpcClient:       mainchainEthRpcClient,
-		witnessedDynasty:            big.NewInt(0),
-		chainRegistrarOnMainchain:   chainRegistrarOnMainchain,
-		mainchainTFuelTokenBankAddr: mainchainTFuelTokenBankAddr,
-		mainchainTFuelTokenBank:     mainchainTFuelTokenBank,
-		mainchainTNT20TokenBankAddr: mainchainTNT20TokenBankAddr,
-		mainchainTNT20TokenBank:     mainchainTNT20TokenBank,
+		mainchainID:                  mainchainID,
+		mainchainEthRpcUrl:           mainchainEthRpcURL,
+		mainchainEthRpcClient:        mainchainEthRpcClient,
+		witnessedDynasty:             big.NewInt(0),
+		chainRegistrarOnMainchain:    chainRegistrarOnMainchain,
+		mainchainTFuelTokenBankAddr:  mainchainTFuelTokenBankAddr,
+		mainchainTFuelTokenBank:      mainchainTFuelTokenBank,
+		mainchainTNT20TokenBankAddr:  mainchainTNT20TokenBankAddr,
+		mainchainTNT20TokenBank:      mainchainTNT20TokenBank,
 		mainchainTNT721TokenBankAddr: mainchainTNT721TokenBankAddr,
 		mainchainTNT721TokenBank:     mainchainTNT721TokenBank,
-		mainchainBlockHeight:        nil,
-		lastQueryedMainChainHeight:  big.NewInt(0),
+		mainchainBlockHeight:         nil,
+		lastQueryedMainChainHeight:   big.NewInt(0),
 
 		subchainID:           subchainID,
 		subchainEthRpcUrl:    subchainEthRpcURL,
@@ -272,11 +272,11 @@ func (mw *MetachainWitness) updateSubchainBlockHeight() {
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnMainchain() {
-	mw.collectInterChainMessageEventsOnChain(mw.mainchainID, mw.mainchainEthRpcUrl, mw.mainchainTFuelTokenBankAddr, mw.mainchainTNT20TokenBankAddr,mw.mainchainTNT721TokenBankAddr)
+	mw.collectInterChainMessageEventsOnChain(mw.mainchainID, mw.mainchainEthRpcUrl, mw.mainchainTFuelTokenBankAddr, mw.mainchainTNT20TokenBankAddr, mw.mainchainTNT721TokenBankAddr)
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
-	mw.collectInterChainMessageEventsOnChain(mw.subchainID, mw.subchainEthRpcUrl, mw.subchainTFuelTokenBankAddr, mw.subchainTNT20TokenBankAddr,mw.subchainTNT721TokenBankAddr)
+	mw.collectInterChainMessageEventsOnChain(mw.subchainID, mw.subchainEthRpcUrl, mw.subchainTFuelTokenBankAddr, mw.subchainTNT20TokenBankAddr, mw.subchainTNT721TokenBankAddr)
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,
@@ -339,7 +339,6 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID 
 func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
 	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
-	fmt.Println(mw.chainRegistrarOnMainchain.GetAllSubchainIDs(nil))
 	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
 	validatorAddrs := vs.Validators
 	validatorStakes := vs.ShareAmounts
