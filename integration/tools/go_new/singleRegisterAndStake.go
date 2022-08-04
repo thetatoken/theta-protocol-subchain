@@ -64,7 +64,6 @@ func init() {
 	tfuelTokenbankAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
 	subchainTfuelTokenBank = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
 
-
 	var map1 []string
 
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
@@ -77,6 +76,10 @@ func init() {
 	map1 = append(map1, "8888888888888888888888888888888888888888888888888888888888888888")
 	map1 = append(map1, "9999999999999999999999999999999999999999999999999999999999999999")
 	map1 = append(map1, "1000000000000000000000000000000000000000000000000000000000000000")
+
+	map1 = append(map1, "a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d") //10
+	map1 = append(map1, "d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013") //11
+	map1 = append(map1, "83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d")
 	// privateKey, err := crypto.HexToECDSA("1111111111111111111111111111111111111111111111111111111111111111")
 	for _, value := range map1 {
 
@@ -97,6 +100,34 @@ func init() {
 		fmt.Println(value, "-----", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
+
+	// var dec18 = new(big.Int)
+	// dec18.SetString("1000000000000000000", 10)
+	// //amount := new(big.Int).Mul(dec18, big.NewInt(200000))
+	// client, err := ethclient.Dial("http://localhost:18888/rpc")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// nonce, err := client.PendingNonceAt(context.Background(), accountList[9].fromAddress)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"thetacli.Send","params":[{"chain_id":"privatenet", "from":"%v", "to":"%v", "thetawei":"9900000", "tfuelwei":"88000000", "fee":"100000000", "sequence":"%v", "async":true}],"id":1}`, accountList[9].fromAddress, accountList[10].fromAddress, fmt.Sprintf("%d", nonce))
+	// var jsonData = []byte(queryStr)
+
+	// request, err := http.NewRequest("POST", "http://localhost:18888/rpc", bytes.NewBuffer(jsonData))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// request.Header.Set("Content-Type", "application/json")
+
+	// client1 := &http.Client{}
+	// response, err := client1.Do(request)
+	// if err != nil {
+	// 	log.Fatalf("response error : %v", err)
+	// }
+	// defer response.Body.Close()
+	// fmt.Println(response)
 }
 func mainchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
@@ -213,7 +244,7 @@ func oneAccountRegister() {
 	fmt.Println(x)
 
 }
-func oneAcoountStake() {
+func oneAcoountStake(id int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -233,26 +264,26 @@ func oneAcoountStake() {
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
-	validator1 := accountList[1].fromAddress
+	validator1 := accountList[id].fromAddress
 	validatorCollateralManagerAddr, _ := instanceChainRegistrar.Vcm(nil)
 	validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
 
 	//Deposit wTHETA collateral to validators
 	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
-	authValidator1 := mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 := mainchainSelectAccount(client, id) //Validator1
 
 	tx, err := instanceWrappedTheta.Mint(authValidator1, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceWrappedTheta.Approve(authValidator1, validatorCollateralManagerAddr, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// fmt.Println("validator1 collateral")
 	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[1].fromAddress))
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceChainRegistrar.DepositCollateral(authValidator1, subchainID, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
@@ -273,7 +304,7 @@ func oneAcoountStake() {
 	}
 	// fmt.Println("validator1 deposit")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmountMint)
 	if err != nil {
 		log.Fatal(err)
@@ -284,7 +315,7 @@ func oneAcoountStake() {
 	// fmt.Println("wallet deposited")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validatorStakeManagerAddr))
 
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
 	if err != nil {
 		log.Fatal(err)
@@ -297,15 +328,71 @@ func oneAcoountStake() {
 	fmt.Println(tx)
 
 	time.Sleep(5 * time.Second)
-	// height, _ := client.BlockNumber(context.Background())
-	// fmt.Println(big.NewInt(int64(height)))
-	// dynasty := big.NewInt(int64(height/100 + 1))
-	// tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
-	// fmt.Println(tx1)
-	// fmt.Println(tx2)
-	tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
+	height, _ := client.BlockNumber(context.Background())
+	fmt.Println(big.NewInt(int64(height)))
+	dynasty := big.NewInt(int64(height/100 + 1))
+	tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
+	fmt.Println("set", tx1)
+	fmt.Println("amout", tx2)
+	// tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(tx3)
+}
+func claimStake() {
+	subchainID := big.NewInt(360777)
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(tx3)
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(registerOnMainchainAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	var validatorStakingAmount = new(big.Int)
+	validatorStakingAmount.SetString("1847970383094463086026", 10)
+	//validatorStakingAmount := new(big.Int).Mul(dec18, big.NewInt(100000))
+	// authGovTokenInitDistrWallet := mainchainSelectAccount(client, 6)
+	// validator1 := accountList[12].fromAddress
+	// instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(governanceTokenAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	// tx, err := instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator1, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	//validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
+	// authValidator1 := mainchainSelectAccount(client, 12) //Validator1
+	// tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// authValidator1 = mainchainSelectAccount(client, 12) //Validator1
+	// tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	height, _ := client.BlockNumber(context.Background())
+	fmt.Println(big.NewInt(int64(height)))
+	dynasty := big.NewInt(int64(height/100 + 1))
+	re, _ := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
+	fmt.Println(re)
+	// authValidator1 := mainchainSelectAccount(client, 12) //Validator1
+	// fmt.Println(accountList[1].fromAddress)
+	// tx, err := instanceChainRegistrar.WithdrawStake(authValidator1, subchainID, accountList[12].fromAddress, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(tx.Hash().Hex())
+	// receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// if receipt.Status != 1 {
+	// 	fmt.Println("error")
+	// }
 }

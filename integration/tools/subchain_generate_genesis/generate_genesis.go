@@ -297,6 +297,7 @@ func deploySmartContract(subchainID string, sv *slst.StoreView, contractBytecode
 		Data:     contractBytecode,
 	}
 	parentBlockInfo := svm.NewBlockInfo(0, big.NewInt(0), subchainID)
+	parentBlockInfo.Height = uint64(1000000000)
 	_, contractAddr, _, evmErr := svm.Execute(parentBlockInfo, &deploySCTx, sv)
 	if evmErr != nil {
 		return common.Address{}, evmErr

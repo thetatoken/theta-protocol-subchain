@@ -78,7 +78,7 @@ func subchainTNT20Lock(mintLockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(subchaintnt20TokenBankAddress, client)
+	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)
@@ -178,7 +178,7 @@ func subchainTNT20Burn(burnAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(subchaintnt20TokenBankAddress, client)
+	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)
