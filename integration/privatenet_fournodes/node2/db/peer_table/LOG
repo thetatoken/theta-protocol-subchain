@@ -1,36 +1,6 @@
-=============== Aug 3, 2022 (CST) ===============
-15:05:10.401319 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-15:05:10.414412 db@open opening
-15:05:10.420057 version@stat F·[] S·0B[] Sc·[]
-15:05:10.424416 db@janitor F·2 G·0
-15:05:10.424454 db@open done T·10.0091ms
-=============== Aug 3, 2022 (CST) ===============
-15:12:36.977466 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-15:12:36.977581 version@stat F·[] S·0B[] Sc·[]
-15:12:36.977638 db@open opening
-15:12:36.977683 journal@recovery F·1
-15:12:38.383011 journal@recovery recovering @1
-15:12:38.388873 memdb@flush created L0@2 N·6 S·246B "p2pPeer,v6":"p2pPeer,v1"
-15:12:38.412853 version@stat F·[1] S·246B[246B] Sc·[0.25]
-15:12:38.427749 db@janitor F·3 G·0
-15:12:38.427808 db@open done T·1.4501574s
-=============== Aug 3, 2022 (CST) ===============
-17:27:36.882842 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-17:27:36.883018 version@stat F·[1] S·246B[246B] Sc·[0.25]
-17:27:36.883091 db@open opening
-17:27:36.883169 journal@recovery F·1
-17:27:36.891458 journal@recovery recovering @3
-17:27:36.896283 memdb@flush created L0@5 N·3 S·235B "p2pPeer,v10":"p2pPeer,v8"
-17:27:36.902921 version@stat F·[2] S·481B[481B] Sc·[0.50]
-17:27:36.918097 db@janitor F·4 G·0
-17:27:36.918179 db@open done T·35.0719ms
-=============== Aug 3, 2022 (CST) ===============
-17:34:49.761743 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
-17:34:49.761918 version@stat F·[2] S·481B[481B] Sc·[0.50]
-17:34:49.761984 db@open opening
-17:34:49.762046 journal@recovery F·1
-17:34:49.786679 journal@recovery recovering @6
-17:34:49.792455 memdb@flush created L0@8 N·3 S·235B "p2pPeer,v14":"p2pPeer,v12"
-17:34:49.794520 version@stat F·[3] S·716B[716B] Sc·[0.75]
-17:34:49.815277 db@janitor F·5 G·0
-17:34:49.815346 db@open done T·53.3514ms
+=============== Aug 4, 2022 (CST) ===============
+10:38:19.607238 log@legend F·NumFile S·FileSize N·Entry C·BadEntry B·BadBlock Ke·KeyError D·DroppedEntry L·Level Q·SeqNum T·TimeElapsed
+10:38:19.619371 db@open opening
+10:38:19.626589 version@stat F·[] S·0B[] Sc·[]
+10:38:19.630614 db@janitor F·2 G·0
+10:38:19.630647 db@open done T·11.2474ms
