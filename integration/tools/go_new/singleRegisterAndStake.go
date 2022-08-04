@@ -37,6 +37,7 @@ var tnt721VoucherContractAddress common.Address
 var tfuelTokenbankAddress common.Address
 var subchainTfuelTokenBank common.Address
 var Subchaintnt721TokenBankAddress common.Address
+var subchainID *big.Int
 
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
@@ -50,34 +51,8 @@ func pubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	return common.BytesToAddress(keccak256(pubBytes[1:])[12:])
 }
 func init() {
-	wthetaAddress = common.HexToAddress("0x7d73424a8256C0b2BA245e5d5a3De8820E45F390")
-	registerOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
-	governanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
-	tnt20VoucherContractAddress = common.HexToAddress("0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9")
-	tnt20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
-	subchaintnt20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
+	map1 := config()
 
-	tnt721TokenBankAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
-	tnt721VoucherContractAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
-	Subchaintnt721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
-
-	tfuelTokenbankAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
-	subchainTfuelTokenBank = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
-
-
-	var map1 []string
-
-	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
-	map1 = append(map1, "93a90ea508331dfdf27fb79757d4250b4e84954927ba0073cd67454ac432c737")
-	map1 = append(map1, "3333333333333333333333333333333333333333333333333333333333333333")
-	map1 = append(map1, "4444444444444444444444444444444444444444444444444444444444444444")
-	map1 = append(map1, "5555555555555555555555555555555555555555555555555555555555555555")
-	map1 = append(map1, "6666666666666666666666666666666666666666666666666666666666666666")
-	map1 = append(map1, "7777777777777777777777777777777777777777777777777777777777777777")
-	map1 = append(map1, "8888888888888888888888888888888888888888888888888888888888888888")
-	map1 = append(map1, "9999999999999999999999999999999999999999999999999999999999999999")
-	map1 = append(map1, "1000000000000000000000000000000000000000000000000000000000000000")
-	// privateKey, err := crypto.HexToECDSA("1111111111111111111111111111111111111111111111111111111111111111")
 	for _, value := range map1 {
 
 		privateKey, err := crypto.HexToECDSA(value)
@@ -97,6 +72,34 @@ func init() {
 		fmt.Println(value, "-----", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
+
+	// var dec18 = new(big.Int)
+	// dec18.SetString("1000000000000000000", 10)
+	// //amount := new(big.Int).Mul(dec18, big.NewInt(200000))
+	// client, err := ethclient.Dial("http://localhost:18888/rpc")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// nonce, err := client.PendingNonceAt(context.Background(), accountList[9].fromAddress)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"thetacli.Send","params":[{"chain_id":"privatenet", "from":"%v", "to":"%v", "thetawei":"9900000", "tfuelwei":"88000000", "fee":"100000000", "sequence":"%v", "async":true}],"id":1}`, accountList[9].fromAddress, accountList[10].fromAddress, fmt.Sprintf("%d", nonce))
+	// var jsonData = []byte(queryStr)
+
+	// request, err := http.NewRequest("POST", "http://localhost:18888/rpc", bytes.NewBuffer(jsonData))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// request.Header.Set("Content-Type", "application/json")
+
+	// client1 := &http.Client{}
+	// response, err := client1.Do(request)
+	// if err != nil {
+	// 	log.Fatalf("response error : %v", err)
+	// }
+	// defer response.Body.Close()
+	// fmt.Println(response)
 }
 func mainchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
 	time.Sleep(1 * time.Second)
@@ -167,7 +170,6 @@ func oneAccountRegister() {
 		log.Fatal(err)
 	}
 
-	subchainID := big.NewInt(360777)
 
 	//tnt20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
 
@@ -213,14 +215,13 @@ func oneAccountRegister() {
 	fmt.Println(x)
 
 }
-func oneAcoountStake() {
+func oneAcoountStake(id int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
-	subchainID := big.NewInt(360777)
 	instanceWrappedTheta, err := ct.NewMockWrappedTheta(wthetaAddress, client)
 	if err != nil {
 		log.Fatal("hhh", err)
@@ -233,26 +234,26 @@ func oneAcoountStake() {
 	if err != nil {
 		log.Fatal("hhh", err)
 	}
-	validator1 := accountList[1].fromAddress
+	validator1 := accountList[id].fromAddress
 	validatorCollateralManagerAddr, _ := instanceChainRegistrar.Vcm(nil)
 	validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
 
 	//Deposit wTHETA collateral to validators
 	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
-	authValidator1 := mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 := mainchainSelectAccount(client, id) //Validator1
 
 	tx, err := instanceWrappedTheta.Mint(authValidator1, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceWrappedTheta.Approve(authValidator1, validatorCollateralManagerAddr, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// fmt.Println("validator1 collateral")
 	// fmt.Println(instanceWrappedTheta.BalanceOf(nil, accountList[1].fromAddress))
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceChainRegistrar.DepositCollateral(authValidator1, subchainID, validator1, validatorCollateral)
 	if err != nil {
 		log.Fatal(err)
@@ -273,7 +274,7 @@ func oneAcoountStake() {
 	}
 	// fmt.Println("validator1 deposit")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validator1))
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmountMint)
 	if err != nil {
 		log.Fatal(err)
@@ -284,7 +285,7 @@ func oneAcoountStake() {
 	// fmt.Println("wallet deposited")
 	// fmt.Println(instanceGovernanceToken.BalanceOf(nil, validatorStakeManagerAddr))
 
-	authValidator1 = mainchainSelectAccount(client, 1) //Validator1
+	authValidator1 = mainchainSelectAccount(client, id) //Validator1
 	tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
 	if err != nil {
 		log.Fatal(err)
@@ -297,15 +298,85 @@ func oneAcoountStake() {
 	fmt.Println(tx)
 
 	time.Sleep(5 * time.Second)
-	// height, _ := client.BlockNumber(context.Background())
-	// fmt.Println(big.NewInt(int64(height)))
-	// dynasty := big.NewInt(int64(height/100 + 1))
-	// tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
-	// fmt.Println(tx1)
-	// fmt.Println(tx2)
-	tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
+	height, _ := client.BlockNumber(context.Background())
+	fmt.Println(big.NewInt(int64(height)))
+	dynasty := big.NewInt(int64(height/100 + 1))
+	tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
+	fmt.Println("set", tx1)
+	fmt.Println("amout", tx2)
+	// tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(tx3)
+}
+func claimStake() {
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(tx3)
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(registerOnMainchainAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	var validatorStakingAmount = new(big.Int)
+
+	//validatorStakingAmount := new(big.Int).Mul(dec18, big.NewInt(100000))
+	// authGovTokenInitDistrWallet := mainchainSelectAccount(client, 6)
+	// validator1 := accountList[12].fromAddress
+	// instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(governanceTokenAddress, client)
+	if err != nil {
+		log.Fatal("hhh", err)
+	}
+	// tx, err := instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, validator1, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	//validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
+	// authValidator1 := mainchainSelectAccount(client, 12) //Validator1
+	// tx, err = instanceGovernanceToken.Approve(authValidator1, validatorStakeManagerAddr, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// authValidator1 = mainchainSelectAccount(client, 12) //Validator1
+	// tx, err = instanceChainRegistrar.DepositStake(authValidator1, subchainID, validator1, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	height, _ := client.BlockNumber(context.Background())
+	fmt.Println(big.NewInt(int64(height)))
+	dynasty := big.NewInt(int64(height/100 + 1))
+	re, _ := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
+	fmt.Println(re)
+	//validatorStakingAmount.SetString("1621710387562809105166", 10)
+	validatorStakingAmount = re.ShareAmounts[0]
+	authValidator1 := mainchainSelectAccount(client, 10) //Validator1
+	tx, err := instanceChainRegistrar.WithdrawStake(authValidator1, subchainID, accountList[10].fromAddress, validatorStakingAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println(tx.Hash().Hex())
+	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if receipt.Status != 1 {
+		fmt.Println("error")
+	}
+	// validatorStakingAmount = re.ShareAmounts[1]
+	// authValidator1 = mainchainSelectAccount(client, 10) //Validator1
+	// tx, err = instanceChainRegistrar.WithdrawStake(authValidator1, subchainID, accountList[10].fromAddress, validatorStakingAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println(tx.Hash().Hex())
+	// receipt, err = client.TransactionReceipt(context.Background(), tx.Hash())
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// if receipt.Status != 1 {
+	// 	fmt.Println("error")
+	// }
 }

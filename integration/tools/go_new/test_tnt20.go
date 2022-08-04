@@ -12,12 +12,11 @@ import (
 	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
 )
 
-func mainchainTNT20Locked(mintLockAmount *big.Int) {
+func mainchainTNT20Lock(mintLockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainID := big.NewInt(360777)
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
 	user := accountList[1].fromAddress
@@ -78,7 +77,7 @@ func subchainTNT20Lock(mintLockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(subchaintnt20TokenBankAddress, client)
+	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)
@@ -178,7 +177,7 @@ func subchainTNT20Burn(burnAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTestSubchainTNT20TokenBank(subchaintnt20TokenBankAddress, client)
+	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("subchain_account_balance is", tx)

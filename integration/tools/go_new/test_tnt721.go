@@ -17,7 +17,6 @@ func mainchainTNT721Lock(tokenID *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainID := big.NewInt(360777)
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
 	user := accountList[1].fromAddress
