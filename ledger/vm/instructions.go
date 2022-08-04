@@ -584,7 +584,6 @@ func opGasLimit(pc *uint64, interpreter *EVMInterpreter, contract *Contract, mem
 func opChainID(pc *uint64, interpreter *EVMInterpreter, contract *Contract, memory *Memory, stack *Stack) ([]byte, error) {
 	chainID := interpreter.evm.chainConfig.ChainID
 	stack.push(chainID)
-	fmt.Println(chainID)
 	return nil, nil
 }
 
