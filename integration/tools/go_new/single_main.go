@@ -1,6 +1,13 @@
 package main
 
-import "github.com/thetatoken/theta/common"
+import (
+	"fmt"
+	"log"
+
+	"github.com/thetatoken/theta/common"
+	"github.com/thetatoken/thetasubchain/eth/ethclient"
+	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+)
 
 const CHAIN_ID_OFFSET int64 = 360
 
@@ -37,7 +44,35 @@ func config() []string {
 	return map1
 }
 func main() {
-	oneAcoountStake(10)
+
+	// var dec18 = new(big.Int)
+	// dec18.SetString("1000000000000000000", 10)
+	// //amount := new(big.Int).Mul(dec18, big.NewInt(200000))
+	// client, err := ethclient.Dial("http://localhost:18888/rpc")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// nonce, err := client.PendingNonceAt(context.Background(), accountList[9].fromAddress)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"thetacli.Send","params":[{"chain_id":"privatenet", "from":"%v", "to":"%v", "thetawei":"9900000", "tfuelwei":"88000000", "fee":"100000000", "sequence":"%v", "async":true}],"id":1}`, accountList[1].fromAddress, accountList[10].fromAddress, fmt.Sprintf("%d", nonce))
+	// var jsonData = []byte(queryStr)
+
+	// request, err := http.NewRequest("POST", "http://localhost:18888/rpc", bytes.NewBuffer(jsonData))
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// request.Header.Set("Content-Type", "application/json")
+
+	// client1 := &http.Client{}
+	// response, err := client1.Do(request)
+	// if err != nil {
+	// 	log.Fatalf("response error : %v", err)
+	// }
+	// defer response.Body.Close()
+	// fmt.Println(response)
+	//oneAcoountStake(10)
 	//oneAcoountStake(12)
 	//claimStake()
 	//oneAcoountStake(1)
@@ -45,17 +80,18 @@ func main() {
 
 	// mainchainTNT721Lock(big.NewInt(33))
 	// subchainTNT721Burn(big.NewInt(33))
-	// client, err := ethclient.Dial("http://localhost:19888/rpc")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// TfuelTokenBankInstance, err := ct.NewTFuelTokenBank(subchainTfuelTokenBank, client)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// auth := subchainSelectAccount(client, 1)
-	// tx, _ := TfuelTokenBankInstance.Id(auth)
-	// fmt.Println(tx.Hash().Hex())
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	TfuelTokenBankInstance, err := ct.NewTFuelTokenBank(tfuelTokenbankAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	//auth := subchainSelectAccount(client, 1)
+	tx, _ := TfuelTokenBankInstance.Test(nil)
+	fmt.Println(tx)
 	// getMintlog1(1, 9, common.HexToAddress("0x5a443704dd4b594b382c22a083e2bd3090a6fef3"))
 	// chainID, err := client.ChainID(context.Background())
 	// if err != nil {
