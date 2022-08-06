@@ -16,7 +16,7 @@ import (
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
 
 	// rg "chainRegistrarOnMainchain" // for demo
-	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+	ct "github.com/thetatoken/thetasubchain/interchain/contracts/contract"
 )
 
 type accounts struct {
@@ -169,7 +169,6 @@ func oneAccountRegister() {
 	if err != nil {
 		log.Fatal(err)
 	}
-
 
 	//tnt20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
 

@@ -9,7 +9,7 @@ import (
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
-	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+	ct "github.com/thetatoken/thetasubchain/interchain/contracts/contract"
 )
 
 func mainchainTNT721Lock(tokenID *big.Int) {

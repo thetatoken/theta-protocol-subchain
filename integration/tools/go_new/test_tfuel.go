@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
-	ct "github.com/thetatoken/thetasubchain/integration/tools/go_new/accessors"
+	ct "github.com/thetatoken/thetasubchain/interchain/contracts/contract"
 )
 
 func mainchainTfuelLock(lockAmount *big.Int) {
@@ -14,14 +14,14 @@ func mainchainTfuelLock(lockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	
+
 	var dec18 = new(big.Int)
 	dec18.SetString("1000000000000000000", 10)
 	user := accountList[1].fromAddress
 
 	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(tfuelTokenbankAddress, client)
 	auth := mainchainSelectAccount(client, 3)
-	auth.Value =lockAmount// big.NewInt(2000000) //new(big.Int).Mul(dec18, big.NewInt(200000))
+	auth.Value = lockAmount // big.NewInt(2000000) //new(big.Int).Mul(dec18, big.NewInt(200000))
 	tx, err := tfuelTokenBankInstance.LockTokens(auth, subchainID, user)
 	if err != nil {
 		log.Fatal(err)

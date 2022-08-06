@@ -14,7 +14,7 @@ import (
 
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
-	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/contract"
 	siu "github.com/thetatoken/thetasubchain/interchain/utils"
 
 	// "github.com/thetatoken/thetasubchain/eth/abi/bind"
