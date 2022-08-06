@@ -300,9 +300,8 @@ func oneAcoountStake(id int) {
 	height, _ := client.BlockNumber(context.Background())
 	fmt.Println(big.NewInt(int64(height)))
 	dynasty := big.NewInt(int64(height/100 + 1))
-	tx1, tx2 := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
-	fmt.Println("set", tx1)
-	fmt.Println("amout", tx2)
+	tx1, _ := instanceChainRegistrar.GetValidatorSet(nil, subchainID, dynasty)
+	fmt.Println("set info", tx1)
 	// tx3, err := instanceChainRegistrar.GetStakeSnapshotHeights(nil, subchainID)
 	// if err != nil {
 	// 	log.Fatal(err)
