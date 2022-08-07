@@ -16,7 +16,7 @@ import (
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
 
 	// rg "chainRegistrarOnMainchain" // for demo
-	ct "github.com/thetatoken/thetasubchain/interchain/contracts/contract"
+	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
 type accounts struct {

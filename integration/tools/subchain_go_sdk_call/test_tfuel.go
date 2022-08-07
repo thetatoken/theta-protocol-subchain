@@ -6,7 +6,7 @@ import (
 	"math/big"
 
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
-	ct "github.com/thetatoken/thetasubchain/interchain/contracts/contract"
+	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
 func mainchainTfuelLock(lockAmount *big.Int) {
