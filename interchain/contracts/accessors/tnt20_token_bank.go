@@ -1006,7 +1006,7 @@ type TNT20TokenBankTNT20TokenLocked struct {
 	LockedAmount               *big.Int
 	Name                       string
 	Symbol                     string
-	Decimal                    uint8
+	Decimals                   uint8
 	TokenLockNonce             *big.Int
 	Raw                        types.Log // Blockchain specific contextual infos
 }
