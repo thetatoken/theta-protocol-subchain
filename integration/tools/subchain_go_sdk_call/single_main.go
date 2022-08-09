@@ -48,12 +48,12 @@ func main() {
 	//oneAcoountStake(1)   // use the 10th account to deposit and become validator
 
 	// //Tfuel
-	mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
-	 //subchainTfuelBurn(big.NewInt(10))
+	//mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
+	//subchainTfuelBurn(big.NewInt(10))
 
 	// //TNT20
 	//mainchainTNT20Lock(big.NewInt(100)) // last address printed in console is subchain voucher contract address
-	//subchainTNT20Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
+	subchainTNT20Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
 	//mainchainTNT20Burn(big.NewInt(10))
 	// subchainTNT20Burn(big.NewInt(10))
 
