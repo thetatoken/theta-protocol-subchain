@@ -247,7 +247,7 @@ type CrossChainTNT20TokenLockedEvent struct { // corresponding to the "TNT20Toke
 	LockedAmount               *big.Int
 	Name                       string
 	Symbol                     string
-	Decimal                    uint8
+	Decimals                   uint8
 	TokenLockNonce             *big.Int
 }
 

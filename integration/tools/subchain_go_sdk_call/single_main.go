@@ -14,15 +14,15 @@ func config() []string {
 	wthetaAddress = common.HexToAddress("0x7d73424a8256C0b2BA245e5d5a3De8820E45F390")
 	registerOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
 	governanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
-	tnt20VoucherContractAddress = common.HexToAddress("0x4fb87c52Bb6D194f78cd4896E3e574028fedBAB9")
+	tnt20VoucherContractAddress = common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4")
 	tnt20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
 	subchaintnt20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 
-	tnt721TokenBankAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
-	tnt721VoucherContractAddress = common.HexToAddress("0x52d2878492EF30d625fc54EC52c4dB7f010d471e")
+	tnt721TokenBankAddress = common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
+	tnt721VoucherContractAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
 	Subchaintnt721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
 
-	tfuelTokenbankAddress = common.HexToAddress("0x560A0c0CA6B0A67895024dae77442C5fd3DC473e")
+	tfuelTokenbankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
 	subchainTfuelTokenBank = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
 
 	var map1 []string
@@ -44,24 +44,24 @@ func config() []string {
 }
 func main() {
 
-	oneAccountRegister() //register subchain , its id is 360777
-	oneAcoountStake(1)   // use the 10th account to deposit and become validator
+	//oneAccountRegister() //register subchain , its id is 360777
+	//oneAcoountStake(1)   // use the 10th account to deposit and become validator
 
-	//Tfuel
+	// //Tfuel
 	mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
-	subchainTfuelBurn(big.NewInt(10))
+	 //subchainTfuelBurn(big.NewInt(10))
 
-	//TNT20
-	mainchainTNT20Lock(big.NewInt(100)) // last address printed in console is subchain voucher contract address
-	subchainTNT20Lock(big.NewInt(10))   //last address printed in console is mainchain voucher contract address
-	mainchainTNT20Burn(big.NewInt(10))
-	subchainTNT20Burn(big.NewInt(10))
+	// //TNT20
+	//mainchainTNT20Lock(big.NewInt(100)) // last address printed in console is subchain voucher contract address
+	//subchainTNT20Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
+	//mainchainTNT20Burn(big.NewInt(10))
+	// subchainTNT20Burn(big.NewInt(10))
 
-	//TNT721
-	mainchainTNT721Lock(big.NewInt(100)) //last address printed in console is subchain voucher contract address
-	subchainTNT721Burn(big.NewInt(10))
-	subchainTNT721Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
-	mainchainTNT721Burn(big.NewInt(10))
+	// //TNT721
+	// mainchainTNT721Lock(big.NewInt(100)) //last address printed in console is subchain voucher contract address
+	// subchainTNT721Burn(big.NewInt(10))
+	// subchainTNT721Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
+	// mainchainTNT721Burn(big.NewInt(10))
 
 	//oneAcoountStake(12)
 	//claimStake()

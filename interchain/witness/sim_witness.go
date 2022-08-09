@@ -288,7 +288,7 @@ func (mw *SimulatedMetachainWitness) generateInterChainEventForTNT20Lock(tokenSo
 		LockedAmount:               tokenAmount,
 		Name:                       tokenName,
 		Symbol:                     tokenSymbol,
-		Decimal:                    tokenDecimals,
+		Decimals:                    tokenDecimals,
 		TokenLockNonce:             nonce,
 	})
 	if err != nil {
