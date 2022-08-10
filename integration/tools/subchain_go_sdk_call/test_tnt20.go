@@ -55,7 +55,7 @@ func mainchainTNT20Lock(mintLockAmount *big.Int) {
 	if receipt.Status != 1 {
 		fmt.Println("lock error")
 	}
-	fmt.Println(LockTx.Hash())
+	fmt.Println(LockTx.Hash().Hex())
 	var subchainVoucherAddress common.Address
 	for {
 		time.Sleep(2 * time.Second)

@@ -374,7 +374,6 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
