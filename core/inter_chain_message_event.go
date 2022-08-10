@@ -152,7 +152,7 @@ func (c *InterChainMessageEvent) DecodeRLP(stream *rlp.Stream) error {
 	}
 	c.SourceChainID = sourceChainID
 
-	targetChainID := big.NewInt(0) //gai
+	targetChainID := big.NewInt(0)
 	err = stream.Decode(&targetChainID)
 	if err != nil {
 		return err

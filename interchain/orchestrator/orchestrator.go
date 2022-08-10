@@ -91,13 +91,12 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	if err != nil {
 		logger.Fatalf("failed to create MainchainTNT721TokenBank contract %v\n", err)
 	}
-	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID)) //big.NewInt(360777) //gai
+	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
 		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
 	}
-	//var eventProcessedTime map[string]time.Time //gai
 	eventProcessedTime := make(map[string]time.Time)
 	oc := &Orchestrator{
 		updateInterval:     updateInterval,

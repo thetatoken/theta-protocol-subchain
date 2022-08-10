@@ -274,6 +274,21 @@ func (sv *StoreView) GetValidatorSetForChainDuringDynasty(chainID *big.Int, dyna
 	return vs
 }
 
+// GetChainRegistrarContractAddress gets chain registrar contract address
+func (sv *StoreView) GetChainRegistrarContractAddress() *common.Address {
+	data := sv.Get(ChainRegistrarContractAddressKey())
+	if len(data) == 0 {
+		return nil
+	}
+	tbca := &common.Address{}
+	err := types.FromBytes(data, tbca)
+	if err != nil {
+		log.Panicf("Error reading chain registrar contract address %X, error: %v",
+			data, err.Error())
+	}
+	return tbca
+}
+
 // GetTFuelTokenBankContractAddress gets the TFuel token bank contract address.
 func (sv *StoreView) GetTFuelTokenBankContractAddress() *common.Address {
 	data := sv.Get(TFuelTokenBankContractAddressKey())

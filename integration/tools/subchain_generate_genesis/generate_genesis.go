@@ -146,10 +146,6 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 
 		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
 	}
-	var dec18 = new(big.Int)
-	dec18.SetString("1000000000000000000", 10)
-	amount := new(big.Int).Mul(dec18, big.NewInt(2000000))
-	setInitialBalance(sv, common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"), amount)
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
 
@@ -191,43 +187,10 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 
 	sequence := 0
 	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, predeployed.ChainRegistrarContractBytecode, deployer, sequence, slst.ChainRegistrarContractAddressKey())
-	fmt.Println(chainRegistrarContractAddr.Hex())
 	if err != nil {
 		logger.Panicf("Failed to deploy the chain registrar smart contract (sequence = %v): %v", sequence, err)
 	}
 
-	// tokenBankContractBytecodes := []string{
-	// 	predeployed.TFuelTokenBankContractBytecode,
-	// 	predeployed.TNT20TokenBankContractBytecode,
-	// }
-	// contractAddressKeys := []common.Bytes{
-	// 	slst.TFuelTokenBankContractAddressKey(),
-	// 	slst.TNT20TokenBankContractAddressKey(),
-	// 	//slst.TNT721TokenBankContractAddressKey(),
-
-	// }
-
-	//
-	// Deploy the TokenBank contracts
-	//
-	// sequence += 1
-	// _, err = deploySmartContract(subchainID, sv, predeployed.TestByteCodeA, deployer, sequence, slst.TestAddressKeyA())
-	// if err != nil {
-	// 	logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
-	// }
-	// for idx, contractBytecode := range tokenBankContractBytecodes {
-	// 	sequence += 1
-	// 	tokenBankDeploymentBytecode := addConstructorArgumentForTokenBankBytecode(contractBytecode, mainchainIDInt, chainRegistrarContractAddr)
-	// 	if sequence == 2 {
-	// 		ioutil.WriteFile(`22.txt`, []byte(tokenBankDeploymentBytecode), 0666)
-	// 	}
-
-	// 	contractAddressKey := contractAddressKeys[idx]
-	// 	_, err := deploySmartContract(subchainID, sv, tokenBankDeploymentBytecode, deployer, sequence, contractAddressKey)
-	// 	if err != nil {
-	// 		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
-	// 	}
-	// }
 	sequence += 1
 	_, err = deploySmartContract(subchainID, sv, addConstructorArgumentForTokenBankBytecode(predeployed.TFuelTokenBankContractBytecode, mainchainIDInt, chainRegistrarContractAddr), deployer, sequence, slst.TFuelTokenBankContractAddressKey())
 	if err != nil {
@@ -250,23 +213,23 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 // Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
 func addConstructorArgumentForTokenBankBytecode(contractBytecode string, mainchainIDInt *big.Int, chainRegistrarContractAddr common.Address) string {
 	RawABI := `[
-    {
-      "inputs": [
-        {
-          "internalType": "uint256",
-          "name": "mainchainID_",
-          "type": "uint256"
-        },
-        {
-          "internalType": "contract ChainRegistrar",
-          "name": "chainRegistrar_",
-          "type": "address"
-        }
-      ],
-      "stateMutability": "nonpayable",
-      "type": "constructor"
-    }
-]`
+		{
+		"inputs": [
+			{
+			"internalType": "uint256",
+			"name": "mainchainID_",
+			"type": "uint256"
+			},
+			{
+			"internalType": "contract ChainRegistrar",
+			"name": "chainRegistrar_",
+			"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+		}
+    ]`
 	parsed, err := abi.JSON(strings.NewReader(RawABI))
 	if err != nil {
 		panic(err)
@@ -406,6 +369,11 @@ func sanityChecks(sv *slst.StoreView) error {
 		return true
 	})
 
+	chainRegistrarContractAddr := sv.GetChainRegistrarContractAddress()
+	if chainRegistrarContractAddr == nil {
+		panic("Chain registrar contract is not set")
+	}
+	logger.Infof("Chain Registrar Contract Address : %v", chainRegistrarContractAddr.Hex())
 	tfuelTokenBankContractAddr := sv.GetTFuelTokenBankContractAddress()
 	if tfuelTokenBankContractAddr == nil {
 		panic("TFuel token bank contract is not set")
