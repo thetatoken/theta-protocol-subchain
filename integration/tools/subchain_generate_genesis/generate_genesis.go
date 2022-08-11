@@ -37,6 +37,9 @@ const (
 	GenGenesisFileMode
 )
 
+const CrossChainTFuelTransferGasPerTx int64 = 500000
+const NumInitialTFuelCrossChainTransfers int64 = 1000000
+
 type Validator struct {
 	Address string `json:"address"`
 	Stake   string `json:"stake"`
@@ -133,6 +136,14 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		panic(fmt.Sprintf("failed to read initial stake deposit file: %v", err))
 	}
 
+	// need to create an account with a small amount of TFuel Vouchers for the initial validators,
+	// so that they can vote for the cross-chain transfers
+	//     validatorInitialBalance = crossChainTFuelTransferGasPerTx * minGasPrice * numInitialTFuelCrossChainTransfers
+	crossChainTFuelTransferGasPerTx := big.NewInt(CrossChainTFuelTransferGasPerTx)
+	numInitialTFuelCrossChainTransfers := big.NewInt(NumInitialTFuelCrossChainTransfers)
+	validatorInitialBalance := big.NewInt(1).Mul(crossChainTFuelTransferGasPerTx, scom.GetMinimumGasPrice())
+	validatorInitialBalance = big.NewInt(1).Mul(validatorInitialBalance, numInitialTFuelCrossChainTransfers)
+
 	json.Unmarshal(initValidatorSetByteValue, &validators)
 	initialDynasty := big.NewInt(0)
 	validatorSet := score.NewValidatorSet(initialDynasty)
@@ -144,7 +155,7 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		validator := score.NewValidator(v.Address, stake)
 		validatorSet.AddValidator(validator)
 
-		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
+		setInitialBalance(sv, common.HexToAddress(v.Address), validatorInitialBalance)
 	}
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
@@ -339,7 +350,7 @@ func writeStoreView(db database.Database, sv *slst.StoreView, needAccountStorage
 }
 
 func sanityChecks(sv *slst.StoreView) error {
-	logger.Infof("------------------------------------------------------------------------------")
+	logger.Infof("-----------------------------------------------------------------------------")
 
 	vsAnalyzed := false
 	sv.GetStore().Traverse(nil, func(key, val common.Bytes) bool {
@@ -350,7 +361,8 @@ func sanityChecks(sv *slst.StoreView) error {
 				panic(fmt.Sprintf("Failed to decode validator set: %v", err))
 			}
 			for _, validator := range vs.Validators() {
-				logger.Infof("Initial validator: %v, stake: %v", validator.Address.Hex(), validator.Stake)
+				validatorInitTFuelVoucherBalance := sv.GetAccount(validator.Address).Balance.TFuelWei
+				logger.Infof("Initial Validator: %v, Stake: %v, TFuel Voucher Balance: %v TFuelWei", validator.Address.Hex(), validator.Stake, validatorInitTFuelVoucherBalance)
 			}
 			vsAnalyzed = true
 		} else if bytes.Equal(key, slst.ValidatorSetUpdateTxHeightListKey()) {
@@ -373,7 +385,7 @@ func sanityChecks(sv *slst.StoreView) error {
 	if chainRegistrarContractAddr == nil {
 		panic("Chain registrar contract is not set")
 	}
-	logger.Infof("Chain Registrar Contract Address : %v", chainRegistrarContractAddr.Hex())
+	logger.Infof("Chain Registrar  Contract Address: %v", chainRegistrarContractAddr.Hex())
 	tfuelTokenBankContractAddr := sv.GetTFuelTokenBankContractAddress()
 	if tfuelTokenBankContractAddr == nil {
 		panic("TFuel token bank contract is not set")
@@ -385,11 +397,11 @@ func sanityChecks(sv *slst.StoreView) error {
 	}
 	logger.Infof("TNT20 Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
 	tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
-	if tnt20TokenBankContractAddr == nil {
+	if tnt721TokenBankContractAddr == nil {
 		panic("TNT721 token bank contract is not set")
 	}
 	logger.Infof("TNT721Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
-	logger.Infof("------------------------------------------------------------------------------")
+	logger.Infof("-----------------------------------------------------------------------------")
 
 	// Sanity checks for the initial validator set
 	vsProof, err := proveValidatorSet(sv)

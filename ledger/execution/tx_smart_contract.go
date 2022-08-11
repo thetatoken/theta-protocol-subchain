@@ -11,6 +11,7 @@ import (
 	"github.com/thetatoken/theta/ledger/types"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
@@ -101,7 +102,7 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 	}
 
 	if !sanityCheckForGasPrice(tx.GasPrice, blockHeight) {
-		minimumGasPrice := types.GetMinimumGasPrice(blockHeight)
+		minimumGasPrice := scom.GetMinimumGasPrice()
 		return result.Error("Insufficient gas price. Gas price needs to be at least %v TFuelWei", minimumGasPrice).
 			WithErrorCode(result.CodeInvalidGasPrice)
 	}

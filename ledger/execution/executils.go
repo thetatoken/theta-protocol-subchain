@@ -9,6 +9,7 @@ import (
 	"github.com/thetatoken/theta/core"
 	"github.com/thetatoken/theta/ledger/types"
 
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 )
@@ -266,7 +267,7 @@ func sanityCheckForGasPrice(gasPrice *big.Int, blockHeight uint64) bool {
 		return false
 	}
 
-	minimumGasPrice := types.GetMinimumGasPrice(blockHeight)
+	minimumGasPrice := scom.GetMinimumGasPrice()
 	if gasPrice.Cmp(minimumGasPrice) < 0 {
 		return false
 	}

@@ -171,13 +171,13 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 	}
 
 	subchainTNT721TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
-	if subchainTNT20TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	if subchainTNT721TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
 	}
 	oc.subchainTNT721TokenBankAddr = *subchainTNT721TokenBankAddr
 	oc.subchainTNT721TokenBank, err = scta.NewTNT721TokenBank(*subchainTNT721TokenBankAddr, oc.subchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
+		logger.Fatalf("failed to set the SubchainTNT721TokenBankAddr contract: %v\n", err)
 	}
 }
 
