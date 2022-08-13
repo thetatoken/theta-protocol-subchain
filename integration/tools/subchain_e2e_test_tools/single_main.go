@@ -44,22 +44,22 @@ func config() []string {
 }
 func main() {
 
-	// oneAccountRegister() //register subchain , its id is 360777
-	// oneAcoountStake(1)   // use the 10th account to deposit and become validator
+	oneAccountRegister() //register subchain , its id is 360777
+	oneAcoountStake(1)   // use the 10th account to deposit and become validator
 
-	// //Tfuel
-	// mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
-	// subchainTfuelBurn(big.NewInt(10))
+	//Tfuel
+	mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
+	subchainTfuelBurn(big.NewInt(10))
 
 	//TNT20
 	mainchainTNT20Lock(big.NewInt(100)) // last address printed in console is subchain voucher contract address
-	// subchainTNT20Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
-	// mainchainTNT20Burn(big.NewInt(10))
-	// subchainTNT20Burn(big.NewInt(10))
+	subchainTNT20Lock(big.NewInt(10))   //last address printed in console is mainchain voucher contract address
+	mainchainTNT20Burn(big.NewInt(10))
+	subchainTNT20Burn(big.NewInt(10))
 
-	// //TNT721
-	// mainchainTNT721Lock(big.NewInt(12)) //last address printed in console is subchain voucher contract address
-	// subchainTNT721Burn(big.NewInt(12))
-	// subchainTNT721Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
-	// mainchainTNT721Burn(big.NewInt(10))
+	//TNT721
+	mainchainTNT721Lock(big.NewInt(12)) //last address printed in console is subchain voucher contract address
+	subchainTNT721Burn(big.NewInt(12))
+	subchainTNT721Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
+	mainchainTNT721Burn(big.NewInt(10))
 }
