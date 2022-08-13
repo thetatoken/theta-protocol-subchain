@@ -53,43 +53,13 @@ func main() {
 
 	//TNT20
 	mainchainTNT20Lock(big.NewInt(100)) // last address printed in console is subchain voucher contract address
-	subchainTNT20Lock(big.NewInt(10))   //last address printed in console is mainchain voucher contract address
+	subchainTNT20Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
 	mainchainTNT20Burn(big.NewInt(10))
 	subchainTNT20Burn(big.NewInt(10))
 
 	//TNT721
-	mainchainTNT721Lock(big.NewInt(100)) //last address printed in console is subchain voucher contract address
-	subchainTNT721Burn(big.NewInt(10))
+	mainchainTNT721Lock(big.NewInt(12)) //last address printed in console is subchain voucher contract address
+	subchainTNT721Burn(big.NewInt(12))
 	subchainTNT721Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
 	mainchainTNT721Burn(big.NewInt(10))
-
-	//oneAcoountStake(12)
-	//claimStake()
-	//oneAcoountStake(1)
-	//mainchainTfuelLock(big.NewInt(33))
-
-	// mainchainTNT721Lock(big.NewInt(33))
-	// subchainTNT721Burn(big.NewInt(33))
-	// client, err := ethclient.Dial("http://localhost:19888/rpc")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// TfuelTokenBankInstance, err := ct.NewTFuelTokenBank(subchainTfuelTokenBank, client)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// auth := subchainSelectAccount(client, 1)
-	// tx, _ := TfuelTokenBankInstance.Id(auth)
-	// fmt.Println(tx.Hash().Hex())
-	// getMintlog1(1, 9, common.HexToAddress("0x5a443704dd4b594b382c22a083e2bd3090a6fef3"))
-	// chainID, err := client.ChainID(context.Background())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(chainID)
-	// chainIDStr := "tsub_360777"
-	// chainIDWithoutOffset := new(big.Int).Abs(crypto.Keccak256Hash(common.Bytes(chainIDStr)).Big())
-	// chainID1 := big.NewInt(1).Add(big.NewInt(CHAIN_ID_OFFSET), chainIDWithoutOffset)
-	// //chainID1.SetString("tsub_360777", 16)
-	// fmt.Println(hex.EncodeToString(chainID1.Bytes()))
 }

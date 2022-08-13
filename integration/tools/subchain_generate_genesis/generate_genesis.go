@@ -146,6 +146,11 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 
 		setInitialBalance(sv, common.HexToAddress(v.Address), big.NewInt(0)) // need to create an account with zero balance for the initial validators
 	}
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	amount := new(big.Int).Mul(dec18, big.NewInt(2000000))
+	setInitialBalance(sv, common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"), amount)
+
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
 
