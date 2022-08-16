@@ -26,12 +26,12 @@ import (
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 
 type Orchestrator struct {
-	updateInterval          int
-	privateKey              *crypto.PrivateKey
-	ledger                  score.Ledger
-	eventProcessingTicker   *time.Ticker
-	metachainWitness        witness.ChainWitness
-	eventProcessedTimestamp map[string]time.Time
+	updateInterval        int
+	privateKey            *crypto.PrivateKey
+	ledger                score.Ledger
+	eventProcessingTicker *time.Ticker
+	metachainWitness      witness.ChainWitness
+	eventProcessedTime    map[string]time.Time
 
 	// The mainchain
 	mainchainID                  *big.Int
@@ -210,7 +210,7 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TFuel token lock nonce for chain: %v", targetChainID.String())
-		return // ignore, will retry shortly
+		return // ignore
 	}
 
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTFuel, maxProcessedTokenLockNonce)
@@ -221,7 +221,7 @@ func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, t
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
-		return // ignore, will retry shortly
+		return // ignore
 	}
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT20, maxProcessedTokenLockNonce)
 }
@@ -247,7 +247,7 @@ func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int,
 	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TFuel voucher burn nonce for chain: %v", targetChainID.String())
-		return // ignore, will retry shortly
+		return // ignore
 	}
 
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTFuel, maxProcessedVoucherBurnNonce)
@@ -258,7 +258,7 @@ func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int,
 	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 voucher burn nonce for chain: %v", targetChainID.String())
-		return // ignore, will retry shortly
+		return // ignore
 	}
 
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT20, maxProcessedVoucherBurnNonce)
@@ -289,7 +289,7 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 	if oc.timeElapsedSinceEventProcessed(sourceEvent) > retryThreshold { // retry if the tx has been submitted for a long time
 		err := oc.callTargetContract(targetChainID, targetEventType, sourceEvent)
 		if err == nil {
-			oc.updateEventProcessedTimestamp(sourceEvent)
+			oc.updateEventProcessedTime(sourceEvent)
 		} else {
 			logger.Warnf("Failed to call target contract: %v", err)
 		}
@@ -308,16 +308,16 @@ func (oc *Orchestrator) cleanUpInterChainEventCache(sourceChainID *big.Int, even
 
 func (oc *Orchestrator) timeElapsedSinceEventProcessed(event *score.InterChainMessageEvent) time.Duration {
 	eventID := event.ID()
-	if processedTimestamp, ok := oc.eventProcessedTimestamp[eventID]; ok {
-		return time.Since(processedTimestamp)
+	if processedTime, ok := oc.eventProcessedTime[eventID]; ok {
+		return time.Since(processedTime)
 	} else { // never processed, return a large value
 		return time.Since(time.Time{}) // since the Unix epoch start time (0:00:00 Jan 1st, 1970 UTC)
 	}
 }
 
-func (oc *Orchestrator) updateEventProcessedTimestamp(event *score.InterChainMessageEvent) {
+func (oc *Orchestrator) updateEventProcessedTime(event *score.InterChainMessageEvent) {
 	eventID := event.ID()
-	oc.eventProcessedTimestamp[eventID] = time.Now()
+	oc.eventProcessedTime[eventID] = time.Now()
 }
 
 // For Token Lock events on the source chain, call the Mint Voucher method of the corresponding TokenBank contract on the target chain
