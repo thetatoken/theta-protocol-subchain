@@ -44,74 +44,23 @@ func config() []string {
 }
 func main() {
 
-	// oneAccountRegister() //register subchain , its id is 360777
-	// oneAcoountStake(1)   // use the 10th account to deposit and become validator
+	oneAccountRegister() //register subchain , its id is 360777
+	oneAcoountStake(1)   // use the 10th account to deposit and become validator
 
-	// //Tfuel
-	// mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
-	// subchainTfuelBurn(big.NewInt(10))
+	//Tfuel
+	mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
+	subchainTfuelBurn(big.NewInt(10))
 
-	// //TNT20
-	//mainchainTNT20Lock(big.NewInt(100)) //mainchainTNT20Lock(tokenAmount) last address printed in console is subchain voucher contract address
-	// subchainTNT20Lock(big.NewInt(10))   //last address printed in console is mainchain voucher contract address
-	// mainchainTNT20Burn(big.NewInt(10))
-	// subchainTNT20Burn(big.NewInt(10))
+	//TNT20
+	mainchainTNT20Lock(big.NewInt(100)) //mainchainTNT20Lock(tokenAmount) last address printed in console is subchain voucher contract address
+	subchainTNT20Lock(big.NewInt(10))   //last address printed in console is mainchain voucher contract address
+	mainchainTNT20Burn(big.NewInt(10))
+	subchainTNT20Burn(big.NewInt(10))
 
-	// //TNT721
-	// mainchainTNT721Lock(big.NewInt(12)) //mainchainTNT721Lock(tokenid) last address printed in console is subchain voucher contract address
-	// subchainTNT721Lock(big.NewInt(12)) //last address printed in console is mainchain voucher contract address
-	// mainchainTNT721Burn(big.NewInt(12))
-	// subchainTNT721Burn(big.NewInt(12))
-	// mintLockAmount := big.NewInt(10)
-
-	// client, err := ethclient.Dial("http://localhost:18888/rpc")
-	// fromNumber, _ := client.BlockNumber(context.Background())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// var dec18 = new(big.Int)
-	// dec18.SetString("1000000000000000000", 10)
-	// user := accountList[1].fromAddress
-
-	// instanceTNT20VoucherContract, err := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, client)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(tnt20TokenBankAddress, client)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// authAccount0 := mainchainSelectAccount(client, 0)
-	// _, err = instanceTNT20VoucherContract.Mint(authAccount0, user, mintLockAmount)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// authUser := mainchainSelectAccount(client, 1)
-	// _, err = instanceTNT20VoucherContract.Approve(authUser, tnt20TokenBankAddress, mintLockAmount)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-
-	// authUser = mainchainSelectAccount(client, 1)
-	// LockTx, err := instanceTNT20TokenBank.LockTokens(authUser, subchainID, tnt20VoucherContractAddress, user, mintLockAmount)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// receipt, err := client.TransactionReceipt(context.Background(), LockTx.Hash())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// if receipt.Status != 1 {
-	// 	fmt.Println("lock error")
-	// }
-	// mainchainTfuelLock(big.NewInt(100))
-	// //mainchainTNT721Lock(big.NewInt(12))
-	// for {
-	// 	time.Sleep(5 * time.Second)
-	// 	toNumber, _ := client.BlockNumber(context.Background())
-	// 	if TestGetMintlog(fromNumber, toNumber, tfuelTokenbankAddress, accountList[6].fromAddress) != nil {
-	// 		break
-	// 	}
-	// }
+	//TNT721
+	mainchainTNT721Lock(big.NewInt(12)) //mainchainTNT721Lock(tokenid) last address printed in console is subchain voucher contract address
+	subchainTNT721Lock(big.NewInt(12))  //last address printed in console is mainchain voucher contract address
+	mainchainTNT721Burn(big.NewInt(12))
+	subchainTNT721Burn(big.NewInt(12))
 
 }
