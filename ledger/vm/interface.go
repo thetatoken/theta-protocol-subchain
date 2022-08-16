@@ -21,6 +21,8 @@ import (
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/ledger/types"
+
+	score "github.com/thetatoken/thetasubchain/core"
 )
 
 // StateDB is an EVM database for full state querying.
@@ -37,6 +39,10 @@ type StateDB interface {
 	AddThetaBalance(common.Address, *big.Int)
 	GetThetaBalance(common.Address) *big.Int // GetThetaBalance returns the ThetaWei balance of the given address
 	GetThetaStake(common.Address) *big.Int   // GetThetaStake returns the total amount of ThetaWei the address staked to validators and/or guardians
+
+	GetValidatorSetForChainDuringDynasty(chainID *big.Int, dynasty *big.Int) *score.ValidatorSet
+
+	GetTFuelTokenBankContractAddress() *common.Address
 
 	GetNonce(common.Address) uint64
 	SetNonce(common.Address, uint64)

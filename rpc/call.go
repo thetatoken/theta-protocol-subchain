@@ -56,7 +56,7 @@ func (t *ThetaRPCService) CallSmartContract(args *CallSmartContractArgs, result 
 
 	pb := t.ledger.State().ParentBlock()
 	parentBlockInfo := svm.NewBlockInfo(pb.Height, pb.Timestamp, pb.ChainID)
-	vmRet, contractAddr, gasUsed, vmErr := svm.Execute(parentBlockInfo, sctx, ledgerState, svm.NormalAccess)
+	vmRet, contractAddr, gasUsed, vmErr := svm.Execute(parentBlockInfo, sctx, ledgerState)
 	ledgerState.Save()
 
 	result.VmReturn = hex.EncodeToString(vmRet)

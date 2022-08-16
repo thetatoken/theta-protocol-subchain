@@ -1,4 +1,4 @@
-# theta-protocol-subchain-poc
+# theta-protocol-subchain
 
 ## Compilation
 
@@ -9,42 +9,11 @@ cd $THETA_HOME
 git checkout sc-privatenet
 git pull origin sc-privatenet
 
-git clone https://github.com/thetatoken/theta-protocol-subchain-poc $GOPATH/src/github.com/thetatoken/thetasubchain
+git clone https://github.com/thetatoken/theta-protocol-subchain $GOPATH/src/github.com/thetatoken/thetasubchain
 export SUBCHAIN_HOME=$GOPATH/src/github.com/thetatoken/thetasubchain
 cd $SUBCHAIN_HOME
 
 make install
-```
-
-## Start a single validator testnet
-
-### Setup (run once)
-
-```shell
-cd $SUBCHAIN_HOME
-mkdir -p ../data/subchain/privatenet/node
-rm -rf ../data/subchain/privatenet/node/*
-cp -r integration/privatenet/node/* ../data/subchain/privatenet/node/
-```
-
-### Start the validator
-
-```shell
-cd $SUBCHAIN_HOME
-thetasubchain start --config=../data/subchain/privatenet/node --password=qwertyuiop
-```
-
-## Query the validator
-
-```shell
-# query status
-thetasubcli query status
-
-# query validator set at a given block height
-thetasubcli query vs --height=20
-
-# query block(s) at a given height
-thetasubcli query block --height=122
 ```
 
 ## Misc

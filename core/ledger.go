@@ -29,9 +29,10 @@ type TxInfo struct {
 //
 type Ledger interface {
 	GetCurrentBlock() *Block
+	GetDynasty() *big.Int
 	ScreenTxUnsafe(rawTx common.Bytes) result.Result
 	ScreenTx(rawTx common.Bytes) (priority *TxInfo, res result.Result)
-	ProposeBlockTxs(block *Block, shouldIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result)
+	ProposeBlockTxs(block *Block, shouldIncludeValidatorUpdateTxs bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result)
 	ApplyBlockTxs(block *Block) result.Result
 	ApplyBlockTxsForChainCorrection(block *Block) (common.Hash, result.Result)
 	//ResetState(height uint64, rootHash common.Hash) result.Result
@@ -39,5 +40,5 @@ type Ledger interface {
 	FinalizeState(height uint64, rootHash common.Hash) result.Result
 	GetFinalizedValidatorSet(blockHash common.Hash, isNext bool) (*ValidatorSet, error)
 	PruneState(endHeight uint64) error
-	GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error)
+	GetTokenBankContractAddress(tokenType CrossChainTokenType) (*common.Address, error)
 }

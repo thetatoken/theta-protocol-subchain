@@ -20,12 +20,14 @@ import (
 	"crypto/sha256"
 	"errors"
 	"math/big"
+	"strings"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/math"
 	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/crypto/bn256"
 	"github.com/thetatoken/theta/ledger/vm/params"
+	"github.com/thetatoken/thetasubchain/eth/abi"
 	"golang.org/x/crypto/ripemd160"
 )
 
@@ -47,7 +49,7 @@ var PrecompiledContracts = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 
-	common.BytesToAddress([]byte{181}): &hasPreviledgedAccess{},
+	common.BytesToAddress([]byte{181}): &validatorSet{},
 	common.BytesToAddress([]byte{182}): &mintTFuel{},
 	common.BytesToAddress([]byte{183}): &burnTFuel{},
 
@@ -369,26 +371,76 @@ func (c *bn256Pairing) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 	return false32Byte, nil
 }
 
-// hasPreviledgedAccess return if the current execution context has previledged access
-type hasPreviledgedAccess struct {
+// validatorSet return the validator set of a chain for a given dynasty
+type validatorSet struct {
 }
 
-func (c *hasPreviledgedAccess) RequiredGas(input []byte, blockHeight uint64) uint64 {
-	const previledgeAcessCheckGas = uint64(50)
-	return previledgeAcessCheckGas
+func (c *validatorSet) RequiredGas(input []byte, blockHeight uint64) uint64 {
+	const validatorSetGas = uint64(200)
+	return validatorSetGas
 }
 
-func (c *hasPreviledgedAccess) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	hasPreviledgedAccess := big.NewInt(0).SetUint64(0)
-	if evm.HasPreviledgedAccess() {
-		hasPreviledgedAccess.SetUint64(1)
+func (c *validatorSet) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	const RawABI = `
+[
+	{
+		"inputs": [
+			{
+				"components": [
+					{
+						"internalType": "address",
+						"name": "validator",
+						"type": "address"
+					},
+					{
+						"internalType": "uint256",
+						"name": "shareAmount",
+						"type": "uint256"
+					}
+				],
+				"internalType": "struct TestRegister.ValidatorAddrSharePair[]",
+				"name": "a",
+				"type": "tuple[]"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
 	}
-	hasPreviledgedAccessBytes := hasPreviledgedAccess.Bytes()
-	hasPreviledgedAccessBytes32 := common.LeftPadBytes(hasPreviledgedAccessBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
-	return hasPreviledgedAccessBytes32, nil
+]`
+	type validatorSetInfo struct {
+		Validator   common.Address
+		ShareAmount *big.Int
+	}
+	parsed, err := abi.JSON(strings.NewReader(RawABI))
+	if err != nil {
+		panic(err)
+	}
+	var infoSet []validatorSetInfo
+
+	chainID := new(big.Int).SetBytes(getData(input, 0, 32))
+	dynasty := new(big.Int).SetBytes(getData(input, 32, 32))
+
+	validatorSet := evm.StateDB.GetValidatorSetForChainDuringDynasty(chainID, dynasty)
+	if validatorSet == nil {
+		return common.Bytes{}, nil
+	}
+
+	validators := validatorSet.Validators()
+	for _, val := range validators {
+		c := &validatorSetInfo{
+			Validator:   val.Address,
+			ShareAmount: val.Stake,
+		}
+		infoSet = append(infoSet, *c)
+	}
+	valSetBytes, err := parsed.Pack("", infoSet)
+	if err != nil {
+		panic(err)
+	}
+	return valSetBytes, nil
 }
 
-// mintTFuel mints TFuel for a given account when the current execution context has previledge access
+// mintTFuel mints TFuel for a given account if the caller contract has previledged access
 type mintTFuel struct {
 }
 
@@ -398,7 +450,7 @@ func (c *mintTFuel) RequiredGas(input []byte, blockHeight uint64) uint64 {
 }
 
 func (c *mintTFuel) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
-	if !evm.HasPreviledgedAccess() {
+	if !evm.HasPreviledgedAccess(callerAddr) {
 		return nil, errors.New("the execution context does not have previledged access")
 	}
 

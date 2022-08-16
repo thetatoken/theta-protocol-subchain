@@ -139,16 +139,27 @@ const (
 	// CfgDebugLogSelectedEENPs to enable logging of selected eenps
 	CfgDebugLogSelectedEENPs = "debug.logSelectedEENPs"
 
-	// CfgRegisterContractAddress defines the register contract address
-	CfgRegisterContractAddress = "subchain.register"
-	// CfgERC20ContractAddress defines the erc20 contract address
-	CfgERC20ContractAddress = "subchain.erc20"
-	// CfgMainchainAdaptorURL defines the URL of the mainchain adaptor
-	CfgMainchainAdaptorURL = "subchain.clientURL"
+	// CfgRegistrarContractAddress defines the subchain registrar contract address
+	CfgChainRegistrarOnMainchainContractAddress = "subchain.chainRegistrarOnMainchain"
+	// CfgMainchainTFuelTokenBankContractAddress defines the mainchain TFuel token bank contract address
+	CfgMainchainTFuelTokenBankContractAddress = "subchain.mainchainTFuelTB"
+	// CfgMainchainTNT20TokenBankContractAddress defines the mainchain TNT20 token bank contract address
+	CfgMainchainTNT20TokenBankContractAddress = "subchain.mainchainTNT20TB"
+	// CfgMainchainTNT721TokenBankContractAddress defines the mainchain TNT721 token bank contract address
+	CfgMainchainTNT721TokenBankContractAddress = "subchain.mainchainTNT721TB"
+	// CfgMainchainEthRpcURL defines the URL of the mainchain ETH RPC adaptor
+	CfgMainchainEthRpcURL = "subchain.mainchainEthRpcURL"
+	// CfgSubchainEthRpcURL defines the URL of the subchain ETH RPC adaptor
+	CfgSubchainEthRpcURL = "subchain.subchainEthRpcURL"
+	// CfgSubchainEthRpcURL defines the URL of the subchain ETH RPC adaptor
+	CfgSubchainMainchainBlockIntervalInSeconds = "subchain.mainchainBlockIntervalInSeconds"
+
 	// CfgSubchainID defines the subchainID
 	CfgSubchainID = "subchain.ID"
-	// CfgSubchainUpdateInterval defines the time interval in millisecond for the subchain to obtain the status update from the main chain
-	CfgSubchainUpdateInterval = "subchain.updateInterval"
+	// CfgSubchainUpdateIntervalInMilliseconds defines the time interval in millisecond for the subchain to obtain the status update from the mainchain
+	CfgSubchainUpdateIntervalInMilliseconds = "subchain.updateInterval"
+	// CfgSubchainTestID defines the ID of this node in a test case
+	CfgSubchainTestID = "subchain.testID"
 )
 
 // InitialConfig is the default configuration produced by init command.
@@ -213,12 +224,15 @@ func init() {
 	viper.SetDefault(CfgProfEnabled, false)
 	viper.SetDefault(CfgForceGCEnabled, true)
 
-	viper.SetDefault(CfgSubchainUpdateInterval, 1000)
+	viper.SetDefault(CfgSubchainUpdateIntervalInMilliseconds, 1000)
+	viper.SetDefault(CfgSubchainMainchainBlockIntervalInSeconds, 6)
+	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
+	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 
+	viper.SetDefault(CfgSubchainID, 360777)
 }
 
 // WriteInitialConfig writes initial config file to file system.
 func WriteInitialConfig(filePath string) error {
 	return tcom.WriteFileAtomic(filePath, []byte(InitialConfig), 0600)
 }
-

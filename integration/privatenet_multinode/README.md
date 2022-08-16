@@ -4,18 +4,18 @@ First follow the steps [here](https://docs.thetatoken.org/docs/setup) to compile
 
 ```
 cd $THETA_HOME
-cp -r ./integration/testnet ../testnet
-mkdir ../testnet/logs
+cp -r ./integration/privatenet_multinode ../privatenet_multinode
+mkdir ../privatenet_multinode/logs
 
 # In terminal 1
-theta start --config=../testnet/node1 |& tee ../testnet/logs/node1.log
+thetasubchain start --config=../privatenet_multinode/node1 --password=qwertyuiop |& tee ../privatenet_multinode/logs/node1.log
 
 # In terminal 2
-theta start --config=../testnet/node2 |& tee ../testnet/logs/node2.log
+thetasubchain start --config=../privatenet_multinode/node2 --password=qwertyuiop |& tee ../privatenet_multinode/logs/node2.log
 
 # In terminal 3
-theta start --config=../testnet/node3 |& tee ../testnet/logs/node3.log
+thetasubchain start --config=../privatenet_multinode/node3 --password=qwertyuiop |& tee ../privatenet_multinode/logs/node3.log
 
 # In terminal 4
-theta start --config=../testnet/node4 |& tee ../testnet/logs/node4.log
+thetasubchain start --config=../privatenet_multinode/node4 --password=qwertyuiop |& tee ../privatenet_multinode/logs/node4.log
 ```

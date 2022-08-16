@@ -1,6 +1,8 @@
 package state
 
 import (
+	"math/big"
+
 	"github.com/thetatoken/theta/common"
 )
 
@@ -34,15 +36,24 @@ func CodeKey(codeHash common.Bytes) common.Bytes {
 	return append(common.Bytes("ls/ch/"), codeHash...)
 }
 
-// ValidatorSetKey returns the state key for the validator stake holder set
-func ValidatorSetKey() common.Bytes {
+// CurrentValidatorSetKey returns the state key for the current validator stake holder set
+func CurrentValidatorSetKey() common.Bytes {
 	return common.Bytes("ls/vs")
 }
 
-// EventNonceKey returns the state key for the last processed event nonce
-func EventNonceKey() common.Bytes {
-	return common.Bytes("ls/evn")
+// ValidatorSetForChainDuringDynastyKey returns the key for the validator set for a chain during the given dynasty
+func ValidatorSetForChainDuringDynastyKey(chainID *big.Int, dynasty *big.Int) common.Bytes {
+	key := common.Bytes("ls/vscd/")
+	key = append(key, common.Bytes(chainID.String())...)
+	key = append(key, common.Bytes("/")...)
+	key = append(key, common.Bytes(dynasty.String())...)
+	return key
 }
+
+// // EventNonceKey returns the state key for the last processed event nonce
+// func EventNonceKey(eventType score.InterChainMessageEventType) common.Bytes {
+// 	return common.Bytes("ls/evn/" + strconv.FormatUint(uint64(eventType), 10))
+// }
 
 // ValidatorSetUpdateTxHeightListKey returns the state key the heights of blocks
 // that contain stake related transactions (i.e. StakeDeposit, StakeWithdraw, etc)
@@ -53,6 +64,12 @@ func ValidatorSetUpdateTxHeightListKey() common.Bytes {
 // StatePruningProgressKey returns the key for the state pruning progress
 func StatePruningProgressKey() common.Bytes {
 	return common.Bytes("ls/spp")
+}
+
+// ChainRegistrarContractAddressKey returns the key for looking up the address of the
+// chain registrar contract deployed in the genesis block
+func ChainRegistrarContractAddressKey() common.Bytes {
+	return common.Bytes("ls/trca")
 }
 
 // TFuelTokenBankContractAddressKey returns the key for looking up the address of the

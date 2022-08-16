@@ -1,0 +1,13 @@
+# Theta configuration
+# chainID: private_multinode_subchain
+genesis:
+  hash: "0x85daff5fe8ba49ba9d520eda5537a8bfb5ee410d795a38e9db87210edc0a8ec0"
+p2p:
+  port: 16000
+  seeds: 127.0.0.1:12000,127.0.0.1:13000,127.0.0.1:14000,127.0.0.1:15000,127.0.0.1:11000,127.0.0.1:17000,127.0.0.1:18000
+  seedPeerOnlyOutbound: true
+subchain:
+  registrar: "0x0FFb8d91d0Aee9172Fe88e6cD2C35fa3a5d9C67d"
+  clientURL: "http://localhost:18888/rpc"
+  ID: 3610002
+  testID: 5

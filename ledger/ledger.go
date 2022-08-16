@@ -23,11 +23,11 @@ import (
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
 	sexec "github.com/thetatoken/thetasubchain/ledger/execution"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
 	smp "github.com/thetatoken/thetasubchain/mempool"
-	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "ledger"})
@@ -49,14 +49,14 @@ type Ledger struct {
 	state    *slst.LedgerState
 	executor *sexec.Executor
 
-	mainchainWitness witness.ChainWitness
+	metachainWitness witness.ChainWitness
 }
 
 // NewLedger creates an instance of Ledger
 func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mempool *smp.Mempool, mainchainWitness witness.ChainWitness) *Ledger {
+	valMgr score.ValidatorManager, mempool *smp.Mempool, metachainWitness witness.ChainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
-	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, mainchainWitness)
+	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, metachainWitness)
 	ledger := &Ledger{
 		db:               db,
 		chain:            chain,
@@ -66,7 +66,7 @@ func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *
 		mu:               &sync.RWMutex{},
 		state:            state,
 		executor:         executor,
-		mainchainWitness: mainchainWitness,
+		metachainWitness: metachainWitness,
 	}
 	return ledger
 }
@@ -79,6 +79,11 @@ func (ledger *Ledger) State() *slst.LedgerState {
 // GetCurrentBlock returns the block currently being processed
 func (ledger *Ledger) GetCurrentBlock() *score.Block {
 	return ledger.currentBlock
+}
+
+// GetDynasty returns the current dyansty
+func (ledger *Ledger) GetDynasty() *big.Int {
+	return ledger.state.Finalized().GetDynasty()
 }
 
 // GetScreenedSnapshot returns a snapshot of screened ledger state to query about accounts, etc.
@@ -148,65 +153,34 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
 }
 
-// // GetFinalizedValidatorSet returns the validator set of the latest DIRECTLY finalized block
-// func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
-// 	db := ledger.state.DB()
-// 	store := kvstore.NewKVStore(db)
-
-// 	block, err := findBlock(store, blockHash)
-// 	if err != nil {
-// 		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
-// 		return nil, err
-// 	}
-// 	if block == nil {
-// 		return nil, fmt.Errorf("Block is nil for hash %v", blockHash.Hex())
-// 	}
-
-// 	if block.HCC.BlockHash.IsEmpty() || block.Status.IsTrusted() {
-// 		stateRoot := block.BlockHeader.StateHash
-// 		storeView := slst.NewStoreView(block.Height, stateRoot, db)
-// 		if storeView == nil {
-// 			logger.WithFields(log.Fields{
-// 				"block.Hash":                  blockHash.Hex(),
-// 				"block.Height":                block.Height,
-// 				"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
-// 				"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
-// 				"block.Status.IsTrusted()":    block.Status.IsTrusted(),
-// 			}).Panic("Failed to load state for last processed event nonce")
-// 		}
-// 		lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
-// 		return lastProcessedEventNonce, nil
-// 	}
-
-// 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
-// }
-
-func (ledger *Ledger) GetLastProcessedEventNonce(blockHash common.Hash) (*big.Int, error) {
+func (ledger *Ledger) GetTokenBankContractAddress(tokenType score.CrossChainTokenType) (*common.Address, error) {
 	db := ledger.state.DB()
 	store := kvstore.NewKVStore(db)
 
+	blockHash := ledger.chain.Root().Hash()
+
 	block, err := findBlock(store, blockHash)
+
 	if err != nil {
 		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
 		return nil, err
 	}
 	if block == nil {
-		return nil, fmt.Errorf("Block is nil for hash %v", blockHash.Hex())
+		return nil, fmt.Errorf("block is nil for hash %v", blockHash.Hex())
 	}
 
 	stateRoot := block.BlockHeader.StateHash
 	storeView := slst.NewStoreView(block.Height, stateRoot, db)
-	if storeView == nil {
-		logger.WithFields(log.Fields{
-			"block.Hash":                  blockHash.Hex(),
-			"block.Height":                block.Height,
-			"block.HCC.BlockHash":         block.HCC.BlockHash.Hex(),
-			"block.BlockHeader.StateHash": block.BlockHeader.StateHash.Hex(),
-			"block.Status.IsTrusted()":    block.Status.IsTrusted(),
-		}).Panic("Failed to load state for last processed event nonce")
+	switch tokenType {
+	case score.CrossChainTokenTypeTFuel:
+		return storeView.GetTFuelTokenBankContractAddress(), nil
+	case score.CrossChainTokenTypeTNT20:
+		return storeView.GetTNT20TokenBankContractAddress(), nil
+	case score.CrossChainTokenTypeTNT721:
+		return storeView.GetTNT721TokenBankContractAddress(), nil
+	default:
+		return nil, nil
 	}
-	lastProcessedEventNonce := storeView.GetLastProcessedEventNonce()
-	return lastProcessedEventNonce, nil
 
 }
 
@@ -262,7 +236,7 @@ func (ledger *Ledger) ScreenTx(rawTx common.Bytes) (txInfo *score.TxInfo, res re
 
 // ProposeBlockTxs collects and executes a list of transactions, which will be used to assemble the next blockl
 // It also clears these transactions from the mempool.
-func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
+func (ledger *Ledger) ProposeBlockTxs(block *score.Block, validatorMajorityInTheSameDynasty bool) (stateRootHash common.Hash, blockRawTxs []common.Bytes, res result.Result) {
 	// Must always acquire locks in following order to avoid deadlock: mempool, ledger.
 	// Otherwise, could cause deadlock since mempool.InsertTransaction() also first acquires the mempool, and then the ledger lock
 	logger.Debugf("ProposeBlockTxs: Propose block transactions, block.height = %v", block.Height)
@@ -285,12 +259,13 @@ func (ledger *Ledger) ProposeBlockTxs(block *score.Block, canIncludeValidatorUpd
 
 	// Add special transactions
 	rawTxCandidates := []common.Bytes{}
-	ledger.addSpecialTransactions(block, view, &rawTxCandidates, canIncludeValidatorUpdateTxs, includeInterChainMessageTxsTillNonce)
+	ledger.addSpecialTransactions(block, view, &rawTxCandidates, validatorMajorityInTheSameDynasty)
 
 	// Add regular transactions submitted by the clients
 	regularRawTxs := ledger.mempool.ReapUnsafe(score.MaxNumRegularTxsPerBlock)
 	for _, regularRawTx := range regularRawTxs {
 		rawTxCandidates = append(rawTxCandidates, regularRawTx)
+		logger.Debugf("regular raw tx %v added to block", regularRawTx)
 	}
 
 	logger.Debugf("ProposeBlockTxs: block transactions added, block.height = %v", block.Height)
@@ -640,7 +615,7 @@ func (ledger *Ledger) shouldSkipCheckTx(tx types.Tx) bool {
 }
 
 // addSpecialTransactions adds special transactions (e.g. coinbase transaction, slash transaction) to the block
-func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, canIncludeValidatorUpdateTxs bool, includeInterChainMessageTxsTillNonce *big.Int) {
+func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.StoreView, rawTxs *[]common.Bytes, validatorMajorityInTheSameDynasty bool) {
 	if block == nil {
 		logger.Warnf("addSpecialTransactions: block is nil")
 		return
@@ -657,39 +632,59 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	ledger.addCoinbaseTx(view, &proposer, currentValidatorSet, rawTxs)
 
 	// ------- Add subchain validator set update transaction ------- //
-	hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet, view)
-	logger.Debugf("Add special transactions: canIncludeValidatorUpdateTxs: %v, hasValidatorSetUpdate: %v, newDynasty: %v, newValidatorSet: %v",
-		canIncludeValidatorUpdateTxs, hasValidatorSetUpdate, newDynasty, newValidatorSet)
-	if canIncludeValidatorUpdateTxs && hasValidatorSetUpdate {
+
+	// Here we add the subchain validator set update tx regardless whether the validator set has changed, since
+	// the token bank contracts need to query the validator set of each dynasty
+	enteringNewDynasty, newDynasty, newValidatorSet := ledger.getNewDynastyAndValidatorSet(currentValidatorSet, view)
+	if enteringNewDynasty && validatorMajorityInTheSameDynasty {
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
 	}
+	logger.Debugf("Checking whether to add subchain validator update transactions: validatorMajorityInTheSameDynasty: %v, enteringNewDynasty: %v, newDynasty: %v, newValidatorSet: %v",
+		validatorMajorityInTheSameDynasty, enteringNewDynasty, newDynasty, newValidatorSet)
 
-	// ------- Add inter-chain message transactions ------- //
-	if includeInterChainMessageTxsTillNonce.Cmp(big.NewInt(0)) > 0 {
-		lastEventNonce := view.GetLastProcessedEventNonce()
-		if lastEventNonce == nil {
-			logger.Panic("nil last event nonce")
-		}
-		nextEventNonce := new(big.Int).Add(lastEventNonce, big.NewInt(1))
-		eventCache := ledger.mainchainWitness.GetInterChainEventCache()
-		for nextEventNonce.Cmp(includeInterChainMessageTxsTillNonce) <= 0 {
-			nextEvent, err := eventCache.Get(nextEventNonce)
-			if nextEvent.Nonce.Cmp(nextEventNonce) != 0 { // these two nonces should match
-				logger.Panicf("nonce mismatch for event %v: %v vs %v", nextEvent, nextEvent.Nonce, nextEventNonce) // should not happen
-			}
-			if err != nil {
-				break
-			}
-			ledger.addInterChainMessageTx(view, &proposer, nextEvent, rawTxs)
-			logger.Debugf("Add special transactions cross-chain event Tx %v", nextEvent)
-			nextEventNonce = new(big.Int).Add(nextEventNonce, big.NewInt(1))
-		}
-	}
+	// hasValidatorSetUpdate, newDynasty, newValidatorSet := ledger.hasSubchainValidatorSetUpdate(currentValidatorSet, view)
+	// logger.Debugf("Add special transactions: validatorMajorityInTheSameDynasty: %v, hasValidatorSetUpdate: %v, newDynasty: %v, newValidatorSet: %v",
+	// 	validatorMajorityInTheSameDynasty, hasValidatorSetUpdate, newDynasty, newValidatorSet)
+	// if validatorMajorityInTheSameDynasty && hasValidatorSetUpdate {
+	// 	ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
+	// }
 }
 
+func (ledger *Ledger) getNewDynastyAndValidatorSet(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (enteringNewDynasty bool, newDynasty *big.Int, newValidatorSet *score.ValidatorSet) {
+	currentDynasty := currentValidatorSet.Dynasty()
+	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockHeight()
+	if err != nil {
+		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
+		return false, nil, nil
+	}
+
+	witnessedDynasty := scom.CalculateDynasty(mainchainBlockHeight)
+	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
+	if err != nil {
+		logger.Warnf("Failed to get validator set by dynasty %v when checking validator set updates, err: %v", witnessedDynasty, err)
+		return false, nil, nil
+	}
+
+	if witnessedDynasty.Cmp(currentDynasty) <= 0 {
+		return false, nil, nil
+	}
+
+	// at this point: witnessedDynasty >= currentDynasty + 1, we are entering a new dynasty
+
+	validatorSetInView := view.GetValidatorSet()
+
+	logger.Debugf("block height: %v", view.GetBlockHeight())
+	logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet)
+	logger.Debugf("currentValidatorSet  : %v", currentValidatorSet)
+	logger.Debugf("validatorSetInView   : %v", validatorSetInView)
+
+	return true, witnessedDynasty, witnessedValidatorSet
+}
+
+// Not used
 func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (bool, *big.Int, *score.ValidatorSet) {
 	currentDynasty := currentValidatorSet.Dynasty()
-	mainchainBlockHeight, err := ledger.mainchainWitness.GetMainchainBlockNumber()
+	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockHeight()
 	if err != nil {
 		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
 		return false, nil, nil
@@ -701,7 +696,7 @@ func (ledger *Ledger) hasSubchainValidatorSetUpdate(currentValidatorSet *score.V
 	}
 	// at this point: witnessedDynasty >= currentDynasty + 1
 
-	witnessedValidatorSet, err := ledger.mainchainWitness.GetValidatorSetByDynasty(witnessedDynasty)
+	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
 	if err != nil {
 		logger.Warnf("Failed to get validator set by dynasty %v when checking validator set updates, err: %v", witnessedDynasty, err)
 		return false, nil, nil
@@ -795,43 +790,6 @@ func (ledger *Ledger) addSubchainValidatorSetUpdateTx(view *slst.StoreView, prop
 	*rawTxs = append(*rawTxs, subchainValidatorSetUpdateTxBytes)
 	logger.Infof("Added subchain validator set update transction: tx: %v", subchainValidatorSetUpdateTx)
 	logger.Debugf("Subchain validator set update transction bytes: %v", hex.EncodeToString(subchainValidatorSetUpdateTxBytes))
-}
-
-// addInterChainMessageTx adds a cross-chain transaction
-func (ledger *Ledger) addInterChainMessageTx(view *slst.StoreView, proposer *score.Validator, nextInterChainMessageEvent *score.InterChainMessageEvent, rawTxs *[]common.Bytes) {
-	proposerAccount := view.GetAccount(proposer.Address)
-	if proposerAccount == nil {
-		// should not happen, since the the validator set update tx shouuld create the propser account if it does not exist
-		logger.Fatalf("Failed to get proposer account: %v", proposer.Address)
-	}
-
-	proposerAddress := proposer.Address
-	proposerTxIn := types.TxInput{
-		Address:  proposerAddress,
-		Sequence: proposerAccount.Sequence + 1,
-	}
-
-	crossChainTransferTx := &stypes.InterChainMessageTx{
-		Proposer:    proposerTxIn,
-		BlockNumber: nextInterChainMessageEvent.BlockNumber,
-		Event:       *nextInterChainMessageEvent,
-	}
-
-	signature, err := ledger.signTransaction(crossChainTransferTx)
-	if err != nil {
-		logger.Fatalf("Failed to add subchain validator set update transaction: %v", err) // do not expect this to happen
-		return
-	}
-	crossChainTransferTx.SetSignature(proposerAddress, signature)
-	crossChainTransferTxBytes, err := stypes.TxToBytes(crossChainTransferTx)
-	if err != nil {
-		logger.Fatalf("Failed to serialize subchain validator set update transaction: %v", err) // do not expect this to happen
-		return
-	}
-
-	*rawTxs = append(*rawTxs, crossChainTransferTxBytes)
-	logger.Infof("Added inter-chain message transction: tx: %v", crossChainTransferTx)
-	logger.Debugf("Inter-chain message transction bytes: %v", hex.EncodeToString(crossChainTransferTxBytes))
 }
 
 // signTransaction signs the given transaction

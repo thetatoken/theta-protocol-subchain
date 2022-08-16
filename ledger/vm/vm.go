@@ -79,12 +79,12 @@ func run(evm *EVM, contract *Contract, input []byte, readOnly bool) ([]byte, err
 	return nil, ErrNoCompatibleInterpreter
 }
 
-type ExecutionAccessLevelEnum uint8
+// type ExecutionAccessLevelEnum uint8
 
-const (
-	PreviledgedAccess ExecutionAccessLevelEnum = iota
-	NormalAccess
-)
+// const (
+// 	PreviledgedAccess ExecutionAccessLevelEnum = iota
+// 	NormalAccess
+// )
 
 // Context provides the EVM with auxiliary information. Once provided
 // it shouldn't be modified.
@@ -108,7 +108,7 @@ type Context struct {
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
 
-	ExecutionAccessLevel ExecutionAccessLevelEnum // execution prevideledge
+	// ExecutionAccessLevel ExecutionAccessLevelEnum // execution prevideledge
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -459,6 +459,14 @@ func (evm *EVM) Create2(caller ContractRef, code []byte, gas uint64, endowment *
 // ChainConfig returns the environment's chain configuration
 func (evm *EVM) ChainConfig() *params.ChainConfig { return evm.chainConfig }
 
-func (evm *EVM) HasPreviledgedAccess() bool {
-	return (evm.Context.ExecutionAccessLevel == PreviledgedAccess)
+func (evm *EVM) HasPreviledgedAccess(callerAddr common.Address) bool {
+	previledgedContracts := []common.Address{}
+	previledgedContracts = append(previledgedContracts, *evm.StateDB.GetTFuelTokenBankContractAddress())
+
+	for _, previledgedContract := range previledgedContracts {
+		if callerAddr == previledgedContract {
+			return true
+		}
+	}
+	return false
 }

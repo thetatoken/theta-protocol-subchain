@@ -156,22 +156,6 @@ func (sv *StoreView) SetSubchainValidatorSetTransactionProcessed(processed bool)
 	sv.subchainValidatorSetTransactinProcessed = processed
 }
 
-// InterChainMessageTransactionProcessed returns whether the cross-chain transfer transaction has been processed
-func (sv *StoreView) InterChainMessageTransactionProcessed(crossChainTransferID *big.Int) bool {
-	return sv.GetLastProcessedEventNonce().Cmp(crossChainTransferID) > 0
-}
-
-// ShouldProcessThisInterChainMessageEvent returns whether the crossChainTransferID is the next nonce to process
-func (sv *StoreView) ShouldProcessThisInterChainMessageEvent(crossChainTransferID *big.Int) bool {
-	// if the crossChainTransferID equals the LastProcessedEventNonce + 1 then process it
-	return crossChainTransferID.Cmp(new(big.Int).Add(sv.GetLastProcessedEventNonce(), big.NewInt(1))) == 0
-}
-
-// SetInterChainMessageTransactionProcessed sets whether the validator set update transaction for the current block has been processed
-func (sv *StoreView) SetInterChainMessageTransactionProcessed(crossChainTransferID *big.Int) {
-	sv.UpdateLastProcessedEventNonce(crossChainTransferID)
-}
-
 // GetAccount returns an account.
 func (sv *StoreView) GetAccount(addr common.Address) *types.Account {
 	data := sv.Get(AccountKey(addr))
@@ -236,7 +220,7 @@ func (sv *StoreView) DeleteAccount(addr common.Address) {
 
 // GetDynasty gets the dynasty associated with the view
 func (sv *StoreView) GetDynasty() *big.Int {
-	data := sv.Get(ValidatorSetKey())
+	data := sv.Get(CurrentValidatorSetKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -252,7 +236,7 @@ func (sv *StoreView) GetDynasty() *big.Int {
 
 // GetValidatorSet gets the validator set.
 func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
-	data := sv.Get(ValidatorSetKey())
+	data := sv.Get(CurrentValidatorSetKey())
 	if data == nil || len(data) == 0 {
 		return nil
 	}
@@ -266,13 +250,43 @@ func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
 }
 
 // UpdateValidatorSet updates the validator set.
-func (sv *StoreView) UpdateValidatorSet(vs *score.ValidatorSet) {
+func (sv *StoreView) UpdateValidatorSet(chainID *big.Int, vs *score.ValidatorSet) {
 	vsBytes, err := types.ToBytes(vs)
 	if err != nil {
 		log.Panicf("Error writing validator set %v, error: %v",
 			vs, err.Error())
 	}
-	sv.Set(ValidatorSetKey(), vsBytes)
+	sv.Set(CurrentValidatorSetKey(), vsBytes)
+	sv.Set(ValidatorSetForChainDuringDynastyKey(chainID, vs.Dynasty()), vsBytes)
+}
+
+func (sv *StoreView) GetValidatorSetForChainDuringDynasty(chainID *big.Int, dynasty *big.Int) *score.ValidatorSet {
+	data := sv.Get(ValidatorSetForChainDuringDynastyKey(chainID, dynasty))
+	if data == nil || len(data) == 0 {
+		return nil
+	}
+	vs := &score.ValidatorSet{}
+	err := types.FromBytes(data, vs)
+	if err != nil {
+		log.Panicf("Error reading validator set %X, error: %v",
+			data, err.Error())
+	}
+	return vs
+}
+
+// GetChainRegistrarContractAddress gets chain registrar contract address
+func (sv *StoreView) GetChainRegistrarContractAddress() *common.Address {
+	data := sv.Get(ChainRegistrarContractAddressKey())
+	if len(data) == 0 {
+		return nil
+	}
+	tbca := &common.Address{}
+	err := types.FromBytes(data, tbca)
+	if err != nil {
+		log.Panicf("Error reading chain registrar contract address %X, error: %v",
+			data, err.Error())
+	}
+	return tbca
 }
 
 // GetTFuelTokenBankContractAddress gets the TFuel token bank contract address.
@@ -318,31 +332,6 @@ func (sv *StoreView) GetTNT721TokenBankContractAddress() *common.Address {
 			data, err.Error())
 	}
 	return tbca
-}
-
-// GetLastProcessedEventNonce gets the last processed event nonce.
-func (sv *StoreView) GetLastProcessedEventNonce() *big.Int {
-	data := sv.Get(EventNonceKey())
-	if data == nil || len(data) == 0 {
-		return nil
-	}
-	lastProcessedEventNonce := big.NewInt(0)
-	err := types.FromBytes(data, lastProcessedEventNonce)
-	if err != nil {
-		log.Panicf("Error reading validator set %X, error: %v",
-			data, err.Error())
-	}
-	return lastProcessedEventNonce
-}
-
-// UpdateLastProcessedEventNonce updates the last processed event nonce.
-func (sv *StoreView) UpdateLastProcessedEventNonce(lastProcessedEventNonce *big.Int) {
-	lpenBytes, err := types.ToBytes(lastProcessedEventNonce)
-	if err != nil {
-		log.Panicf("Error writing last processed event nonce %v, error: %v",
-			lastProcessedEventNonce, err.Error())
-	}
-	sv.Set(EventNonceKey(), lpenBytes)
 }
 
 // GetValidatorSetUpdateTxHeightList gets the heights of blocks that contain stake related transactions

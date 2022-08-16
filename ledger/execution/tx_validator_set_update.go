@@ -10,10 +10,11 @@ import (
 	"github.com/thetatoken/theta/store/database"
 
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/interchain/witness"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
 	stypes "github.com/thetatoken/thetasubchain/ledger/types"
-	"github.com/thetatoken/thetasubchain/witness"
 )
 
 var _ TxExecutor = (*SubchainValidatorSetUpdateTxExecutor)(nil)
@@ -27,19 +28,19 @@ type SubchainValidatorSetUpdateTxExecutor struct {
 	state            *slst.LedgerState
 	consensus        score.ConsensusEngine
 	valMgr           score.ValidatorManager
-	mainchainWitness witness.ChainWitness
+	metachainWitness witness.ChainWitness
 }
 
 // NewSubchainValidatorSetUpdateTxExecutor creates a new instance of SubchainValidatorSetUpdateTxExecutor
 func NewSubchainValidatorSetUpdateTxExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState, consensus score.ConsensusEngine,
-	valMgr score.ValidatorManager, mainchainWitness witness.ChainWitness) *SubchainValidatorSetUpdateTxExecutor {
+	valMgr score.ValidatorManager, metachainWitness witness.ChainWitness) *SubchainValidatorSetUpdateTxExecutor {
 	return &SubchainValidatorSetUpdateTxExecutor{
 		db:               db,
 		chain:            chain,
 		state:            state,
 		consensus:        consensus,
 		valMgr:           valMgr,
-		mainchainWitness: mainchainWitness,
+		metachainWitness: metachainWitness,
 	}
 }
 
@@ -108,7 +109,7 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 		return common.Hash{}, result.Error(fmt.Sprintf("new dynasty needs to be strictly larger than the current dynasty (new: %v, current: %v)", newDynasty, currentDynasty))
 	}
 
-	witnessedValidatorSet, err := exec.mainchainWitness.GetValidatorSetByDynasty(newDynasty)
+	witnessedValidatorSet, err := exec.metachainWitness.GetValidatorSetByDynasty(newDynasty)
 	if err != nil {
 		return common.Hash{}, result.UndecidedWith(result.Info{"newDynasty": newDynasty, "err": err})
 	}
@@ -118,7 +119,8 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	}
 
 	// update the dynasty and the subchain validator set
-	view.UpdateValidatorSet(newValidatorSet)
+	selfChainIDInt := scom.MapChainID(chainID)
+	view.UpdateValidatorSet(selfChainIDInt, newValidatorSet)
 	view.SetSubchainValidatorSetTransactionProcessed(true)
 	txHash := types.TxID(chainID, tx)
 	return txHash, result.OK

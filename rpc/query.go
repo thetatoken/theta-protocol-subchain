@@ -844,8 +844,6 @@ func getTxType(tx types.Tx) byte {
 		t = TxTypeStakeRewardDistributionTx
 	case *stypes.SubchainValidatorSetUpdateTx:
 		t = TxSubchainValidatorSetUpdate
-	case *stypes.InterChainMessageTx:
-		t = TxInterChainMessage
 	}
 
 	return t
