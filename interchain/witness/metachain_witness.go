@@ -34,6 +34,7 @@ type MetachainWitness struct {
 	updateInterval int
 	witnessState   *metachainWitnessState
 
+	queryTopics string
 	// The mainchain
 	mainchainID                  *big.Int
 	mainchainEthRpcUrl           string
@@ -115,9 +116,15 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	witnessState := newMetachainWitnessState(db)
 	validatorSet := make(map[string]*score.ValidatorSet)
 
+	var queryTopics string
+	for _, eventTopicString := range siu.EventSelectors {
+		queryTopics = queryTopics + ",\"" + eventTopicString + "\""
+	}
+
 	mw := &MetachainWitness{
 		updateInterval: updateInterval,
 		witnessState:   witnessState,
+		queryTopics:    queryTopics[1:],
 
 		mainchainID:                  mainchainID,
 		mainchainEthRpcUrl:           mainchainEthRpcURL,
@@ -289,7 +296,7 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	}
 	toBlock := mw.calculateToBlock(fromBlock, queriedChainID)
 	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", fromBlock.String(), toBlock.String(), queriedChainID.String())
-	events := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, ethRpcUrl)
+	events := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, mw.queryTopics, ethRpcUrl)
 	err = mw.interChainEventCache.InsertList(events)
 	if err != nil { // should not happen
 		logger.Panicf("failed to insert events into cache")
