@@ -289,26 +289,10 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	}
 	toBlock := mw.calculateToBlock(fromBlock, queriedChainID)
 	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", fromBlock.String(), toBlock.String(), queriedChainID.String())
-
-	queryTypes := append(siu.LockTypes, siu.UnlockTypes...)
-	queryTypes = append(queryTypes, siu.VoucherBurnTypes...)
-	for _, imceType := range queryTypes {
-		var events []*score.InterChainMessageEvent
-		switch imceType {
-		case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainVoucherBurnTFuel:
-			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, imceType, ethRpcUrl)
-		case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainVoucherBurnTNT20:
-			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tnt20TokenBankAddr, imceType, ethRpcUrl)
-		case score.IMCEventTypeCrossChainTokenLockTNT721, score.IMCEventTypeCrossChainVoucherBurnTNT721:
-			events = siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tnt721TokenBankAddr, imceType, ethRpcUrl)
-		}
-		if len(events) == 0 {
-			continue
-		}
-		err = mw.interChainEventCache.InsertList(events)
-		if err != nil { // should not happen
-			logger.Panicf("failed to insert events into cache")
-		}
+	events := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, ethRpcUrl)
+	err = mw.interChainEventCache.InsertList(events)
+	if err != nil { // should not happen
+		logger.Panicf("failed to insert events into cache")
 	}
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
 }

@@ -83,9 +83,14 @@ var EventSelectors = map[score.InterChainMessageEventType]string{
 	score.IMCEventTypeCrossChainTokenUnlockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
 }
 
-func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, contractAddr common.Address, imceType score.InterChainMessageEventType, url string) []*score.InterChainMessageEvent {
+func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, tfuelTokenbankAddress common.Address, tnt20TokenBankAddress common.Address, tnt721TokenBankAddress common.Address, url string) []*score.InterChainMessageEvent {
+	var topics string
+	for _, value := range EventSelectors {
+		topics = topics + ",\"" + value + "\""
+	}
 	var events []*score.InterChainMessageEvent
-	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), EventSelectors[imceType])
+
+	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":[%v],"topics":[[%v]]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), fmt.Sprintf("\"%v\",\"%v\",\"%v\"", tfuelTokenbankAddress, tnt20TokenBankAddress, tnt721TokenBankAddress), topics[1:]) // fmt.Sprintf("[\"%v\",\"%v\",\"%v\"]", crypto.Keccak256Hash([]byte("TNT20TokenLocked(string,address,uint256,address,uint256,string,string,uint8,uint256)")).Hex(), crypto.Keccak256Hash([]byte("TFuelTokenLocked(string,address,uint256,address,uint256,uint256)")).Hex(), crypto.Keccak256Hash([]byte("TNT721TokenLocked(string,address,uint256,address,uint256,string,string,string,uint256)")).Hex()))
 	var jsonData = []byte(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
@@ -115,38 +120,38 @@ func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBloc
 
 	for _, logData := range rpcres.Result {
 		logData := logData
-		switch imceType {
+		switch logData.Topics[0] {
 
 		// TokenLock events
-		case score.IMCEventTypeCrossChainTokenLockTFuel:
+		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTFuel]:
 			extractTFuelTokenLockedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainTokenLockTNT20:
+		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTNT20]:
 			extractTNT20TokenLockedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainTokenLockTNT721:
+		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTNT721]:
 			extractTNT721TokenLockedEvent(queriedChainID, logData, &events)
 
 		// VoucherMint events
-		case score.IMCEventTypeCrossChainVoucherMintTFuel:
+		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTFuel]:
 			extractTFuelVoucherMintedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainVoucherMintTNT20:
+		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTNT20]:
 			extractTNT20VoucherMintedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainVoucherMintTNT721:
+		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTNT721]:
 			extractTNT721VoucherMintedEvent(queriedChainID, logData, &events)
 
 		// VoucherBurn events
-		case score.IMCEventTypeCrossChainVoucherBurnTFuel:
+		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTFuel]:
 			extractTFuelVoucherBurnedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainVoucherBurnTNT20:
+		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTNT20]:
 			extractTNT20VoucherBurnedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainVoucherBurnTNT721:
+		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTNT721]:
 			extractTNT721VoucherBurnedEvent(queriedChainID, logData, &events)
 
 		// TokenUnlock events
-		case score.IMCEventTypeCrossChainTokenUnlockTFuel:
+		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTFuel]:
 			extractTFuelTokenUnlockedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainTokenUnlockTNT20:
+		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTNT20]:
 			extractTNT20TokenUnlockedEvent(queriedChainID, logData, &events)
-		case score.IMCEventTypeCrossChainTokenUnlockTNT721:
+		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTNT721]:
 			extractTNT721TokenUnlockedEvent(queriedChainID, logData, &events)
 
 		default:

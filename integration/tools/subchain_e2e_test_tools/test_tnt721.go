@@ -63,21 +63,21 @@ func mainchainTNT721Lock(tokenID *big.Int) {
 	// if receipt.Status != 1 {
 	// 	fmt.Println("lock error")
 	// }
-	fmt.Println(LockTx.Hash().Hex())
-	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
-	fromHeight, _ := subchainClient.BlockNumber(context.Background())
-	fmt.Println(LockTx.Hash())
-	var subchainVoucherAddress common.Address
-	for {
-		time.Sleep(2 * time.Second)
-		toHeight, _ := subchainClient.BlockNumber(context.Background())
-		result := get721Mintlog(int(fromHeight), int(toHeight), Subchaintnt721TokenBankAddress, user)
-		if result != nil {
-			subchainVoucherAddress = *result
-			break
-		}
-	}
-	fmt.Println(subchainVoucherAddress)
+	// fmt.Println(LockTx.Hash().Hex())
+	// subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
+	// fromHeight, _ := subchainClient.BlockNumber(context.Background())
+	// fmt.Println(LockTx.Hash())
+	// var subchainVoucherAddress common.Address
+	// for {
+	// 	time.Sleep(2 * time.Second)
+	// 	toHeight, _ := subchainClient.BlockNumber(context.Background())
+	// 	result := get721Mintlog(int(fromHeight), int(toHeight), Subchaintnt721TokenBankAddress, user)
+	// 	if result != nil {
+	// 		subchainVoucherAddress = *result
+	// 		break
+	// 	}
+	// }
+	// fmt.Println(subchainVoucherAddress)
 }
 func subchainTNT721Burn(tokenID *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
