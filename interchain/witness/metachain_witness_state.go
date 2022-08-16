@@ -45,7 +45,7 @@ func (mws *metachainWitnessState) getLastQueryedHeightForType(sourceChainID *big
 	if err == nil {
 		return height, nil
 	}
-	return big.NewInt(0), err
+	return big.NewInt(0), err 
 }
 
 func (mws *metachainWitnessState) setLastQueryedHeightForType(sourceChainID *big.Int, icmeType score.InterChainMessageEventType, height *big.Int) error {

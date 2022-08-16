@@ -41,8 +41,6 @@ type SimulatedMetachainWitness struct {
 func NewSimulatedMetachainWitness(
 	mainchainIDStr string,
 	subchainIDStr string,
-	registerContractAddr common.Address,
-	ercContractAddr common.Address,
 	crossChainEventCache *siu.InterChainEventCache,
 	testId int,
 ) *SimulatedMetachainWitness {
@@ -95,9 +93,12 @@ func (mw *SimulatedMetachainWitness) Wait() {
 	mw.wg.Wait()
 }
 
-func (mw *SimulatedMetachainWitness) GetMainchainBlockNumber() (*big.Int, error) {
-	blockNumber := int64((time.Since(mw.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
-	return big.NewInt(int64(blockNumber)), nil
+func (mw *SimulatedMetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
+}
+
+func (mw *SimulatedMetachainWitness) GetMainchainBlockHeight() (*big.Int, error) {
+	blockHeight := int64((time.Since(mw.startingTime)).Milliseconds()) / mainchainBlockIntervalMilliseconds
+	return big.NewInt(int64(blockHeight)), nil
 }
 
 func (mw *SimulatedMetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error) {
@@ -128,7 +129,7 @@ func (mw *SimulatedMetachainWitness) mainloop(ctx context.Context) {
 }
 
 func (mw *SimulatedMetachainWitness) update() {
-	mainchainBlockNumber, err := mw.GetMainchainBlockNumber()
+	mainchainBlockNumber, err := mw.GetMainchainBlockHeight()
 	logger.Debugf("witnessed mainchain block height: %v", mainchainBlockNumber)
 
 	if err != nil {

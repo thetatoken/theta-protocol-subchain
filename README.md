@@ -16,37 +16,6 @@ cd $SUBCHAIN_HOME
 make install
 ```
 
-## Start a single validator testnet
-
-### Setup (run once)
-
-```shell
-cd $SUBCHAIN_HOME
-mkdir -p ../data/subchain/privatenet/node
-rm -rf ../data/subchain/privatenet/node/*
-cp -r integration/privatenet/node/* ../data/subchain/privatenet/node/
-```
-
-### Start the validator
-
-```shell
-cd $SUBCHAIN_HOME
-thetasubchain start --config=../data/subchain/privatenet/node --password=qwertyuiop
-```
-
-## Query the validator
-
-```shell
-# query status
-thetasubcli query status
-
-# query validator set at a given block height
-thetasubcli query vs --height=20
-
-# query block(s) at a given height
-thetasubcli query block --height=122
-```
-
 ## Misc
 
 If you need to generate a new genesis snapshot for the single node testnet, please use the following command. The json file `init_validator_set.json` specifies the initial validator set.

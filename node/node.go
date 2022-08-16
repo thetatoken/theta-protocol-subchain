@@ -82,14 +82,12 @@ func NewNode(params *Params) *Node {
 
 	interChainEventCache := siu.NewInterChainEventCache(params.DB)
 
-	// For testing...
-	// metachainWitness := witness.NewSimulatedMainchainWitness(
-	// 	viper.GetString(scom.CfgMainchainEthRpcURL),
+	// // For testing...
+	// metachainWitness := witness.NewSimulatedMetachainWitness(
+	// 	"privatenet",
 	// 	params.ChainID,
-	// 	common.HexToAddress(viper.GetString(scom.CfgRegisterContractAddress)),
-	// 	common.HexToAddress(viper.GetString(scom.CfgERC20ContractAddress)),
 	// 	interChainEventCache,
-	// 	viper.GetInt(scom.CfgSubchainTestID))
+	// 	0)
 	metachainWitness := witness.NewMetachainWitness(
 		params.DB,
 		viper.GetInt(scom.CfgSubchainUpdateIntervalInMilliseconds),
@@ -112,8 +110,7 @@ func NewNode(params *Params) *Node {
 	validatorManager.SetConsensusEngine(consensus)
 	consensus.SetLedger(ledger)
 	mempool.SetLedger(ledger)
-	metachainWitness.SetSubchainTokenBanks(ledger)
-	orchestrator.SetLedgerAndSubchainTokenBanks(ledger)
+
 	txMsgHandler := smp.CreateMempoolMessageHandler(mempool)
 
 	if !reflect.ValueOf(params.Network).IsNil() {
@@ -141,7 +138,8 @@ func NewNode(params *Params) *Node {
 			state.SetLastProposal(score.Proposal{})
 		}
 	}
-
+	metachainWitness.SetSubchainTokenBanks(ledger)
+	orchestrator.SetLedgerAndSubchainTokenBanks(ledger)
 	node := &Node{
 		Store:                store,
 		Chain:                chain,
