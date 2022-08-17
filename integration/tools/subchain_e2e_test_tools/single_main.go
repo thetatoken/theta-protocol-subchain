@@ -58,9 +58,9 @@ func main() {
 	subchainTNT20Burn(big.NewInt(10))
 
 	//TNT721
-	mainchainTNT721Lock(big.NewInt(12)) //mainchainTNT721Lock(tokenid) last address printed in console is subchain voucher contract address
+	mainchainTNT721Lock(big.NewInt(13)) //mainchainTNT721Lock(tokenid) last address printed in console is subchain voucher contract address
 	subchainTNT721Lock(big.NewInt(12))  //last address printed in console is mainchain voucher contract address
 	mainchainTNT721Burn(big.NewInt(12))
-	subchainTNT721Burn(big.NewInt(12))
+	subchainTNT721Burn(big.NewInt(13))
 
 }

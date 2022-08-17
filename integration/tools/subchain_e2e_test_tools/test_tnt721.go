@@ -63,21 +63,21 @@ func mainchainTNT721Lock(tokenID *big.Int) {
 	// if receipt.Status != 1 {
 	// 	fmt.Println("lock error")
 	// }
-	// fmt.Println(LockTx.Hash().Hex())
-	// subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
-	// fromHeight, _ := subchainClient.BlockNumber(context.Background())
-	// fmt.Println(LockTx.Hash())
-	// var subchainVoucherAddress common.Address
-	// for {
-	// 	time.Sleep(2 * time.Second)
-	// 	toHeight, _ := subchainClient.BlockNumber(context.Background())
-	// 	result := get721Mintlog(int(fromHeight), int(toHeight), Subchaintnt721TokenBankAddress, user)
-	// 	if result != nil {
-	// 		subchainVoucherAddress = *result
-	// 		break
-	// 	}
-	// }
-	// fmt.Println(subchainVoucherAddress)
+	fmt.Println(LockTx.Hash().Hex())
+	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
+	fromHeight, _ := subchainClient.BlockNumber(context.Background())
+	fmt.Println(LockTx.Hash())
+	var subchainVoucherAddress common.Address
+	for {
+		time.Sleep(2 * time.Second)
+		toHeight, _ := subchainClient.BlockNumber(context.Background())
+		result := get721Mintlog(int(fromHeight), int(toHeight), Subchaintnt721TokenBankAddress, user)
+		if result != nil {
+			subchainVoucherAddress = *result
+			break
+		}
+	}
+	fmt.Println(subchainVoucherAddress)
 }
 func subchainTNT721Burn(tokenID *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
@@ -175,7 +175,7 @@ func mainchainTNT721Burn(tokenID *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mainchainTNT721VoucherAddr := common.HexToAddress("0xaE65cd74C7aF2C5c1009E2Caa6Fa30e4a832a687")
+	mainchainTNT721VoucherAddr := common.HexToAddress("0x20B2897c4f95df71a5a8A62Ae812f5843AA92E25")
 	mainchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(mainchainTNT721VoucherAddr, client)
 	auth := mainchainSelectAccount(client, 6)
 	_, err = mainchainTNT721VoucherInstance.Approve(auth, tnt721TokenBankAddress, tokenID)
@@ -184,7 +184,7 @@ func mainchainTNT721Burn(tokenID *big.Int) {
 	}
 	mainchainTNT721TokenBankInstance, _ := ct.NewTNT721TokenBank(tnt721TokenBankAddress, client)
 	auth = mainchainSelectAccount(client, 6)
-	tx, err := mainchainTNT721TokenBankInstance.BurnVouchers(auth, mainchainTNT721VoucherAddr, accountList[7].fromAddress, tokenID)
+	tx, err := mainchainTNT721TokenBankInstance.BurnVouchers(auth, mainchainTNT721VoucherAddr, accountList[1].fromAddress, tokenID)
 	fmt.Println("burn tx hash is", tx.Hash().Hex())
 	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
 	if err != nil {
