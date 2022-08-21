@@ -14,6 +14,7 @@ import (
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	"github.com/thetatoken/thetasubchain/ledger/vm"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 )
 
@@ -113,6 +114,12 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 			WithErrorCode(result.CodeInvalidGasLimit)
 	}
 
+	err := exec.checkIntrinsicGas(tx)
+	if err != nil {
+		return result.Error("Intrinsic gas check failed: %v", err).
+			WithErrorCode(result.CodeInvalidGasLimit)
+	}
+
 	zero := big.NewInt(0)
 	feeLimit := new(big.Int).Mul(tx.GasPrice, new(big.Int).SetUint64(tx.GasLimit))
 	if feeLimit.BitLen() > 255 || feeLimit.Cmp(zero) < 0 {
@@ -190,6 +197,22 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	contractInfo[contractAddrInfoKey] = contractAddr
 
 	return txHash, result.OKWith(contractInfo)
+}
+
+func (exec *SmartContractTxExecutor) checkIntrinsicGas(tx *types.SmartContractTx) error {
+	contractAddr := tx.To.Address
+	createContract := (contractAddr == common.Address{})
+	intrinsicGas, err := vm.CalculateIntrinsicGas(tx.Data, createContract)
+	if err != nil {
+		return err
+	}
+
+	gasLimit := tx.GasLimit
+	if intrinsicGas > gasLimit {
+		return vm.ErrOutOfGas
+	}
+
+	return nil
 }
 
 func (exec *SmartContractTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {
