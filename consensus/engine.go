@@ -376,6 +376,16 @@ func (e *ConsensusEngine) validateBlock(block *score.Block, parent *score.Extend
 		}).Warn("Block.Height != parent.Height + 1")
 		return result.Error("Block height is incorrect")
 	}
+	minBlockTimestamp := big.NewInt(0).Add(parent.Timestamp, big.NewInt(1))
+	if block.Timestamp.Cmp(minBlockTimestamp) < 0 {
+		e.logger.WithFields(log.Fields{
+			"parent":           block.Parent.Hex(),
+			"parent.Timestamp": parent.Timestamp,
+			"block":            block.Hash().Hex(),
+			"block.Timestamp":  block.Timestamp,
+		}).Warn("Block.Timestamp <= parent.Timestamp + 1")
+		return result.Error("Block timestamp needs to increase monotonically")
+	}
 	if parent.Epoch >= block.Epoch {
 		e.logger.WithFields(log.Fields{
 			"parent":       block.Parent.Hex(),
@@ -1078,14 +1088,24 @@ func (e *ConsensusEngine) createProposal(validatorMajorityInTheSameDynasty bool)
 		}).Panic("Failed to reset state to tip.StateHash")
 	}
 
+	parentBlockHash := tip.Hash()
+	parentBlock, err := e.chain.FindBlock(parentBlockHash)
+	if err != nil {
+		logger.Fatalf("Failed to find parent block with hash: %v, err: %v", parentBlockHash.Hex(), err) // should not happen
+	}
+	minBlockTimestamp := big.NewInt(0).Add(parentBlock.Timestamp, big.NewInt(1))
+
 	// Add block.
 	block := score.NewBlock()
 	block.ChainID = e.chain.ChainID
 	block.Epoch = e.GetEpoch()
-	block.Parent = tip.Hash()
+	block.Parent = parentBlockHash
 	block.Height = tip.Height + 1
 	block.Proposer = e.privateKey.PublicKey().Address()
 	block.Timestamp = big.NewInt(time.Now().Unix())
+	if block.Timestamp.Cmp(minBlockTimestamp) < 0 {
+		block.Timestamp.Set(minBlockTimestamp) // keep the block timestamp monotonically increasing to be compatible with Ethereum, block.timestamp >= parent.timestamp + 1
+	}
 	block.HCC.BlockHash = e.state.GetHighestCCBlock().Hash()
 	hccValidators := e.validatorManager.GetValidatorSet(block.HCC.BlockHash)
 	block.HCC.Votes = e.chain.FindVotesByHash(block.HCC.BlockHash).UniqueVoter().FilterByValidators(hccValidators)
