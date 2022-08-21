@@ -21,13 +21,13 @@ import (
 
 // sendCmd represents the send command
 // Example:
-//		thetacli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1
-//		thetacli tx send --chain="privatenet" --path "m/44'/60'/0'/0/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1 --wallet=trezor
-//		thetacli tx send --chain="privatenet" --path "m/44'/60'/0'/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1 --wallet=nano
+//		thetasubcli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1
+//		thetasubcli tx send --chain="privatenet" --path "m/44'/60'/0'/0/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1 --wallet=trezor
+//		thetasubcli tx send --chain="privatenet" --path "m/44'/60'/0'/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1 --wallet=nano
 var sendCmd = &cobra.Command{
 	Use:     "send",
 	Short:   "Send tokens",
-	Example: `thetacli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1`,
+	Example: `thetasubcli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1`,
 	Run:     doSendCmd,
 }
 
