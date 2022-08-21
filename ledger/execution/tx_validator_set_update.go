@@ -44,7 +44,7 @@ func NewSubchainValidatorSetUpdateTxExecutor(db database.Database, chain *sbc.Ch
 	}
 }
 
-func (exec *SubchainValidatorSetUpdateTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *SubchainValidatorSetUpdateTxExecutor) sanityCheck(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) result.Result {
 	tx := transaction.(*stypes.SubchainValidatorSetUpdateTx)
 	validatorSet := getValidatorSet(exec.consensus.GetLedger(), exec.valMgr)
 	validatorAddresses := getValidatorAddresses(validatorSet)
@@ -80,7 +80,7 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) sanityCheck(chainID string, vi
 	return result.OK
 }
 
-func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*stypes.SubchainValidatorSetUpdateTx)
 
 	if view.SubchainValidatorSetTransactionProcessed() {

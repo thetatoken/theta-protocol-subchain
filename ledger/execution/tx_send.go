@@ -28,7 +28,7 @@ func NewSendTxExecutor(state *slst.LedgerState) *SendTxExecutor {
 	}
 }
 
-func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) result.Result {
 	tx := transaction.(*types.SendTx)
 
 	// Validate inputs and outputs, basic
@@ -103,7 +103,7 @@ func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, tr
 	return result.OK
 }
 
-func (exec *SendTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *SendTxExecutor) process(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*types.SendTx)
 
 	accounts, res := getInputs(view, tx.Inputs)

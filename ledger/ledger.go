@@ -56,7 +56,6 @@ type Ledger struct {
 func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
 	valMgr score.ValidatorManager, mempool *smp.Mempool, metachainWitness witness.ChainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
-	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, metachainWitness)
 	ledger := &Ledger{
 		db:               db,
 		chain:            chain,
@@ -65,10 +64,17 @@ func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *
 		mempool:          mempool,
 		mu:               &sync.RWMutex{},
 		state:            state,
-		executor:         executor,
 		metachainWitness: metachainWitness,
 	}
+	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, ledger, metachainWitness)
+	ledger.SetExecutor(executor)
+
 	return ledger
+}
+
+// SetExecutor sets the executor for the ledger
+func (ledger *Ledger) SetExecutor(executor *sexec.Executor) {
+	ledger.executor = executor
 }
 
 // State returns the state of the ledger

@@ -26,19 +26,21 @@ const contractAddrInfoKey string = "contract_address"
 
 // SmartContractTxExecutor implements the TxExecutor interface
 type SmartContractTxExecutor struct {
-	state *slst.LedgerState
-	chain *sbc.Chain
+	state  *slst.LedgerState
+	chain  *sbc.Chain
+	ledger score.Ledger
 }
 
 // NewSmartContractTxExecutor creates a new instance of SmartContractTxExecutor
-func NewSmartContractTxExecutor(chain *sbc.Chain, state *slst.LedgerState) *SmartContractTxExecutor {
+func NewSmartContractTxExecutor(chain *sbc.Chain, state *slst.LedgerState, ledger score.Ledger) *SmartContractTxExecutor {
 	return &SmartContractTxExecutor{
-		state: state,
-		chain: chain,
+		state:  state,
+		chain:  chain,
+		ledger: ledger,
 	}
 }
 
-func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) result.Result {
 	blockHeight := getBlockHeight(exec.state)
 	tx := transaction.(*types.SmartContractTx)
 
@@ -150,7 +152,7 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 	return result.OK
 }
 
-func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*types.SmartContractTx)
 
 	view.ResetLogs()
@@ -191,7 +193,10 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 		// Do not record events if transaction is reverted
 		logs = nil
 	}
-	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
+
+	if viewSel == score.DeliveredView { // only record the receipt for the delivered views
+		exec.chain.AddTxReceipt(exec.ledger.GetCurrentBlock(), tx, logs, evmRet, contractAddr, gasUsed, evmErr)
+	}
 
 	contractInfo := result.Info{}
 	contractInfo[contractAddrInfoKey] = contractAddr
