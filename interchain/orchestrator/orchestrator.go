@@ -462,10 +462,19 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 }
 
 func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bind.TransactOpts, error) {
-	gasPrice, err := ecClient.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, err
+	var gasPrice *big.Int
+	var err error
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		gasPrice, err = ecClient.SuggestGasPrice(context.Background())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// eth_gasPrice returns a hardcoded nubmer for the mainchain, which could be much higher than min gasPrice required by the subchain
+		// TODO: parameterize the subchain ETH RPC service to suggest the proper gasPrice for different chains
+		gasPrice = big.NewInt(int64(scom.MinimumGasPrice) * 2)
 	}
+
 	nonce, err := ecClient.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
 	if err != nil {
 		return nil, err

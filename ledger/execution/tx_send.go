@@ -61,7 +61,7 @@ func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, tr
 		coins := input.Coins.NoNil()
 		if coins.ThetaWei.Cmp(types.Zero) != 0 { // subchains do not support native THETA
 			return result.Error("Subchain does not support native THETA").
-				WithErrorCode(result.CodeDoNotSupportNativeTheta)
+				WithErrorCode(result.CodeDoNotSupportNativeThetaInSubchain)
 		}
 	}
 

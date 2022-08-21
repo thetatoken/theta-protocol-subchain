@@ -124,7 +124,7 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 
 	if coins.ThetaWei.Cmp(types.Zero) != 0 { // subchains do not support native THETA
 		return result.Error("Subchain does not support native THETA").
-			WithErrorCode(result.CodeDoNotSupportNativeTheta)
+			WithErrorCode(result.CodeDoNotSupportNativeThetaInSubchain)
 	}
 
 	var minimalBalance types.Coins
