@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"bytes"
@@ -85,7 +85,7 @@ func getMintlog(fromBlock, toBlock int, contractAddr common.Address, receiver co
 	//queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"83c", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`, crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex()
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
 	var jsonData = []byte(queryStr)
-	fmt.Println(queryStr)
+	////fmt.Println(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -103,7 +103,7 @@ func getMintlog(fromBlock, toBlock int, contractAddr common.Address, receiver co
 	body, _ := ioutil.ReadAll(response.Body)
 
 	var rpcres RPCResult
-	fmt.Println("-----------RPC res----------------")
+	//fmt.Println("-----------RPC res----------------")
 
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
@@ -114,11 +114,11 @@ func getMintlog(fromBlock, toBlock int, contractAddr common.Address, receiver co
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(rpcres)
-	for idx, logData := range rpcres.Result {
-		fmt.Println(idx)
+	//fmt.Println(rpcres)
+	for _, logData := range rpcres.Result {
+		//fmt.Println(idx)
 		logData := logData
-		fmt.Println(logData.Data)
+		//fmt.Println(logData.Data)
 		//out, err := contractAbi.Unpack("SendToSubchainEvent", logData.Data)
 		// if err != nil {
 		// 	fmt.Println(err)
@@ -216,9 +216,9 @@ func get721Mintlog(fromBlock, toBlock int, contractAddr common.Address, receiver
 
 	//queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"83c", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`, crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex()
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT721VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
-	fmt.Println("query str", queryStr)
+	//fmt.Println("query str", queryStr)
 	var jsonData = []byte(queryStr)
-	fmt.Println(queryStr)
+	//fmt.Println(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -236,7 +236,7 @@ func get721Mintlog(fromBlock, toBlock int, contractAddr common.Address, receiver
 	body, _ := ioutil.ReadAll(response.Body)
 
 	var rpcres RPCResult
-	fmt.Println("-----------RPC res----------------")
+	//fmt.Println("-----------RPC res----------------")
 
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
@@ -247,11 +247,11 @@ func get721Mintlog(fromBlock, toBlock int, contractAddr common.Address, receiver
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(rpcres)
-	for idx, logData := range rpcres.Result {
-		fmt.Println(idx)
+	//fmt.Println(rpcres)
+	for _, logData := range rpcres.Result {
+		//fmt.Println(idx)
 		logData := logData
-		fmt.Println(logData.Data)
+		//fmt.Println(logData.Data)
 		//out, err := contractAbi.Unpack("SendToSubchainEvent", logData.Data)
 		// if err != nil {
 		// 	fmt.Println(err)
@@ -350,7 +350,7 @@ func getMainchainMintlog(fromBlock, toBlock int, contractAddr common.Address) {
 	//queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"83c", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`, crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex()
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
 	var jsonData = []byte(queryStr)
-	fmt.Println(queryStr)
+	//fmt.Println(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -368,7 +368,7 @@ func getMainchainMintlog(fromBlock, toBlock int, contractAddr common.Address) {
 	body, _ := ioutil.ReadAll(response.Body)
 
 	var rpcres RPCResult
-	fmt.Println("-----------RPC res----------------")
+	//fmt.Println("-----------RPC res----------------")
 
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
@@ -379,11 +379,11 @@ func getMainchainMintlog(fromBlock, toBlock int, contractAddr common.Address) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(rpcres)
-	for idx, logData := range rpcres.Result {
-		fmt.Println(idx)
+	//fmt.Println(rpcres)
+	for _, logData := range rpcres.Result {
+		//fmt.Println(idx)
 		logData := logData
-		fmt.Println(logData.Data)
+		//fmt.Println(logData.Data)
 		//out, err := contractAbi.Unpack("SendToSubchainEvent", logData.Data)
 		// if err != nil {
 		// 	fmt.Println(err)
@@ -480,7 +480,7 @@ func getMainchainTNT20Mintlog(fromBlock, toBlock int, contractAddr common.Addres
 	//queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"83c", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`, crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex()
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
 	var jsonData = []byte(queryStr)
-	fmt.Println(queryStr)
+	//fmt.Println(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -498,7 +498,7 @@ func getMainchainTNT20Mintlog(fromBlock, toBlock int, contractAddr common.Addres
 	body, _ := ioutil.ReadAll(response.Body)
 
 	var rpcres RPCResult
-	fmt.Println("-----------RPC res----------------")
+	//fmt.Println("-----------RPC res----------------")
 
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
@@ -509,11 +509,11 @@ func getMainchainTNT20Mintlog(fromBlock, toBlock int, contractAddr common.Addres
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(rpcres)
-	for idx, logData := range rpcres.Result {
-		fmt.Println(idx)
+	//fmt.Println(rpcres)
+	for _, logData := range rpcres.Result {
+		//fmt.Println(idx)
 		logData := logData
-		fmt.Println(logData.Data)
+		//fmt.Println(logData.Data)
 		//out, err := contractAbi.Unpack("SendToSubchainEvent", logData.Data)
 		// if err != nil {
 		// 	fmt.Println(err)
@@ -611,7 +611,7 @@ func getSubchainTNT20Mintlog(fromBlock, toBlock int, contractAddr common.Address
 	//queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"83c", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`, crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex()
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
 	var jsonData = []byte(queryStr)
-	fmt.Println(queryStr)
+	//fmt.Println(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -629,7 +629,7 @@ func getSubchainTNT20Mintlog(fromBlock, toBlock int, contractAddr common.Address
 	body, _ := ioutil.ReadAll(response.Body)
 
 	var rpcres RPCResult
-	fmt.Println("-----------RPC res----------------")
+	//fmt.Println("-----------RPC res----------------")
 
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
@@ -640,11 +640,11 @@ func getSubchainTNT20Mintlog(fromBlock, toBlock int, contractAddr common.Address
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(rpcres)
-	for idx, logData := range rpcres.Result {
-		fmt.Println(idx)
+	//fmt.Println(rpcres)
+	for _, logData := range rpcres.Result {
+		//fmt.Println(idx)
 		logData := logData
-		fmt.Println(logData.Data)
+		//fmt.Println(logData.Data)
 		//out, err := contractAbi.Unpack("SendToSubchainEvent", logData.Data)
 		// if err != nil {
 		// 	fmt.Println(err)
@@ -743,7 +743,7 @@ func getMainchainTNT721Mintlog(fromBlock, toBlock int, contractAddr common.Addre
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT721VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
 	fmt.Println("query str", queryStr)
 	var jsonData = []byte(queryStr)
-	fmt.Println(queryStr)
+	//fmt.Println(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
@@ -761,7 +761,7 @@ func getMainchainTNT721Mintlog(fromBlock, toBlock int, contractAddr common.Addre
 	body, _ := ioutil.ReadAll(response.Body)
 
 	var rpcres RPCResult
-	fmt.Println("-----------RPC res----------------")
+	//fmt.Println("-----------RPC res----------------")
 
 	err = json.Unmarshal(body, &rpcres)
 	if err != nil {
@@ -772,11 +772,11 @@ func getMainchainTNT721Mintlog(fromBlock, toBlock int, contractAddr common.Addre
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(rpcres)
-	for idx, logData := range rpcres.Result {
-		fmt.Println(idx)
+	//fmt.Println(rpcres)
+	for _, logData := range rpcres.Result {
+		//fmt.Println(idx)
 		logData := logData
-		fmt.Println(logData.Data)
+		//fmt.Println(logData.Data)
 		//out, err := contractAbi.Unpack("SendToSubchainEvent", logData.Data)
 		// if err != nil {
 		// 	fmt.Println(err)

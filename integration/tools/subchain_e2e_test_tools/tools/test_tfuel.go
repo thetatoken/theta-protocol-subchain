@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"fmt"
@@ -9,7 +9,7 @@ import (
 	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
-func mainchainTfuelLock(lockAmount *big.Int) {
+func MainchainTfuelLock(lockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -30,7 +30,7 @@ func mainchainTfuelLock(lockAmount *big.Int) {
 
 }
 
-func subchainTfuelBurn(burnAmount *big.Int) {
+func SubchainTfuelBurn(burnAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
 	if err != nil {
 		log.Fatal(err)

@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
-func mainchainTNT20Lock(mintLockAmount *big.Int) {
+func MainchainTNT20Lock(mintLockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -39,13 +39,15 @@ func mainchainTNT20Lock(mintLockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-
+	//
+	initNum, _ := instanceTNT20VoucherContract.BalanceOf(nil, accountList[1].fromAddress)
+	fmt.Println("account ", accountList[1].fromAddress, " balance on mainchain  is ", initNum)
+	//
 	authUser = mainchainSelectAccount(client, 1)
 	LockTx, err := instanceTNT20TokenBank.LockTokens(authUser, subchainID, tnt20VoucherContractAddress, user, mintLockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
-
 	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	receipt, err := client.TransactionReceipt(context.Background(), LockTx.Hash())
@@ -56,6 +58,10 @@ func mainchainTNT20Lock(mintLockAmount *big.Int) {
 		fmt.Println("lock error")
 	}
 	fmt.Println(LockTx.Hash().Hex())
+	//
+	lastNum, _ := instanceTNT20VoucherContract.BalanceOf(nil, accountList[1].fromAddress)
+	fmt.Println("account ", accountList[1].fromAddress, " balance on mainchain  is ", lastNum)
+	//
 	var subchainVoucherAddress common.Address
 	for {
 		time.Sleep(2 * time.Second)
@@ -67,8 +73,13 @@ func mainchainTNT20Lock(mintLockAmount *big.Int) {
 		}
 	}
 	fmt.Println(subchainVoucherAddress)
+	instanceSubchainTNT20VoucherContractAddress, _ := ct.NewTNT20VoucherContract(subchainVoucherAddress, subchainClient)
+	//
+	balanceOfSubchain, _ := instanceSubchainTNT20VoucherContractAddress.BalanceOf(nil, accountList[1].fromAddress)
+	fmt.Println("account ", accountList[1].fromAddress, " balance on subchain is ", balanceOfSubchain)
+	//
 }
-func subchainTNT20Lock(mintLockAmount *big.Int) {
+func SubchainTNT20Lock(mintLockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -80,7 +91,7 @@ func subchainTNT20Lock(mintLockAmount *big.Int) {
 	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println("subchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
 	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
 	authUser := subchainSelectAccount(client, 1)
 	tx2, err := subchainTNT20VoucherAddressInstance.Approve(authUser, subchaintnt20TokenBankAddress, mintLockAmount)
@@ -100,12 +111,12 @@ func subchainTNT20Lock(mintLockAmount *big.Int) {
 	if receipt.Status != 1 {
 		fmt.Println("lock error")
 	}
+	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
+	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	var mainchainVoucherAddress common.Address
 	for {
-		tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-		fmt.Println("subchain_account_balance is", tx)
 		time.Sleep(2 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
 		result := getMainchainTNT20Mintlog(int(fromHeight), int(toHeight), tnt20TokenBankAddress, accountList[6].fromAddress)
@@ -115,8 +126,13 @@ func subchainTNT20Lock(mintLockAmount *big.Int) {
 		}
 	}
 	fmt.Println(mainchainVoucherAddress)
+	instanceMainchainTNT20VoucherContractAddress, _ := ct.NewTNT20VoucherContract(mainchainVoucherAddress, mainchainClient)
+	//
+	balanceOfSubchain, _ := instanceMainchainTNT20VoucherContractAddress.BalanceOf(nil, accountList[6].fromAddress)
+	fmt.Println("account ", accountList[6].fromAddress, " balance on mainchain is ", balanceOfSubchain)
+	//
 }
-func mainchainTNT20Burn(burnAmount *big.Int) {
+func MainchainTNT20Burn(burnAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -129,7 +145,7 @@ func mainchainTNT20Burn(burnAmount *big.Int) {
 	}
 	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(mainchainTNT20VoucherAddress, client)
 	tx, err := mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[6].fromAddress)
-	fmt.Println("mainchain account 6 tnt20 balance is", tx)
+	fmt.Println("mainchain account 6 ", accountList[6].fromAddress, "tnt20 balance is", tx)
 	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
 	authUser := mainchainSelectAccount(client, 6)
 	tx1, err := mainchainTNT20VoucherAddressInstance.Approve(authUser, tnt20TokenBankAddress, burnAmount)
@@ -151,12 +167,12 @@ func mainchainTNT20Burn(burnAmount *big.Int) {
 	}
 	time.Sleep(2 * time.Second)
 	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[6].fromAddress)
-	fmt.Println("mainchain account 6 tnt20 balance is", tx)
+	fmt.Println("mainchain account 6 ", accountList[6].fromAddress, "tnt20 balance is", tx)
 	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
 	subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, subchainClient)
 	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println("subchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
 	for {
 		time.Sleep(2 * time.Second)
 		tx_subchain, _ := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
@@ -165,9 +181,9 @@ func mainchainTNT20Burn(burnAmount *big.Int) {
 			break
 		}
 	}
-	fmt.Println("subchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
 }
-func subchainTNT20Burn(burnAmount *big.Int) {
+func SubchainTNT20Burn(burnAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -180,7 +196,7 @@ func subchainTNT20Burn(burnAmount *big.Int) {
 	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchaintnt20TokenBankAddress, client)
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
 	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println("subchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
 	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
 	authUser := subchainSelectAccount(client, 1)
 	tx1, err := subchainTNT20VoucherAddressInstance.Approve(authUser, subchaintnt20TokenBankAddress, burnAmount)
@@ -203,19 +219,19 @@ func subchainTNT20Burn(burnAmount *big.Int) {
 	}
 	time.Sleep(2 * time.Second)
 	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println("subchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
 	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, mainchainClient)
 	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println("mainchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress,"mainchain_account_balance is", tx)
 	for {
 		time.Sleep(2 * time.Second)
 		tx_subchain, _ := mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-		fmt.Println("mainchain_account_balance is", tx_subchain)
+		//fmt.Println(accountList[1].fromAddress, "mainchain_account_balance is", tx_subchain)
 		if tx.Cmp(tx_subchain) != 0 {
 			tx = tx_subchain
 			break
 		}
 	}
-	fmt.Println("mainchain_account_balance is", tx)
+	fmt.Println(accountList[1].fromAddress, "mainchain_account_balance is", tx)
 }
