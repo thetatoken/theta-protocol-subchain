@@ -156,6 +156,7 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 	tx := transaction.(*types.SmartContractTx)
 
 	view.ResetLogs()
+	view.ResetBalanceChanges()
 
 	// Note: for contract deployment, vm.Execute() might transfer coins from the fromAccount to the
 	//       deployed smart contract. Thus, we should call vm.Execute() before calling getInput().
@@ -189,13 +190,16 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 
 	// TODO: Add tx receipt: status and events
 	logs := view.PopLogs()
+	balanceChanges := view.PopBalanceChanges()
+
 	if evmErr != nil {
 		// Do not record events if transaction is reverted
 		logs = nil
+		balanceChanges = nil
 	}
 
 	if viewSel == score.DeliveredView { // only record the receipt for the delivered views
-		exec.chain.AddTxReceipt(exec.ledger.GetCurrentBlock(), tx, logs, evmRet, contractAddr, gasUsed, evmErr)
+		exec.chain.AddTxReceipt(exec.ledger.GetCurrentBlock(), tx, logs, balanceChanges, evmRet, contractAddr, gasUsed, evmErr)
 	}
 
 	contractInfo := result.Info{}
