@@ -79,38 +79,38 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	mainchainEthRpcURL := viper.GetString(scom.CfgMainchainEthRpcURL)
 	mainchainEthRpcClient, err := ec.Dial(mainchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("the ETH client failed to connect to the mainchain ETH RPC %v\n", err)
+		logger.Fatalf("the ETH client failed to connect to the mainchain ETH RPC: %v\n", err)
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the mainchain %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain: %v\n", err)
 	}
 	chainRegistrarOnMainchainAddr := common.HexToAddress(viper.GetString(scom.CfgChainRegistrarOnMainchainContractAddress))
 	chainRegistrarOnMainchain, err := scta.NewChainRegistrarOnMainchain(chainRegistrarOnMainchainAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create ChainRegistrarOnMainchain contract %v\n", err)
+		logger.Fatalf("failed to create ChainRegistrarOnMainchain contract: %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTFuelTokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTFuelTokenBank contract: %v\n", err)
 	}
 	mainchainTNT20TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress))
 	mainchainTNT20TokenBank, err := scta.NewTNT20TokenBank(mainchainTNT20TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTNT20TokenBank contract: %v\n", err)
 	}
 	mainchainTNT721TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT721TokenBankContractAddress))
 	mainchainTNT721TokenBank, err := scta.NewTNT721TokenBank(mainchainTNT721TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTNT20TokenBank contract: %v\n", err)
 	}
 
 	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
+		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC: %v\n", err)
 	}
 
 	witnessState := newMetachainWitnessState(db)

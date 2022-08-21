@@ -92,14 +92,18 @@ func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBloc
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		logger.Fatal(err)
+		// logger.Fatal(err)
+		logger.Warnf("Failed to post to %v, err: %v", url, err)
+		return events // ignore, the query is repeated periodically anyway
 	}
 	request.Header.Set("Content-Type", "application/json")
 
 	client := &http.Client{}
 	response, err := client.Do(request)
 	if err != nil {
-		logger.Fatalf("response error : %v", err)
+		// logger.Fatalf("response error : %v", err)
+		logger.Warnf("RPC response error %v, err: %v", url, err)
+		return events // ignore, the query is repeated periodically anyway
 	}
 	defer response.Body.Close()
 
