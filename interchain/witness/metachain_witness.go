@@ -62,7 +62,9 @@ type MetachainWitness struct {
 	subchainTNT20TokenBank      *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the subchain
 	subchainTNT721TokenBankAddr common.Address
 	subchainTNT721TokenBank     *scta.TNT721TokenBank
+
 	// Validator set
+	cacheMutex        *sync.Mutex // mutex to for validatorSetCache concurrent write protection
 	validatorSetCache map[string]*score.ValidatorSet
 
 	// Inter-chain messaging
@@ -144,6 +146,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		subchainEthRpcUrl:    subchainEthRpcURL,
 		subchainEthRpcClient: subchainEthRpcClient,
 		subchainBlockHeight:  nil,
+		cacheMutex:           &sync.Mutex{},
 		validatorSetCache:    validatorSet,
 		interChainEventCache: interChainEventCache,
 
@@ -328,6 +331,9 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID 
 }
 
 func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
+	mw.cacheMutex.Lock()
+	defer mw.cacheMutex.Unlock()
+
 	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
 	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
