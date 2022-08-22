@@ -21,13 +21,13 @@ import (
 
 // sendCmd represents the send command
 // Example:
-//		thetacli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --theta=10 --tfuel=9 --seq=1
-//		thetacli tx send --chain="privatenet" --path "m/44'/60'/0'/0/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --theta=10 --tfuel=9 --seq=1 --wallet=trezor
-//		thetacli tx send --chain="privatenet" --path "m/44'/60'/0'/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --theta=10 --tfuel=9 --seq=1 --wallet=nano
+//		thetasubcli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1
+//		thetasubcli tx send --chain="privatenet" --path "m/44'/60'/0'/0/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1 --wallet=trezor
+//		thetasubcli tx send --chain="privatenet" --path "m/44'/60'/0'/0" --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1 --wallet=nano
 var sendCmd = &cobra.Command{
 	Use:     "send",
 	Short:   "Send tokens",
-	Example: `thetacli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --theta=10 --tfuel=9 --seq=1`,
+	Example: `thetasubcli tx send --chain="privatenet" --from=2E833968E5bB786Ae419c4d13189fB081Cc43bab --to=9F1233798E905E173560071255140b4A8aBd3Ec6 --tfuel=9 --seq=1`,
 	Run:     doSendCmd,
 }
 
@@ -53,10 +53,6 @@ func doSendCmd(cmd *cobra.Command, args []string) {
 	}
 	defer wallet.Lock(fromAddress)
 
-	theta, ok := types.ParseCoinAmount(thetaAmountFlag)
-	if !ok {
-		utils.Error("Failed to parse theta amount")
-	}
 	tfuel, ok := types.ParseCoinAmount(tfuelAmountFlag)
 	if !ok {
 		utils.Error("Failed to parse tfuel amount")
@@ -69,7 +65,7 @@ func doSendCmd(cmd *cobra.Command, args []string) {
 		Address: fromAddress,
 		Coins: types.Coins{
 			TFuelWei: new(big.Int).Add(tfuel, fee),
-			ThetaWei: theta,
+			ThetaWei: new(big.Int).SetUint64(0),
 		},
 		Sequence: uint64(seqFlag),
 	}}
@@ -77,7 +73,7 @@ func doSendCmd(cmd *cobra.Command, args []string) {
 		Address: common.HexToAddress(toFlag),
 		Coins: types.Coins{
 			TFuelWei: tfuel,
-			ThetaWei: theta,
+			ThetaWei: new(big.Int).SetUint64(0),
 		},
 	}}
 	sendTx := &types.SendTx{
@@ -134,7 +130,6 @@ func init() {
 	sendCmd.Flags().StringVar(&toFlag, "to", "", "Address to send to")
 	sendCmd.Flags().StringVar(&pathFlag, "path", "", "Wallet derivation path")
 	sendCmd.Flags().Uint64Var(&seqFlag, "seq", 0, "Sequence number of the transaction")
-	sendCmd.Flags().StringVar(&thetaAmountFlag, "theta", "0", "Theta amount")
 	sendCmd.Flags().StringVar(&tfuelAmountFlag, "tfuel", "0", "TFuel amount")
 	sendCmd.Flags().StringVar(&feeFlag, "fee", fmt.Sprintf("%dwei", types.MinimumTransactionFeeTFuelWeiJune2021), "Fee")
 	sendCmd.Flags().StringVar(&walletFlag, "wallet", "soft", "Wallet type (soft|nano|trezor)")

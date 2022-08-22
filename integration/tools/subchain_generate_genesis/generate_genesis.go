@@ -48,7 +48,7 @@ type Validator struct {
 //
 // Example:
 // cd $SUBCHAIN_HOME/integration/privatenet/node
-// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub_360777 -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
+// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub360777 -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
 //
 func main() {
 	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
@@ -82,7 +82,7 @@ func main() {
 
 func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string) {
 	mainchainIDPtr := flag.String("mainchainID", "privatenet", "the ID of the mainchain")
-	subchainIDPtr := flag.String("subchainID", "tsub_360777", "the ID of the subchain")
+	subchainIDPtr := flag.String("subchainID", "tsub360777", "the ID of the subchain")
 	initValidatorSetPathPtr := flag.String("initValidatorSet", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
 	flag.Parse()
@@ -157,11 +157,6 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 
 		setInitialBalance(sv, common.HexToAddress(v.Address), validatorInitialBalance)
 	}
-	var dec18 = new(big.Int)
-	dec18.SetString("1000000000000000000", 10)
-	amount := new(big.Int).Mul(dec18, big.NewInt(2000000))
-	setInitialBalance(sv, common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"), amount)
-
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
 

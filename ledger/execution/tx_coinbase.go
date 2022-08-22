@@ -37,7 +37,7 @@ func NewCoinbaseTxExecutor(db database.Database, chain *sbc.Chain, state *slst.L
 	}
 }
 
-func (exec *CoinbaseTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *CoinbaseTxExecutor) sanityCheck(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) result.Result {
 	tx := transaction.(*types.CoinbaseTx)
 	validatorSet := getValidatorSet(exec.consensus.GetLedger(), exec.valMgr)
 	validatorAddresses := getValidatorAddresses(validatorSet)
@@ -78,7 +78,7 @@ func (exec *CoinbaseTxExecutor) sanityCheck(chainID string, view *slst.StoreView
 	return result.OK
 }
 
-func (exec *CoinbaseTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *CoinbaseTxExecutor) process(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*types.CoinbaseTx)
 
 	if view.CoinbaseTransactinProcessed() {

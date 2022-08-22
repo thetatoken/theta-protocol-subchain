@@ -74,28 +74,28 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the mainchain %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain: %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTFuelTokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTFuelTokenBank contract: %v\n", err)
 	}
 	mainchainTNT20TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress))
 	mainchainTNT20TokenBank, err := scta.NewTNT20TokenBank(mainchainTNT20TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTNT20TokenBank contract: %v\n", err)
 	}
 	mainchainTNT721TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT721TokenBankContractAddress))
 	mainchainTNT721TokenBank, err := scta.NewTNT721TokenBank(mainchainTNT721TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTNT721TokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTNT721TokenBank contract: %v\n", err)
 	}
 	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
+		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC: %v\n", err)
 	}
 	eventProcessedTime := make(map[string]time.Time)
 	oc := &Orchestrator{
@@ -462,10 +462,19 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 }
 
 func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bind.TransactOpts, error) {
-	gasPrice, err := ecClient.SuggestGasPrice(context.Background())
-	if err != nil {
-		return nil, err
+	var gasPrice *big.Int
+	var err error
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		gasPrice, err = ecClient.SuggestGasPrice(context.Background())
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		// eth_gasPrice returns a hardcoded nubmer for the mainchain, which could be much higher than min gasPrice required by the subchain
+		// TODO: parameterize the subchain ETH RPC service to suggest the proper gasPrice for different chains
+		gasPrice = big.NewInt(int64(scom.MinimumGasPrice) * 2)
 	}
+
 	nonce, err := ecClient.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
 	if err != nil {
 		return nil, err

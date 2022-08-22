@@ -155,7 +155,7 @@ const (
 	CfgSubchainMainchainBlockIntervalInSeconds = "subchain.mainchainBlockIntervalInSeconds"
 
 	// CfgSubchainID defines the subchainID
-	CfgSubchainID = "subchain.ID"
+	CfgSubchainID = "subchain.chainID"
 	// CfgSubchainUpdateIntervalInMilliseconds defines the time interval in millisecond for the subchain to obtain the status update from the mainchain
 	CfgSubchainUpdateIntervalInMilliseconds = "subchain.updateInterval"
 	// CfgSubchainTestID defines the ID of this node in a test case

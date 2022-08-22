@@ -56,7 +56,6 @@ type Ledger struct {
 func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *sbc.Chain, consensus score.ConsensusEngine,
 	valMgr score.ValidatorManager, mempool *smp.Mempool, metachainWitness witness.ChainWitness) *Ledger {
 	state := slst.NewLedgerState(chainID, db, tagger)
-	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, metachainWitness)
 	ledger := &Ledger{
 		db:               db,
 		chain:            chain,
@@ -65,10 +64,17 @@ func NewLedger(chainID string, db database.Database, tagger slst.Tagger, chain *
 		mempool:          mempool,
 		mu:               &sync.RWMutex{},
 		state:            state,
-		executor:         executor,
 		metachainWitness: metachainWitness,
 	}
+	executor := sexec.NewExecutor(db, chain, state, consensus, valMgr, ledger, metachainWitness)
+	ledger.SetExecutor(executor)
+
 	return ledger
+}
+
+// SetExecutor sets the executor for the ledger
+func (ledger *Ledger) SetExecutor(executor *sexec.Executor) {
+	ledger.executor = executor
 }
 
 // State returns the state of the ledger
@@ -635,7 +641,7 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 
 	// Here we add the subchain validator set update tx regardless whether the validator set has changed, since
 	// the token bank contracts need to query the validator set of each dynasty
-	enteringNewDynasty, newDynasty, newValidatorSet := ledger.getNewDynastyAndValidatorSet(currentValidatorSet, view)
+	enteringNewDynasty, newDynasty, newValidatorSet := ledger.getNewDynastyAndValidatorSet(view)
 	if enteringNewDynasty && validatorMajorityInTheSameDynasty {
 		ledger.addSubchainValidatorSetUpdateTx(view, &proposer, newDynasty, newValidatorSet, rawTxs)
 	}
@@ -650,8 +656,12 @@ func (ledger *Ledger) addSpecialTransactions(block *score.Block, view *slst.Stor
 	// }
 }
 
-func (ledger *Ledger) getNewDynastyAndValidatorSet(currentValidatorSet *score.ValidatorSet, view *slst.StoreView) (enteringNewDynasty bool, newDynasty *big.Int, newValidatorSet *score.ValidatorSet) {
-	currentDynasty := currentValidatorSet.Dynasty()
+func (ledger *Ledger) getNewDynastyAndValidatorSet(view *slst.StoreView) (enteringNewDynasty bool, newDynasty *big.Int, newValidatorSet *score.ValidatorSet) {
+	// Note that here we get the "current" dynasty from the view, even though the block containing the
+	// validator set update is NOT finalized yet (typically needs two blocks). Otherwise, if we instead
+	// retrieve the dynasty from the "finalized" validator set, the code could issue validator set update
+	// txs for two consecutive blocks, where the second tx will be rejected.
+	currentDynasty := view.GetDynasty()
 	mainchainBlockHeight, err := ledger.metachainWitness.GetMainchainBlockHeight()
 	if err != nil {
 		logger.Warn("Failed to get mainchain block number when checking validator set updates, err: %v", err)
@@ -675,8 +685,10 @@ func (ledger *Ledger) getNewDynastyAndValidatorSet(currentValidatorSet *score.Va
 
 	logger.Debugf("block height: %v", view.GetBlockHeight())
 	logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet)
-	logger.Debugf("currentValidatorSet  : %v", currentValidatorSet)
+	//logger.Debugf("currentValidatorSet  : %v", currentValidatorSet)
 	logger.Debugf("validatorSetInView   : %v", validatorSetInView)
+	logger.Debugf("currentDynasty       : %v", currentDynasty)
+	logger.Debugf("witnessedDynasty     : %v", witnessedDynasty)
 
 	return true, witnessedDynasty, witnessedValidatorSet
 }

@@ -1,7 +1,6 @@
 # Theta configuration
-# chainID: tsub_3610001
 genesis:
-  hash: "0xb436f36c591b800a9feee93ae9d4ce7da0a62d3b6e77479ed5cdc8da33a4fb50"
+  hash: "0x677074d19752816501604e998c32523f220ab40ee2fcb07b22a62773ee602045"
 p2p:
   port: 12100
 rpc:
@@ -19,5 +18,5 @@ subchain:
   mainchainTNT20TB: "0x2Ce636d6240f8955d085a896e12429f8B3c7db26"
   mainchainTNT721TB: "0xEd8d61f42dC1E56aE992D333A4992C3796b22A74"
   updateInterval: 3000
-  #ID: 360777
+  #chainID: 360777
 

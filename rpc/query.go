@@ -123,13 +123,14 @@ type GetTransactionArgs struct {
 }
 
 type GetTransactionResult struct {
-	BlockHash   common.Hash         `json:"block_hash"`
-	BlockHeight common.JSONUint64   `json:"block_height"`
-	Status      TxStatus            `json:"status"`
-	TxHash      common.Hash         `json:"hash"`
-	Type        byte                `json:"type"`
-	Tx          types.Tx            `json:"transaction"`
-	Receipt     *sbc.TxReceiptEntry `json:"receipt"`
+	BlockHash      common.Hash                `json:"block_hash"`
+	BlockHeight    common.JSONUint64          `json:"block_height"`
+	Status         TxStatus                   `json:"status"`
+	TxHash         common.Hash                `json:"hash"`
+	Type           byte                       `json:"type"`
+	Tx             types.Tx                   `json:"transaction"`
+	Receipt        *sbc.TxReceiptEntry        `json:"receipt"`
+	BalanceChanges *sbc.TxBalanceChangesEntry `json:"blance_changes"`
 }
 
 type TxStatus string
@@ -185,9 +186,14 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 	result.TxHash = canonicalTxHash
 
 	// Add receipt
-	receipt, found := t.chain.FindTxReceiptByHash(canonicalTxHash)
+	blockHash := block.Hash()
+	receipt, found := t.chain.FindTxReceiptByHash(blockHash, canonicalTxHash)
 	if found {
 		result.Receipt = receipt
+	}
+	balanceChanges, found := t.chain.FindTxBalanceChangesByHash(blockHash, canonicalTxHash)
+	if found {
+		result.BalanceChanges = balanceChanges
 	}
 
 	return nil
@@ -216,18 +222,20 @@ type GetBlockArgs struct {
 }
 
 type Tx struct {
-	types.Tx `json:"raw"`
-	Type     byte                `json:"type"`
-	Hash     common.Hash         `json:"hash"`
-	Receipt  *sbc.TxReceiptEntry `json:"receipt"`
+	types.Tx       `json:"raw"`
+	Type           byte                       `json:"type"`
+	Hash           common.Hash                `json:"hash"`
+	Receipt        *sbc.TxReceiptEntry        `json:"receipt"`
+	BalanceChanges *sbc.TxBalanceChangesEntry `json:"balance_changes"`
 }
 
 type TxWithEthHash struct {
-	types.Tx  `json:"raw"`
-	Type      byte                `json:"type"`
-	Hash      common.Hash         `json:"hash"`
-	EthTxHash common.Hash         `json:"eth_tx_hash"`
-	Receipt   *sbc.TxReceiptEntry `json:"receipt"`
+	types.Tx       `json:"raw"`
+	Type           byte                       `json:"type"`
+	Hash           common.Hash                `json:"hash"`
+	EthTxHash      common.Hash                `json:"eth_tx_hash"`
+	Receipt        *sbc.TxReceiptEntry        `json:"receipt"`
+	BalanceChanges *sbc.TxBalanceChangesEntry `json:"balance_changes"`
 }
 
 type GetBlockResult struct {
@@ -470,6 +478,8 @@ type GetStatusResult struct {
 	CurrentTime                *common.JSONBig   `json:"current_time"`
 	Syncing                    bool              `json:"syncing"`
 	GenesisBlockHash           common.Hash       `json:"genesis_block_hash"`
+	SnapshotBlockHeight        common.JSONUint64 `json:"snapshot_block_height"`
+	SnapshotBlockHash          common.Hash       `json:"snapshot_block_hash"`
 }
 
 func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult) (err error) {
@@ -516,6 +526,8 @@ func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult
 		genesisHash = common.HexToHash(viper.GetString(common.CfgGenesisHash))
 	}
 	result.GenesisBlockHash = genesisHash
+	result.SnapshotBlockHeight = common.JSONUint64(t.chain.Root().Block.BlockHeader.Height)
+	result.SnapshotBlockHash = t.chain.Root().Block.BlockHeader.Hash()
 
 	return
 }
@@ -783,9 +795,14 @@ func (t *ThetaRPCService) gatherTxs(block *score.ExtendedBlock, txs *[]interface
 			return err
 		}
 		hash := crypto.Keccak256Hash(txBytes)
-		receipt, found := t.chain.FindTxReceiptByHash(hash)
+		blockHash := block.Hash()
+		receipt, found := t.chain.FindTxReceiptByHash(blockHash, hash)
 		if !found {
 			receipt = nil
+		}
+		balanceChanges, found := t.chain.FindTxBalanceChangesByHash(blockHash, hash)
+		if !found {
+			balanceChanges = nil
 		}
 
 		tp := getTxType(tx)
@@ -793,19 +810,21 @@ func (t *ThetaRPCService) gatherTxs(block *score.ExtendedBlock, txs *[]interface
 		var txw interface{}
 		if !includeEthTxHashes { // For backward compatibility, return the same tx struct as before
 			txw = Tx{
-				Tx:      tx,
-				Hash:    hash,
-				Type:    tp,
-				Receipt: receipt,
+				Tx:             tx,
+				Hash:           hash,
+				Type:           tp,
+				Receipt:        receipt,
+				BalanceChanges: balanceChanges,
 			}
 		} else {
 			ethTxHash, _ := sbc.CalcEthTxHash(block, txBytes) // ignore error, since ethTxHash will be 0x000...000 if the function returns an error
 			txw = TxWithEthHash{
-				Tx:        tx,
-				Hash:      hash,
-				EthTxHash: ethTxHash,
-				Type:      tp,
-				Receipt:   receipt,
+				Tx:             tx,
+				Hash:           hash,
+				EthTxHash:      ethTxHash,
+				Type:           tp,
+				Receipt:        receipt,
+				BalanceChanges: balanceChanges,
 			}
 		}
 

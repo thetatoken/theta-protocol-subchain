@@ -23,7 +23,7 @@ type BackupSnapshotResult struct {
 func (t *ThetaRPCService) BackupSnapshot(args *BackupSnapshotArgs, result *BackupSnapshotResult) error {
 	// Default to older verison
 	if args.Version == 0 {
-		args.Version = 2
+		args.Version = 4
 	}
 
 	db := t.ledger.State().DB()

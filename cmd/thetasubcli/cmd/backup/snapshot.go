@@ -14,12 +14,12 @@ import (
 
 // snapshotCmd represents the snapshot backup command.
 // Example:
-//		thetacli backup snapshot
+//		thetasubcli backup snapshot
 var snapshotCmd = &cobra.Command{
 	Use:     "snapshot",
 	Short:   "backup snapshot",
 	Long:    `Backup snapshot.`,
-	Example: `thetacli backup snapshot`,
+	Example: `thetasubcli backup snapshot --config=../data/subchain/validator --height=888`,
 	Run:     doSnapshotCmd,
 }
 
