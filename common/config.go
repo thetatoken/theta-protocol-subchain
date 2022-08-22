@@ -147,6 +147,8 @@ const (
 	CfgMainchainTNT20TokenBankContractAddress = "subchain.mainchainTNT20TB"
 	// CfgMainchainTNT721TokenBankContractAddress defines the mainchain TNT721 token bank contract address
 	CfgMainchainTNT721TokenBankContractAddress = "subchain.mainchainTNT721TB"
+	// CfgMainchainTNT1155TokenBankContractAddress defines the mainchain TNT721 token bank contract address
+	CfgMainchainTNT1155TokenBankContractAddress = "subchain.mainchainTNT1155TB"
 	// CfgMainchainEthRpcURL defines the URL of the mainchain ETH RPC adaptor
 	CfgMainchainEthRpcURL = "subchain.mainchainEthRpcURL"
 	// CfgSubchainEthRpcURL defines the URL of the subchain ETH RPC adaptor

@@ -34,26 +34,29 @@ type Orchestrator struct {
 	eventProcessedTime    map[string]time.Time
 
 	// The mainchain
-	mainchainID                  *big.Int
-	mainchainEthRpcURL           string
-	mainchainEthRpcClient        *ec.Client
-	mainchainTFuelTokenBankAddr  common.Address
-	mainchainTFuelTokenBank      *scta.TFuelTokenBank
-	mainchainTNT20TokenBankAddr  common.Address
-	mainchainTNT20TokenBank      *scta.TNT20TokenBank
-	mainchainTNT721TokenBankAddr common.Address
-	mainchainTNT721TokenBank     *scta.TNT721TokenBank
-
+	mainchainID                   *big.Int
+	mainchainEthRpcURL            string
+	mainchainEthRpcClient         *ec.Client
+	mainchainTFuelTokenBankAddr   common.Address
+	mainchainTFuelTokenBank       *scta.TFuelTokenBank
+	mainchainTNT20TokenBankAddr   common.Address
+	mainchainTNT20TokenBank       *scta.TNT20TokenBank
+	mainchainTNT721TokenBankAddr  common.Address
+	mainchainTNT721TokenBank      *scta.TNT721TokenBank
+	mainchainTNT1155TokenBankAddr common.Address
+	mainchainTNT1155TokenBank     *scta.TNT1155TokenBank
 	// The subchain
-	subchainID                  *big.Int
-	subchainEthRpcURL           string
-	subchainEthRpcClient        *ec.Client
-	subchainTFuelTokenBankAddr  common.Address
-	subchainTFuelTokenBank      *scta.TFuelTokenBank
-	subchainTNT20TokenBankAddr  common.Address
-	subchainTNT20TokenBank      *scta.TNT20TokenBank
-	subchainTNT721TokenBankAddr common.Address
-	subchainTNT721TokenBank     *scta.TNT721TokenBank
+	subchainID                   *big.Int
+	subchainEthRpcURL            string
+	subchainEthRpcClient         *ec.Client
+	subchainTFuelTokenBankAddr   common.Address
+	subchainTFuelTokenBank       *scta.TFuelTokenBank
+	subchainTNT20TokenBankAddr   common.Address
+	subchainTNT20TokenBank       *scta.TNT20TokenBank
+	subchainTNT721TokenBankAddr  common.Address
+	subchainTNT721TokenBank      *scta.TNT721TokenBank
+	subchainTNT1155TokenBankAddr common.Address
+	subchainTNT1155TokenBank     *scta.TNT1155TokenBank
 	// Inter-chain messaging
 	interChainEventCache *siu.InterChainEventCache
 
@@ -91,6 +94,11 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	if err != nil {
 		logger.Fatalf("failed to create MainchainTNT721TokenBank contract %v\n", err)
 	}
+	mainchainTNT1155TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT1155TokenBankContractAddress))
+	mainchainTNT1155TokenBank, err := scta.NewTNT1155TokenBank(mainchainTNT1155TokenBankAddr, mainchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to create MainchainTNT1155TokenBank contract %v\n", err)
+	}
 	subchainID := big.NewInt(viper.GetInt64(scom.CfgSubchainID))
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
@@ -104,15 +112,17 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 		metachainWitness:   metachainWitness,
 		eventProcessedTime: eventProcessedTime,
 
-		mainchainID:                  mainchainID,
-		mainchainEthRpcURL:           mainchainEthRpcURL,
-		mainchainEthRpcClient:        mainchainEthRpcClient,
-		mainchainTFuelTokenBankAddr:  mainchainTFuelTokenBankAddr,
-		mainchainTFuelTokenBank:      mainchainTFuelTokenBank,
-		mainchainTNT20TokenBankAddr:  mainchainTNT20TokenBankAddr,
-		mainchainTNT20TokenBank:      mainchainTNT20TokenBank,
-		mainchainTNT721TokenBankAddr: mainchainTNT721TokenBankAddr,
-		mainchainTNT721TokenBank:     mainchainTNT721TokenBank,
+		mainchainID:                   mainchainID,
+		mainchainEthRpcURL:            mainchainEthRpcURL,
+		mainchainEthRpcClient:         mainchainEthRpcClient,
+		mainchainTFuelTokenBankAddr:   mainchainTFuelTokenBankAddr,
+		mainchainTFuelTokenBank:       mainchainTFuelTokenBank,
+		mainchainTNT20TokenBankAddr:   mainchainTNT20TokenBankAddr,
+		mainchainTNT20TokenBank:       mainchainTNT20TokenBank,
+		mainchainTNT721TokenBankAddr:  mainchainTNT721TokenBankAddr,
+		mainchainTNT721TokenBank:      mainchainTNT721TokenBank,
+		mainchainTNT1155TokenBankAddr: mainchainTNT1155TokenBankAddr,
+		mainchainTNT1155TokenBank:     mainchainTNT1155TokenBank,
 
 		subchainID:           subchainID,
 		subchainEthRpcURL:    subchainEthRpcURL,
@@ -179,6 +189,17 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT721TokenBankAddr contract: %v\n", err)
 	}
+
+	subchainTNT1155TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
+	if subchainTNT1155TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT1155TokenBank contract address: %v\n", err)
+	}
+	oc.subchainTNT1155TokenBankAddr = *subchainTNT1155TokenBankAddr
+	oc.subchainTNT1155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, oc.subchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to set the SubchainTNT1155TokenBankAddr contract: %v\n", err)
+	}
+
 }
 
 func (oc *Orchestrator) mainloop(ctx context.Context) {
@@ -203,6 +224,7 @@ func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, target
 	oc.processNextTFuelTokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20TokenLockEvent(sourceChainID, targetChainID)
 	oc.processNextTNT721TokenLockEvent(sourceChainID, targetChainID)
+	oc.processNextTNT1155TokenLockEvent(sourceChainID, targetChainID)
 }
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
@@ -230,16 +252,27 @@ func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, 
 	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
-		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
+		logger.Warnf("Failed to query the max processed TNT721 token lock nonce for chain: %v", targetChainID.String())
 		return // ignore
 	}
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT721, maxProcessedTokenLockNonce)
+}
+
+func (oc *Orchestrator) processNextTNT1155TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+	if err != nil {
+		logger.Warnf("Failed to query the max processed TNT1155 token lock nonce for chain: %v", targetChainID.String())
+		return // ignore
+	}
+	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT1155, maxProcessedTokenLockNonce)
 }
 
 func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	oc.processNextTFuelVoucherBurnEvent(sourceChainID, targetChainID)
 	oc.processNextTNT20VoucherBurnEvent(sourceChainID, targetChainID)
 	oc.processNextTNT721VoucherBurnEvent(sourceChainID, targetChainID)
+	oc.processNextTNT1155VoucherBurnEvent(sourceChainID, targetChainID)
 }
 
 func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
@@ -273,6 +306,17 @@ func (oc *Orchestrator) processNextTNT721VoucherBurnEvent(sourceChainID *big.Int
 	}
 
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT721, maxProcessedVoucherBurnNonce)
+}
+
+func (oc *Orchestrator) processNextTNT1155VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
+	if err != nil {
+		logger.Warnf("Failed to query the max processed TNT1155 voucher burn nonce for chain: %v", targetChainID.String())
+		return // ignore
+	}
+
+	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainVoucherBurnTNT1155, maxProcessedVoucherBurnNonce)
 }
 
 func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *big.Int, sourceChainEventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
@@ -338,6 +382,8 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 		err = oc.mintTNT20Vouchers(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainVoucherMintTNT721:
 		err = oc.mintTN721Vouchers(txOpts, targetChainID, sourceEvent)
+	case score.IMCEventTypeCrossChainVoucherMintTNT1155:
+		err = oc.mintTN1155Vouchers(txOpts, targetChainID, sourceEvent)
 
 	// Token Unlock events
 	case score.IMCEventTypeCrossChainTokenUnlockTFuel:
@@ -346,6 +392,8 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 		err = oc.unlockTNT20Tokens(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainTokenUnlockTNT721:
 		err = oc.unlockTNT721Tokens(txOpts, targetChainID, sourceEvent)
+	case score.IMCEventTypeCrossChainTokenUnlockTNT1155:
+		err = oc.unlockTNT1155Tokens(txOpts, targetChainID, sourceEvent)
 	default:
 		return nil
 	}
@@ -410,6 +458,23 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 	return nil
 }
 
+func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	se, err := score.ParseToCrossChainTNT1155TokenLockedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	if dynasty == nil {
+		return nil
+	}
+	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
+	_, err = TNT1155TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
 func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
 	se, err := score.ParseToCrossChainTFuelVoucherBurnedEvent(sourceEvent)
 	if err != nil {
@@ -455,6 +520,23 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	_, err = TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+//TNT721
+func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+	se, err := score.ParseToCrossChainTNT1155VoucherBurnedEvent(sourceEvent)
+	if err != nil {
+		return err
+	}
+	dynasty := oc.getDynasty()
+	if dynasty == nil {
+		return nil
+	}
+	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
+	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}
@@ -530,6 +612,14 @@ func (oc *Orchestrator) getTNT721TokenBank(chainID *big.Int) *scta.TNT721TokenBa
 	}
 }
 
+func (oc *Orchestrator) getTNT1155TokenBank(chainID *big.Int) *scta.TNT721TokenBank {
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		return oc.mainchainTNT1155TokenBank
+	} else {
+		return oc.subchainTNT1155TokenBank
+	}
+}
+
 func (oc *Orchestrator) getTargetChainCorrespondingEventType(eventType score.InterChainMessageEventType) score.InterChainMessageEventType {
 	switch eventType {
 	// Token Lock: the corresponding event type on the target chain is Voucher Mint
@@ -539,6 +629,8 @@ func (oc *Orchestrator) getTargetChainCorrespondingEventType(eventType score.Int
 		return score.IMCEventTypeCrossChainVoucherMintTNT20
 	case score.IMCEventTypeCrossChainTokenLockTNT721:
 		return score.IMCEventTypeCrossChainVoucherMintTNT721
+	case score.IMCEventTypeCrossChainTokenLockTNT1155:
+		return score.IMCEventTypeCrossChainVoucherMintTNT1155
 
 	// Voucher Burn: the corresponding event type on the target chain is Token Unlock
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
@@ -547,6 +639,8 @@ func (oc *Orchestrator) getTargetChainCorrespondingEventType(eventType score.Int
 		return score.IMCEventTypeCrossChainTokenUnlockTNT20
 	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
 		return score.IMCEventTypeCrossChainTokenUnlockTNT721
+	case score.IMCEventTypeCrossChainVoucherBurnTNT1155:
+		return score.IMCEventTypeCrossChainTokenUnlockTNT1155
 
 	default:
 		logger.Fatalf("Cannot get the counter event for type: %v", eventType)
