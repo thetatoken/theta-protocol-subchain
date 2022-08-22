@@ -252,6 +252,8 @@ func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
 
 // UpdateValidatorSet updates the validator set.
 func (sv *StoreView) UpdateValidatorSet(chainID *big.Int, vs *score.ValidatorSet) {
+	logger.Debugf("Update validator set, chainID: %v, valset: %v", chainID, vs)
+
 	vsBytes, err := types.ToBytes(vs)
 	if err != nil {
 		log.Panicf("Error writing validator set %v, error: %v",

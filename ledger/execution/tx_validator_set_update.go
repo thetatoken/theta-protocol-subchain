@@ -123,6 +123,9 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	view.UpdateValidatorSet(selfChainIDInt, newValidatorSet)
 	view.SetSubchainValidatorSetTransactionProcessed(true)
 	txHash := types.TxID(chainID, tx)
+
+	logger.Debugf("Update validator set tx processed, chainID: %v, viewSel: %v, blockHeight: %v", selfChainIDInt, viewSel, view.GetBlockHeight())
+
 	return txHash, result.OK
 }
 
