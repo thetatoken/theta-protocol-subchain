@@ -9,7 +9,6 @@ import (
 
 var startMainchainTfuelLockCmd = &cobra.Command{
 	Use:   "MainchainTfuelLock",
-	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.MainchainTfuelLock(big.NewInt(amount))
 	},
@@ -17,7 +16,6 @@ var startMainchainTfuelLockCmd = &cobra.Command{
 
 var startSubchainTfuelBurnCmd = &cobra.Command{
 	Use:   "MainchainTfuelBurn",
-	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.SubchainTfuelBurn(big.NewInt(amount))
 	},

@@ -8,32 +8,28 @@ import (
 )
 
 var startMainchainTNT20LockCmd = &cobra.Command{
-	Use:   "MainchainTNT20Lock",
-	Short: "Start Thetasubchain node.",
+	Use: "MainchainTNT20Lock",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.MainchainTNT20Lock(big.NewInt(amount))
 	},
 }
 
 var startSubchainTNT20LockCmd = &cobra.Command{
-	Use:   "SubchainTNT20Lock",
-	Short: "Start Thetasubchain node.",
+	Use: "SubchainTNT20Lock",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.SubchainTNT20Lock(big.NewInt(amount))
 	},
 }
 
 var startSubchainTNT20BurnCmd = &cobra.Command{
-	Use:   "SubchainTNT20Burn",
-	Short: "Start Thetasubchain node.",
+	Use: "SubchainTNT20Burn",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.SubchainTNT20Burn(big.NewInt(amount))
 	},
 }
 
 var startMainchainTNT20BurnCmd = &cobra.Command{
-	Use:   "MainchainTNT20Burn",
-	Short: "Start Thetasubchain node.",
+	Use: "MainchainTNT20Burn",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.MainchainTNT20Burn(big.NewInt(amount))
 	},

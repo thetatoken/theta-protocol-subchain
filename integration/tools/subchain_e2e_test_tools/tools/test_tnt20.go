@@ -57,10 +57,11 @@ func MainchainTNT20Lock(mintLockAmount *big.Int) {
 	if receipt.Status != 1 {
 		fmt.Println("lock error")
 	}
-	fmt.Println(LockTx.Hash().Hex())
+	fmt.Println("lock tx hash is",LockTx.Hash().Hex())
 	//
 	lastNum, _ := instanceTNT20VoucherContract.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println("account ", accountList[1].fromAddress, " balance on mainchain  is ", lastNum)
+	fmt.Println("---------Detecting---------")
 	//
 	var subchainVoucherAddress common.Address
 	for {
@@ -72,7 +73,7 @@ func MainchainTNT20Lock(mintLockAmount *big.Int) {
 			break
 		}
 	}
-	fmt.Println(subchainVoucherAddress)
+	fmt.Println("Subchain TNT20 voucher contract address is",subchainVoucherAddress)
 	instanceSubchainTNT20VoucherContractAddress, _ := ct.NewTNT20VoucherContract(subchainVoucherAddress, subchainClient)
 	//
 	balanceOfSubchain, _ := instanceSubchainTNT20VoucherContractAddress.BalanceOf(nil, accountList[1].fromAddress)
@@ -102,7 +103,7 @@ func SubchainTNT20Lock(mintLockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(tx2.Hash().Hex())
+	fmt.Println("lock tx hash is",tx2.Hash().Hex())
 
 	receipt, err := client.TransactionReceipt(context.Background(), tx2.Hash())
 	if err != nil {
@@ -113,6 +114,7 @@ func SubchainTNT20Lock(mintLockAmount *big.Int) {
 	}
 	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
+	fmt.Println("---------Detecting---------")
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	var mainchainVoucherAddress common.Address
@@ -125,7 +127,7 @@ func SubchainTNT20Lock(mintLockAmount *big.Int) {
 			break
 		}
 	}
-	fmt.Println(mainchainVoucherAddress)
+	fmt.Println("Mainchain TNT20 voucher contract address is",mainchainVoucherAddress)
 	instanceMainchainTNT20VoucherContractAddress, _ := ct.NewTNT20VoucherContract(mainchainVoucherAddress, mainchainClient)
 	//
 	balanceOfSubchain, _ := instanceMainchainTNT20VoucherContractAddress.BalanceOf(nil, accountList[6].fromAddress)
@@ -168,6 +170,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	time.Sleep(2 * time.Second)
 	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[6].fromAddress)
 	fmt.Println("mainchain account 6 ", accountList[6].fromAddress, "tnt20 balance is", tx)
+	fmt.Println("---------Detecting---------")
 	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
 	subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
 	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, subchainClient)
@@ -220,6 +223,7 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	time.Sleep(2 * time.Second)
 	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
 	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
+	fmt.Println("---------Detecting---------")
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
 	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, mainchainClient)
 	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)

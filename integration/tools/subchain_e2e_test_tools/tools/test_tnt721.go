@@ -34,17 +34,17 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(tx.Hash().Hex())
+	fmt.Println("Lock tx hash is",tx.Hash().Hex())
 	authUser := mainchainSelectAccount(client, 1)
 	tx, err = instanceTNT721VoucherContract.Approve(authUser, tnt721TokenBankAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(tx.Hash().Hex())
+	//fmt.Println(tx.Hash().Hex())
 	authUser = mainchainSelectAccount(client, 1)
 	//
 	firstOnwer, _ := instanceTNT721VoucherContract.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", firstOnwer)
+	fmt.Println("The mainchain owner of ", tokenID, "is", firstOnwer)
 	//
 	LockTx, err := instanceTNT721TokenBank.LockTokens(authUser, subchainID, tnt721VoucherContractAddress, user, tokenID)
 	if err != nil {
@@ -60,7 +60,8 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	}
 	//
 	SecondOnwer, _ := instanceTNT721VoucherContract.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", SecondOnwer)
+	fmt.Println("The mainchain owner of ", tokenID, "is", SecondOnwer)
+	fmt.Println("---------Detecting---------")
 	//
 	// subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
 	// fromHeight, _ := subchainClient.BlockNumber(context.Background())
@@ -71,10 +72,9 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	// if receipt.Status != 1 {
 	// 	fmt.Println("lock error")
 	// }
-	fmt.Println(LockTx.Hash().Hex())
+	fmt.Println("lock tx hash is ",LockTx.Hash().Hex())
 	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
-	fmt.Println(LockTx.Hash())
 	var subchainVoucherAddress common.Address
 	for {
 		time.Sleep(2 * time.Second)
@@ -85,11 +85,11 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 			break
 		}
 	}
-	fmt.Println(subchainVoucherAddress)
+	fmt.Println("Subchain TNT721 Voucher contract address is ",subchainVoucherAddress)
 	instanceSubchainVoucherAddress, _ := ct.NewTNT721VoucherContract(subchainVoucherAddress, subchainClient)
 	//
 	thirdOnwer, _ := instanceSubchainVoucherAddress.OwnerOf(nil, tokenID)
-	fmt.Println("the subchain_owner of ", tokenID, "is", thirdOnwer)
+	fmt.Println("The subchain owner of ", tokenID, "is", thirdOnwer)
 	//
 }
 func SubchainTNT721Burn(tokenID *big.Int) {
@@ -110,7 +110,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	}
 	//
 	firstOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", firstOnwer)
+	fmt.Println("The subchain owner of ", tokenID, "is", firstOnwer)
 	//
 	authUser = subchainSelectAccount(client, 1)
 	tx, err = subchainTNT721TokenBankinstance.BurnVouchers(authUser, subchainTNT721VoucherAddress, accountList[6].fromAddress, tokenID)
@@ -125,15 +125,16 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 		fmt.Println("burn error")
 		return
 	}
-	fmt.Println(tx.Hash().Hex())
+	fmt.Println("burn tx hash is",tx.Hash().Hex())
 	//
 	secondOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", secondOnwer)
+	fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
+	fmt.Println("---------Detecting---------")
 	//
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
 	mainchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(tnt721VoucherContractAddress, mainchainClient)
 	result, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("mainchain owner is", result)
+	fmt.Println("the mainchain owner of ",tokenID,"is", result)
 	for {
 		time.Sleep(2 * time.Second)
 		new_result, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
@@ -142,7 +143,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 			break
 		}
 	}
-	fmt.Println("mainchain owner is", result)
+	fmt.Println("the mainchain owner of ",tokenID,"is", result)
 }
 func SubchainTNT721Lock(tokenID *big.Int) {
 	client, err := ethclient.Dial("http://localhost:19888/rpc")
@@ -162,7 +163,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	}
 	//
 	firstOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", firstOnwer)
+	fmt.Println("The subchain owner of ", tokenID, "is", firstOnwer)
 	//
 	auth = subchainSelectAccount(client, 1)
 	tx, err := subchainTNT721TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT721VoucherAddress, accountList[6].fromAddress, tokenID)
@@ -180,7 +181,8 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	}
 	//
 	secondOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", secondOnwer)
+	fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
+	fmt.Println("---------Detecting---------")
 	//
 	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
 
@@ -195,10 +197,10 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 			break
 		}
 	}
-	fmt.Println(mainchainVoucherAddress)
+	fmt.Println("Mainchain TNT721 Voucher Contract Address is",mainchainVoucherAddress)
 	mainchainTNT721VoucherInstance, err := ct.NewTNT721VoucherContract(mainchainVoucherAddress, mainchainClient)
 	result, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("token owner is", result)
+	fmt.Println("The mainchain token owner of ",tokenID,"is", result)
 }
 func MainchainTNT721Burn(tokenID *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
@@ -215,7 +217,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	mainchainTNT721TokenBankInstance, _ := ct.NewTNT721TokenBank(tnt721TokenBankAddress, client)
 	//
 	firstOnwer, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", firstOnwer)
+	fmt.Println("The mainchain owner of ", tokenID, "is", firstOnwer)
 	//
 	auth = mainchainSelectAccount(client, 6)
 	tx, err := mainchainTNT721TokenBankInstance.BurnVouchers(auth, mainchainTNT721VoucherAddr, accountList[1].fromAddress, tokenID)
@@ -230,13 +232,14 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	}
 	//
 	secondOnwer, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the owner of ", tokenID, "is", secondOnwer)
+	fmt.Println("The mainchain owner of ", tokenID, "is", secondOnwer)
+	fmt.Println("---------Detecting---------")
 	//
 	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
 	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
 	subchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, subchainClient)
 	result, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("subchain owner is", result)
+	fmt.Println("The subchain owner of ", tokenID, " is", result)
 	for {
 		time.Sleep(2 * time.Second)
 		new_result, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
@@ -245,5 +248,5 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 			break
 		}
 	}
-	fmt.Println("subchain owner is", result)
+	fmt.Println("The subchain owner of ", tokenID, " is", result)
 }

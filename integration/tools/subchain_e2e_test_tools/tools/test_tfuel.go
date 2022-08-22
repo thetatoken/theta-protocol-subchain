@@ -26,7 +26,7 @@ func MainchainTfuelLock(lockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println(tx.Hash().Hex())
+	fmt.Println("lock tx hash is",tx.Hash().Hex())
 
 }
 
@@ -50,5 +50,5 @@ func SubchainTfuelBurn(burnAmount *big.Int) {
 		log.Fatal(err)
 	}
 	//fmt.Println(tx)
-	fmt.Println(tx.Hash().Hex())
+	fmt.Println("burn tx hash is",tx.Hash().Hex())
 }

@@ -9,7 +9,6 @@ import (
 
 var startMainchainTNT721LockCmd = &cobra.Command{
 	Use:   "MainchainTNT721Lock",
-	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.MainchainTNT721Lock(big.NewInt(amount))
 	},
@@ -17,7 +16,6 @@ var startMainchainTNT721LockCmd = &cobra.Command{
 
 var startSubchainTNT721LockCmd = &cobra.Command{
 	Use:   "SubchainTNT721Lock",
-	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.SubchainTNT721Lock(big.NewInt(amount))
 	},
@@ -25,7 +23,6 @@ var startSubchainTNT721LockCmd = &cobra.Command{
 
 var startSubchainTNT721BurnCmd = &cobra.Command{
 	Use:   "SubchainTNT721Burn",
-	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.SubchainTNT721Burn(big.NewInt(amount))
 	},
@@ -33,7 +30,6 @@ var startSubchainTNT721BurnCmd = &cobra.Command{
 
 var startMainchainTNT721BurnCmd = &cobra.Command{
 	Use:   "MainchainTNT721Burn",
-	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.MainchainTNT721Burn(big.NewInt(amount))
 	},
