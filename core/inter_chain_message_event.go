@@ -333,8 +333,7 @@ type CrossChainTNT1155TokenLockedEvent struct { // corresponding to the "TNT721T
 	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
 	TargetChainVoucherReceiver common.Address
 	TokenID                    *big.Int
-	Name                       string
-	Symbol                     string
+	LockedAmount               *big.Int
 	TokenURI                   string
 	TokenLockNonce             *big.Int
 }
@@ -477,6 +476,7 @@ type CrossChainTNT1155VoucherMintedEvent struct { // corresponding to the "TNT11
 	TargetChainVoucherReceiver common.Address
 	VoucherContract            common.Address
 	TokenID                    *big.Int
+	MintedAmount               *big.Int
 	SourceChainTokenLockNonce  *big.Int
 	VoucherMintNonce           *big.Int
 }
@@ -628,6 +628,7 @@ type CrossChainTNT1155VoucherBurnedEvent struct { // corresponding to the "TNT11
 	SourceChainVoucherOwner  common.Address
 	TargetChainTokenReceiver common.Address
 	TokenID                  *big.Int
+	BurnedAmount  			 *big.Int
 	VoucherBurnNonce         *big.Int
 }
 
@@ -769,6 +770,7 @@ type CrossChainTNT1155TokenUnlockedEvent struct { // corresponding to the "TNT11
 	Denom                       string
 	TargetChainTokenReceiver    common.Address
 	TokenID                     *big.Int
+	UnlockedAmount				*big.Int
 	SourceChainVoucherBurnNonce *big.Int
 	TokenUnlockNonce            *big.Int
 }
@@ -851,6 +853,10 @@ func ValidateDenom(denom string) error {
 	case CrossChainTokenTypeTNT721:
 		if !common.IsHexAddress(parts[2]) {
 			return fmt.Errorf("invalid TNT20 denom: %v", denom)
+		}
+	case CrossChainTokenTypeTNT1155:
+		if !common.IsHexAddress(parts[2]) {
+			return fmt.Errorf("invalid TNT1155 denom: %v", denom)
 		}
 	default:
 		return fmt.Errorf("invalid denom (unknown token type): %v", denom)

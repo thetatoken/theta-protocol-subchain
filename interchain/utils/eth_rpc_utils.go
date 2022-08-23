@@ -83,18 +83,17 @@ var EventSelectors = map[score.InterChainMessageEventType]string{
 	score.IMCEventTypeCrossChainTokenUnlockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
 
 	//TNT1155
-	score.IMCEventTypeCrossChainTokenLockTNT1155: crypto.Keccak256Hash([]byte("TNT721TokenLocked(string,address,uint256,address,uint256,string,string,string,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainVoucherMintTNT1155: crypto.Keccak256Hash([]byte("TNT721VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainVoucherBurnTNT1155: crypto.Keccak256Hash([]byte("TNT721VoucherBurned(string,address,address,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainTokenUnlockTNT1155: crypto.Keccak256Hash([]byte("TNT721TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
-
+	score.IMCEventTypeCrossChainTokenLockTNT1155:   crypto.Keccak256Hash([]byte("TNT1155TokenLocked(string,address,uint256,address,uint256,uint256,string,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherMintTNT1155: crypto.Keccak256Hash([]byte("TNT1155VoucherMinted(string,address,address,uint256,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherBurnTNT1155: crypto.Keccak256Hash([]byte("TNT1155VoucherBurned(string,address,address,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainTokenUnlockTNT1155: crypto.Keccak256Hash([]byte("TNT1155TokenUnlocked(string,address,uint256,uint256,uint256,uint256)")).Hex(),
 }
 
 func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, tfuelTokenbankAddress common.Address, tnt20TokenBankAddress common.Address, tnt721TokenBankAddress common.Address, tnt1155TokenBankAddress common.Address, queryTopics string, url string) []*score.InterChainMessageEvent {
 
 	var events []*score.InterChainMessageEvent
 
-	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":[%v],"topics":[[%v]]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), fmt.Sprintf("\"%v\",\"%v\",\"%v\",\"%v\"", tfuelTokenbankAddress, tnt20TokenBankAddress, tnt721TokenBankAddress,tnt1155TokenBankAddress), queryTopics)
+	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":[%v],"topics":[[%v]]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), fmt.Sprintf("\"%v\",\"%v\",\"%v\",\"%v\"", tfuelTokenbankAddress, tnt20TokenBankAddress, tnt721TokenBankAddress, tnt1155TokenBankAddress), queryTopics)
 	var jsonData = []byte(queryStr)
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))

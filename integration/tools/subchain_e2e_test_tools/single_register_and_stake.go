@@ -38,6 +38,8 @@ var tfuelTokenbankAddress common.Address
 var subchainTfuelTokenBank common.Address
 var Subchaintnt721TokenBankAddress common.Address
 var subchainID *big.Int
+var mainchainTNT1155TokenBankAddress  common.Address
+var	mainchainTNT1155VoucherContractAddress  common.Address
 
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()

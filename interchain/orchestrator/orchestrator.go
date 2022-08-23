@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -468,10 +469,11 @@ func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChai
 		return nil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
+	tx, err := TNT1155TokenBank.MintVouchers(txOpts, se.Denom, "https://thetatoken.example/api/item/{id}.json", se.TargetChainVoucherReceiver, se.TokenID, se.LockedAmount, dynasty, se.TokenLockNonce, []byte(""))
 	if err != nil {
 		return err
 	}
+	fmt.Println(tx.Hash().Hex())
 	return nil
 }
 
@@ -525,6 +527,7 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	}
 	return nil
 }
+
 //TNT721
 func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
 	se, err := score.ParseToCrossChainTNT1155VoucherBurnedEvent(sourceEvent)
@@ -536,7 +539,7 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 		return nil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
+	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce, []byte("")) //calldata?
 	if err != nil {
 		return err
 	}
@@ -612,7 +615,7 @@ func (oc *Orchestrator) getTNT721TokenBank(chainID *big.Int) *scta.TNT721TokenBa
 	}
 }
 
-func (oc *Orchestrator) getTNT1155TokenBank(chainID *big.Int) *scta.TNT721TokenBank {
+func (oc *Orchestrator) getTNT1155TokenBank(chainID *big.Int) *scta.TNT1155TokenBank {
 	if chainID.Cmp(oc.mainchainID) == 0 {
 		return oc.mainchainTNT1155TokenBank
 	} else {

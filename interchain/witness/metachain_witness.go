@@ -218,7 +218,7 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
 	}
 	mw.subchainTNT1155TokenBankAddr = *subchainTNT1155TokenBankAddr
-	mw.subchainTNT155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, mw.subchainEthRpcClient)
+	mw.subchainTNT1155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
