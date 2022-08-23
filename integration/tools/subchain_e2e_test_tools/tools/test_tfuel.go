@@ -36,7 +36,7 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 	receiverSubchainTFuelBalance, _ := subchainClient.BalanceAt(context.Background(), receiver, big.NewInt(int64(subchainHeight)))
 
 	fmt.Printf("Mainchain sender : %v, TFuel balance on Mainchain       : %v\n", sender.From, senderMainchainTFuelBalance)
-	fmt.Printf("Subchain receiver: %v, TFuel voucher balance on Subchain: %v \n", receiver, receiverSubchainTFuelBalance)
+	fmt.Printf("Subchain receiver: %v, TFuel voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTFuelBalance)
 	tx, err := tfuelTokenBankInstance.LockTokens(sender, subchainID, receiver)
 	if err != nil {
 		log.Fatal(err)
@@ -64,7 +64,7 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 	receiverSubchainTFuelBalance, _ = subchainClient.BalanceAt(context.Background(), receiver, big.NewInt(int64(subchainHeight)))
 
 	fmt.Printf("Mainchain sender : %v, TFuel balance on Mainchain       : %v\n", sender.From, senderMainchainTFuelBalance)
-	fmt.Printf("Subchain receiver: %v, TFuel voucher balance on Subchain: %v \n", receiver, receiverSubchainTFuelBalance)
+	fmt.Printf("Subchain receiver: %v, TFuel voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTFuelBalance)
 }
 
 func SubchainTFuelBurn(burnAmount *big.Int) {
@@ -93,7 +93,7 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	receiverMainchainTFuelBalance, _ := mainchainClient.BalanceAt(context.Background(), receiver, big.NewInt(int64(mainchainHeight)))
 
 	fmt.Printf("Subchain sender   : %v, TFuel voucher balance on Subchain : %v\n", sender.From, senderSubchainTFuelBalance)
-	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v \n", receiver, receiverMainchainTFuelBalance)
+	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v\n\n", receiver, receiverMainchainTFuelBalance)
 
 	tx, err := TFuelTokenBankInstance.BurnVouchers(sender, receiver)
 	if err != nil {
@@ -122,5 +122,5 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	receiverMainchainTFuelBalance, _ = mainchainClient.BalanceAt(context.Background(), receiver, big.NewInt(int64(mainchainHeight)))
 
 	fmt.Printf("Subchain sender   : %v, TFuel voucher balance on Subchain : %v\n", sender.From, senderSubchainTFuelBalance)
-	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v \n", receiver, receiverMainchainTFuelBalance)
+	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v\n\n", receiver, receiverMainchainTFuelBalance)
 }
