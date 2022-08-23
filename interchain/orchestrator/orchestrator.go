@@ -45,15 +45,15 @@ type Orchestrator struct {
 	mainchainTNT721TokenBank     *scta.TNT721TokenBank
 
 	// The subchain
-	subchainID                  *big.Int
-	subchainEthRpcURL           string
-	subchainEthRpcClient        *ec.Client
-	subchainTFuelTokenBankAddr  common.Address
-	subchainTFuelTokenBank      *scta.TFuelTokenBank
-	subchainTNT20TokenBankAddr  common.Address
-	subchainTNT20TokenBank      *scta.TNT20TokenBank
-	subchainTNT721TokenBankAddr common.Address
-	subchainTNT721TokenBank     *scta.TNT721TokenBank
+	subchainID                    *big.Int
+	subchainEthRpcURL             string
+	subchainEthRpcClient          *ec.Client
+	subchainTFuelTokenBankAddr    common.Address
+	subchainTFuelTokenBankAddress *scta.TFuelTokenBank
+	subchainTNT20TokenBankAddr    common.Address
+	subchainTNT20TokenBank        *scta.TNT20TokenBank
+	subchainTNT721TokenBankAddr   common.Address
+	subchainTNT721TokenBank       *scta.TNT721TokenBank
 	// Inter-chain messaging
 	interChainEventCache *siu.InterChainEventCache
 
@@ -155,7 +155,7 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
 	}
 	oc.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
-	oc.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, oc.subchainEthRpcClient)
+	oc.subchainTFuelTokenBankAddress, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, oc.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
@@ -519,7 +519,7 @@ func (oc *Orchestrator) getTFuelTokenBank(chainID *big.Int) *scta.TFuelTokenBank
 	if chainID.Cmp(oc.mainchainID) == 0 {
 		return oc.mainchainTFuelTokenBank
 	} else {
-		return oc.subchainTFuelTokenBank
+		return oc.subchainTFuelTokenBankAddress
 	}
 }
 

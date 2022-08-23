@@ -11,9 +11,9 @@ func main() {
 	// oneAccountRegister() //register subchain , its id is 360777
 	// oneAccountStake(1)   // use the 10th account to deposit and become validator
 
-	// //Tfuel
-	// mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
-	// subchainTfuelBurn(big.NewInt(10))
+	// //TFuel
+	// mainchainTFuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
+	// subchainTFuelBurn(big.NewInt(10))
 
 	// //TNT20
 	// mainchainTNT20Lock(big.NewInt(100)) //mainchainTNT20Lock(tokenAmount) last address printed in console is subchain voucher contract address

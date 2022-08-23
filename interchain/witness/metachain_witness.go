@@ -52,16 +52,16 @@ type MetachainWitness struct {
 	lastQueryedMainChainHeight *big.Int
 
 	// The subchain
-	subchainID                  *big.Int
-	subchainEthRpcUrl           string
-	subchainEthRpcClient        *ec.Client
-	subchainBlockHeight         *big.Int
-	subchainTFuelTokenBankAddr  common.Address
-	subchainTFuelTokenBank      *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the subchain
-	subchainTNT20TokenBankAddr  common.Address
-	subchainTNT20TokenBank      *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the subchain
-	subchainTNT721TokenBankAddr common.Address
-	subchainTNT721TokenBank     *scta.TNT721TokenBank
+	subchainID                    *big.Int
+	subchainEthRpcUrl             string
+	subchainEthRpcClient          *ec.Client
+	subchainBlockHeight           *big.Int
+	subchainTFuelTokenBankAddr    common.Address
+	subchainTFuelTokenBankAddress *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the subchain
+	subchainTNT20TokenBankAddr    common.Address
+	subchainTNT20TokenBank        *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the subchain
+	subchainTNT721TokenBankAddr   common.Address
+	subchainTNT721TokenBank       *scta.TNT721TokenBank
 
 	// Validator set
 	cacheMutex        *sync.Mutex // mutex to for validatorSetCache concurrent write protection
@@ -181,7 +181,7 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
 	}
 	mw.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
-	mw.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
+	mw.subchainTFuelTokenBankAddress, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}

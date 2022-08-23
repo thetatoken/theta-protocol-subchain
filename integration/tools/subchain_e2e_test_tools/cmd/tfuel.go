@@ -7,21 +7,21 @@ import (
 	"github.com/thetatoken/thetasubchain/integration/tools/subchain_e2e_test_tools/tools"
 )
 
-var startMainchainTfuelLockCmd = &cobra.Command{
-	Use:   "MainchainTfuelLock",
+var startMainchainTFuelLockCmd = &cobra.Command{
+	Use: "MainchainTFuelLock",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.MainchainTfuelLock(big.NewInt(amount))
+		tools.MainchainTFuelLock(big.NewInt(amount))
 	},
 }
 
-var startSubchainTfuelBurnCmd = &cobra.Command{
-	Use:   "MainchainTfuelBurn",
+var startSubchainTFuelBurnCmd = &cobra.Command{
+	Use: "MainchainTFuelBurn",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.SubchainTfuelBurn(big.NewInt(amount))
+		tools.SubchainTFuelBurn(big.NewInt(amount))
 	},
 }
 
 func init() {
-	rootCmd.AddCommand(startMainchainTfuelLockCmd)
-	rootCmd.AddCommand(startSubchainTfuelBurnCmd)
+	rootCmd.AddCommand(startMainchainTFuelLockCmd)
+	rootCmd.AddCommand(startSubchainTFuelBurnCmd)
 }
