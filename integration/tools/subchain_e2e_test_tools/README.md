@@ -19,12 +19,13 @@ subchain_e2e_test_tools     MainchainTNT20Burn   --amount=(the amount or tokenid
                             MainchainTNT20Lock  
                             MainchainTNT721Burn 
                             MainchainTNT721Lock 
-                            MainchainTFuelBurn  
                             MainchainTFuelLock   
                             SubchainTNT20Burn   
                             SubchainTNT20Lock   
                             SubchainTNT721Burn  
                             SubchainTNT721Lock
+                            SubchainTFuelBurn  
+
 ```
 
 For help 

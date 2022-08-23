@@ -79,7 +79,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	for {
 		time.Sleep(2 * time.Second)
 		toHeight, _ := subchainClient.BlockNumber(context.Background())
-		result := getSubchainTNT721VoucherMintlog(int(fromHeight), int(toHeight), subchainTNT721TokenBankAddress, user)
+		result := getSubchainTNT721VoucherMintLogs(int(fromHeight), int(toHeight), subchainTNT721TokenBankAddress, user)
 		if result != nil {
 			subchainVoucherAddress = *result
 			break
@@ -191,7 +191,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	for {
 		time.Sleep(2 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
-		result := getMainchainTNT721VoucherMintlog(int(fromHeight), int(toHeight), tnt721TokenBankAddress, accountList[6].fromAddress)
+		result := getMainchainTNT721VoucherMintLogs(int(fromHeight), int(toHeight), tnt721TokenBankAddress, accountList[6].fromAddress)
 		if result != nil {
 			mainchainVoucherAddress = *result
 			break

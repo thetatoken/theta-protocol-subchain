@@ -67,7 +67,7 @@ func MainchainTNT20Lock(mintLockAmount *big.Int) {
 	for {
 		time.Sleep(2 * time.Second)
 		toHeight, _ := subchainClient.BlockNumber(context.Background())
-		result := getSubchainTNT20VoucherMintlog(int(fromHeight), int(toHeight), subchainTNT20TokenBankAddress, user)
+		result := getSubchainTNT20VoucherMintLogs(int(fromHeight), int(toHeight), subchainTNT20TokenBankAddress, user)
 		if result != nil {
 			subchainVoucherAddress = *result
 			break
@@ -121,7 +121,7 @@ func SubchainTNT20Lock(mintLockAmount *big.Int) {
 	for {
 		time.Sleep(2 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
-		result := getMainchainTNT20VoucherMintlog(int(fromHeight), int(toHeight), tnt20TokenBankAddress, accountList[6].fromAddress)
+		result := getMainchainTNT20VoucherMintLogs(int(fromHeight), int(toHeight), tnt20TokenBankAddress, accountList[6].fromAddress)
 		if result != nil {
 			mainchainVoucherAddress = *result
 			break

@@ -35,7 +35,7 @@ var subchainTNT20TokenBankAddress common.Address
 var accountList []accounts
 var tnt721TokenBankAddress common.Address
 var tnt721VoucherContractAddress common.Address
-var tfuelTokenbankAddress common.Address
+var tfuelTokenBankAddress common.Address
 var subchainTFuelTokenBankAddress common.Address
 var subchainTNT721TokenBankAddress common.Address
 var subchainID *big.Int
@@ -58,7 +58,7 @@ func init() {
 	registrarOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
 	governanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
 
-	tfuelTokenbankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
+	tfuelTokenBankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
 	subchainTFuelTokenBankAddress = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
 
 	tnt20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")

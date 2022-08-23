@@ -15,7 +15,7 @@ var startMainchainTFuelLockCmd = &cobra.Command{
 }
 
 var startSubchainTFuelBurnCmd = &cobra.Command{
-	Use: "MainchainTFuelBurn",
+	Use: "SubchainTFuelBurn",
 	Run: func(cmd *cobra.Command, args []string) {
 		tools.SubchainTFuelBurn(big.NewInt(amount))
 	},
