@@ -9,7 +9,7 @@ subchain_e2e_test_tools  RegisterSubchain (it will register 360777)
 To stake to an validator from an account:
 
 ```
-subchain_e2e_test_tools  AcoountStake --id=(the id of accountList)
+subchain_e2e_test_tools  AccountStake --id=(the id of accountList)
 ```
 
 For testing transfer cases:

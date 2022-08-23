@@ -13,16 +13,16 @@ var startOneAccountRegisterCmd = &cobra.Command{
 	},
 }
 var accountID int
-var startOneAcoountStakeCmd = &cobra.Command{
-	Use:   "AcoountStake",
+var startOneAccountStakeCmd = &cobra.Command{
+	Use:   "AccountStake",
 	Short: "Start Thetasubchain node.",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.OneAcoountStake(accountID)
+		tools.OneAccountStake(accountID)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(startOneAccountRegisterCmd)
-	rootCmd.AddCommand(startOneAcoountStakeCmd)
-	startOneAcoountStakeCmd.PersistentFlags().IntVar(&accountID, "id", 1, "id")
+	rootCmd.AddCommand(startOneAccountStakeCmd)
+	startOneAccountStakeCmd.PersistentFlags().IntVar(&accountID, "id", 1, "id")
 }

@@ -9,7 +9,7 @@ const CHAIN_ID_OFFSET int64 = 360
 func main() {
 
 	// oneAccountRegister() //register subchain , its id is 360777
-	// oneAcoountStake(1)   // use the 10th account to deposit and become validator
+	// oneAccountStake(1)   // use the 10th account to deposit and become validator
 
 	// //Tfuel
 	// mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
