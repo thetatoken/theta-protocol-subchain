@@ -28,7 +28,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	sender := mainchainSelectAccount(mainchainClient, 1)
 	receiver := accountList[1].fromAddress
 
-	tnt20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract
+	tnt20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
 	instaceTNT20Contract, err := ct.NewTNT20VoucherContract(tnt20ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
@@ -66,6 +66,9 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 		log.Fatal(err)
 	}
 
+	fmt.Printf("TNT20 Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
+	fmt.Printf("Transfering %v TNT20 tokens (Wei) from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
+
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	receipt, err := mainchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
@@ -74,9 +77,6 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	if receipt.Status != 1 {
 		log.Fatal("lock error")
 	}
-
-	fmt.Printf("TFuel Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
-	fmt.Printf("Transfering %v TNT20 tokens (Wei) from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
 
 	var subchainVoucherAddress common.Address
 	for {
@@ -138,6 +138,9 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 		log.Fatal(err)
 	}
 
+	fmt.Printf("TNT20 Token Lock tx hash (Subchain): %v\n", lockTx.Hash().Hex())
+	fmt.Printf("Transfering %v TNT20 tokens (Wei) from to Subchain %v to the Mainchain...\n\n", lockAmount, subchainID)
+
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
 		log.Fatal(err)
@@ -145,9 +148,6 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	if receipt.Status != 1 {
 		log.Fatal("lock error")
 	}
-
-	fmt.Printf("TFuel Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
-	fmt.Printf("Transfering %v TNT20 tokens (Wei) from to Subchain %v to the Mainchain...\n\n", lockAmount, subchainID)
 
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	var mainchainVoucherAddress common.Address
@@ -173,108 +173,133 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 }
 
 func MainchainTNT20Burn(burnAmount *big.Int) {
-	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Preparing for TNT20 cross-chain transfer...\n")
+
+	sender := accountList[6].fromAddress
+	receiver := accountList[1].fromAddress
+
+	mainchainTNT20TokenBankInstance, _ := ct.NewTNT20TokenBank(tnt20TokenBankAddress, mainchainClient)
 
 	mainchainTNT20VoucherAddress := common.HexToAddress("0xb0DBBcba1Be5B71Dcb42aB1935773B3675e645e8")
-	mainchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(tnt20TokenBankAddress, client)
-	if err != nil {
-		log.Fatal(err)
-	}
-	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(mainchainTNT20VoucherAddress, client)
-	tx, err := mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[6].fromAddress)
-	fmt.Println("mainchain account 6 ", accountList[6].fromAddress, "tnt20 balance is", tx)
-	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
-	authUser := mainchainSelectAccount(client, 6)
-	tx1, err := mainchainTNT20VoucherAddressInstance.Approve(authUser, tnt20TokenBankAddress, burnAmount)
+	mainchainTNT20VoucherContract, _ := ct.NewTNT20VoucherContract(mainchainTNT20VoucherAddress, mainchainClient)
+	senderMainchainTNT20VoucherBalance, _ := mainchainTNT20VoucherContract.BalanceOf(nil, sender)
 
-	authUser = mainchainSelectAccount(client, 6)
-	tx1, err = mainchainTNT20TokenBankInstance.BurnVouchers(authUser, mainchainTNT20VoucherAddress, accountList[1].fromAddress, burnAmount)
-	//tx, err := testSubchainTNT20TokenBankInstance.GetDenom(nil, subchainTNT20VoucherAddress)
+	subchainTNT20TokenAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f") // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
+	subchainTNT20TokenContract, _ := ct.NewTNT20VoucherContract(subchainTNT20TokenAddress, subchainClient)
+	receiverSubchainTNT20TokenBalance, _ := subchainTNT20TokenContract.BalanceOf(nil, receiver)
+
+	fmt.Printf("Mainchain TNT20 Voucher address: %v\n", mainchainTNT20VoucherAddress)
+	fmt.Printf("Mainchain sender : %v, TNT20 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT20VoucherBalance)
+	fmt.Printf("Subchain receiver: %v, TNT20 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT20TokenBalance)
+
+	authUser := mainchainSelectAccount(mainchainClient, 6)
+	mainchainTNT20VoucherContract.Approve(authUser, tnt20TokenBankAddress, burnAmount)
+
+	authUser = mainchainSelectAccount(mainchainClient, 6)
+	burnTx, err := mainchainTNT20TokenBankInstance.BurnVouchers(authUser, mainchainTNT20VoucherAddress, accountList[1].fromAddress, burnAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//fmt.Println(tx)
-	fmt.Println("burn tx is", tx1.Hash().Hex())
-	receipt, err := client.TransactionReceipt(context.Background(), tx1.Hash())
+
+	fmt.Printf("TNT20 Voucher Burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
+	fmt.Printf("Transfering %v TNT20 Vouchers (Wei) from the Mainchain to Subchain %v...\n\n", burnAmount, subchainID)
+
+	receipt, err := mainchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
 	if receipt.Status != 1 {
-		fmt.Println("lock error")
+		log.Fatal("lock error")
 	}
-	time.Sleep(2 * time.Second)
-	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[6].fromAddress)
-	fmt.Println("mainchain account 6 ", accountList[6].fromAddress, "tnt20 balance is", tx)
-	fmt.Println("---------Detecting---------")
-	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
-	subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
-	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, subchainClient)
-	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
+
 	for {
-		time.Sleep(2 * time.Second)
-		tx_subchain, _ := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-		if tx.Cmp(tx_subchain) != 0 {
-			tx = tx_subchain
+		time.Sleep(6 * time.Second)
+		updatedBalance, _ := subchainTNT20TokenContract.BalanceOf(nil, receiver)
+		if receiverSubchainTNT20TokenBalance.Cmp(updatedBalance) != 0 {
 			break
 		}
+		fmt.Printf("waiting for cross-chain transfer completion...\n")
 	}
-	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	senderMainchainTNT20VoucherBalance, _ = mainchainTNT20VoucherContract.BalanceOf(nil, sender)
+	receiverSubchainTNT20TokenBalance, _ = subchainTNT20TokenContract.BalanceOf(nil, receiver)
+
+	fmt.Printf("Subchain TNT20 token contract address: %v\n", subchainTNT20TokenAddress)
+	fmt.Printf("Mainchain sender : %v, TNT20 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT20VoucherBalance)
+	fmt.Printf("Subchain receiver: %v, TNT20 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT20TokenBalance)
 }
 
 func SubchainTNT20Burn(burnAmount *big.Int) {
-	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Preparing for TNT20 cross-chain transfer...\n")
+
+	sender := accountList[1].fromAddress
+	receiver := accountList[1].fromAddress
+
+	subchainTNT20TokenBank, _ := ct.NewTNT20TokenBank(subchainTNT20TokenBankAddress, subchainClient)
 
 	subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
-	if err != nil {
-		log.Fatal(err)
-	}
-	testSubchainTNT20TokenBankInstance, err := ct.NewTNT20TokenBank(subchainTNT20TokenBankAddress, client)
-	subchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, client)
-	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
-	//await TNT20Token.approve(TNT20TokenBank1.address, 20, { from: valGuarantor1 })
-	authUser := subchainSelectAccount(client, 1)
-	tx1, err := subchainTNT20VoucherAddressInstance.Approve(authUser, subchainTNT20TokenBankAddress, burnAmount)
+	subchainTNT20VoucherContract, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, subchainClient)
+	senderSubchainTNT20VoucherBalance, _ := subchainTNT20VoucherContract.BalanceOf(nil, sender)
 
-	authUser = subchainSelectAccount(client, 1)
-	tx1, err = testSubchainTNT20TokenBankInstance.BurnVouchers(authUser, subchainTNT20VoucherAddress, accountList[1].fromAddress, burnAmount)
-	//tx, err := testSubchainTNT20TokenBankInstance.GetDenom(nil, subchainTNT20VoucherAddress)
+	mainchainTNT20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
+	mainchainTNT20Contract, _ := ct.NewTNT20VoucherContract(mainchainTNT20ContractAddress, mainchainClient)
+	receiverMainchainTNT20TokenBalance, _ := mainchainTNT20Contract.BalanceOf(nil, receiver)
+
+	fmt.Printf("Subchain TNT20 Voucher address: %v\n", subchainTNT20VoucherAddress)
+	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
+	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchin  : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
+
+	authUser := subchainSelectAccount(subchainClient, 1)
+	subchainTNT20VoucherContract.Approve(authUser, subchainTNT20TokenBankAddress, burnAmount)
+
+	authUser = subchainSelectAccount(subchainClient, 1)
+	burnTx, err := subchainTNT20TokenBank.BurnVouchers(authUser, subchainTNT20VoucherAddress, sender, burnAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//fmt.Println(tx)
-	fmt.Println("burn tx is", tx1.Hash().Hex())
-	receipt, err := client.TransactionReceipt(context.Background(), tx1.Hash())
+
+	fmt.Printf("TNT20 Voucher Burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
+	fmt.Printf("Transfering %v TNT20 Vouchers (Wei) from Subchain %v to the Mainchain...\n\n", burnAmount, subchainID)
+
+	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
 	if receipt.Status != 1 {
-		fmt.Println("lock error")
-		return
+		log.Fatal("lock error")
 	}
-	time.Sleep(2 * time.Second)
-	tx, err = subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println(accountList[1].fromAddress, "subchain_account_balance is", tx)
-	fmt.Println("---------Detecting---------")
-	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
-	mainchainTNT20VoucherAddressInstance, _ := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, mainchainClient)
-	tx, err = mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-	fmt.Println(accountList[1].fromAddress, "mainchain_account_balance is", tx)
+
 	for {
-		time.Sleep(2 * time.Second)
-		tx_subchain, _ := mainchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
-		//fmt.Println(accountList[1].fromAddress, "mainchain_account_balance is", tx_subchain)
-		if tx.Cmp(tx_subchain) != 0 {
-			tx = tx_subchain
+		time.Sleep(6 * time.Second)
+		updatedBalance, _ := mainchainTNT20Contract.BalanceOf(nil, receiver)
+		if receiverMainchainTNT20TokenBalance.Cmp(updatedBalance) != 0 {
 			break
 		}
+		fmt.Printf("waiting for cross-chain transfer completion...\n")
 	}
-	fmt.Println(accountList[1].fromAddress, "mainchain_account_balance is", tx)
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	senderSubchainTNT20VoucherBalance, _ = subchainTNT20VoucherContract.BalanceOf(nil, sender)
+	receiverMainchainTNT20TokenBalance, _ = mainchainTNT20Contract.BalanceOf(nil, receiver)
+
+	fmt.Printf("Mainchain TNT20 token contract address: %v\n", mainchainTNT20ContractAddress)
+	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
+	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchain  : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
 }

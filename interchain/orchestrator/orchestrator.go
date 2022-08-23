@@ -74,7 +74,7 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the mainchain: %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain, is the mainchain RPC API service running? error: %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)

@@ -85,7 +85,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the mainchain: %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain, is the mainchain RPC API service running? error: %v\n", err)
 	}
 	chainRegistrarOnMainchainAddr := common.HexToAddress(viper.GetString(scom.CfgChainRegistrarOnMainchainContractAddress))
 	chainRegistrarOnMainchain, err := scta.NewChainRegistrarOnMainchain(chainRegistrarOnMainchainAddr, mainchainEthRpcClient)
