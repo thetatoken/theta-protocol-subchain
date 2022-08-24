@@ -45,9 +45,10 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 	fmt.Printf("TFuel Token Lock tx hash (Mainchain): %v\n", tx.Hash().Hex())
 	fmt.Printf("Transfering %v TFuelWei from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
 
+	fmt.Printf("Start transfer, timestamp: %v\n", time.Now())
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	for {
-		time.Sleep(6 * time.Second)
+		time.Sleep(1 * time.Second)
 		toHeight, _ := subchainClient.BlockNumber(context.Background())
 		result := getSubchainTFuelVoucherMintLogs(int(fromHeight), int(toHeight), subchainTFuelTokenBankAddress, receiver)
 		if result != nil {
@@ -55,6 +56,7 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 		}
 		fmt.Printf("waiting for cross-chain transfer completion (scanning Subchain from height %v to %v)...\n", fromHeight, toHeight)
 	}
+	fmt.Printf("End transfer, timestamp  : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
 	mainchainHeight, _ = mainchainClient.BlockNumber(context.Background())
@@ -103,9 +105,10 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	fmt.Printf("TFuel Voucher Burn tx hash (Subchain): %v\n", tx.Hash().Hex())
 	fmt.Printf("Burn %v TFuelWei on Subchain %v to recover authentic TFuel on the Mainchain...\n\n", burnAmount, subchainID)
 
+	fmt.Printf("Start transfer, timestamp: %v\n", time.Now())
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	for {
-		time.Sleep(6 * time.Second)
+		time.Sleep(1 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
 		result := getMainchainTFuelUnlockLogs(int(fromHeight), int(toHeight), tfuelTokenBankAddress, receiver)
 		if result != nil {
@@ -113,6 +116,7 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 		}
 		fmt.Printf("waiting for cross-chain transfer completion (scanning Mainchain from height %v to %v)...\n", fromHeight, toHeight)
 	}
+	fmt.Printf("End transfer, timestamp  : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
 	subchainHeight, _ = subchainClient.BlockNumber(context.Background())

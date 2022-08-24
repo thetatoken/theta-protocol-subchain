@@ -284,6 +284,9 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 		return // the next event (e.g. Token Lock, or Voucher Burn) has not occurred yet
 	}
 
+	logger.Debugf("Process next event, sourceChainID: %v, targetChainID: %v, sourceChainEventType: %v, nextNonce: %v",
+		sourceChainID, targetChainID, sourceChainEventType, nextNonce)
+
 	targetEventType := oc.getTargetChainCorrespondingEventType(sourceChainEventType)
 	retryThreshold := oc.getRetryThreshold(targetChainID)
 	if oc.timeElapsedSinceEventProcessed(sourceEvent) > retryThreshold { // retry if the tx has been submitted for a long time
