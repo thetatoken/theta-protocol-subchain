@@ -210,7 +210,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	}
 
 	fmt.Printf("TNT20 Voucher Burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
-	fmt.Printf("Transfering %v TNT20 Vouchers (Wei) from the Mainchain to Subchain %v...\n\n", burnAmount, subchainID)
+	fmt.Printf("Burn %v TNT20 Vouchers (Wei) on the Mainchain to recover the authentic tokens on Subchain %v...\n\n", burnAmount, subchainID)
 
 	receipt, err := mainchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
@@ -276,7 +276,7 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	}
 
 	fmt.Printf("TNT20 Voucher Burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
-	fmt.Printf("Transfering %v TNT20 Vouchers (Wei) from Subchain %v to the Mainchain...\n\n", burnAmount, subchainID)
+	fmt.Printf("Burn %v TNT20 Vouchers (Wei) on Subchain %v to recover the authentic tokens on the Mainchain...\n\n", burnAmount, subchainID)
 
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {

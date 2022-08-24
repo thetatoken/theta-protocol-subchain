@@ -13,111 +13,142 @@ import (
 )
 
 func MainchainTNT721Lock(tokenID *big.Int) {
-	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	var dec18 = new(big.Int)
-	dec18.SetString("1000000000000000000", 10)
-	user := accountList[1].fromAddress
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Preparing for TNT721 cross-chain transfer...\n")
 
-	instanceTNT721VoucherContract, err := ct.NewTNT721VoucherContract(tnt721VoucherContractAddress, client)
+	sender := accountList[1].fromAddress
+	receiver := accountList[1].fromAddress
+
+	tnt721ContractAddress := tnt721VoucherContractAddress // FIXME: should instantiate a mock TNT721 instead of using the Voucher contract (which causes confusion)
+	tnt721VoucherContract, err := ct.NewTNT721VoucherContract(tnt721ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
-	instanceTNT721TokenBank, err := ct.NewTNT721TokenBank(tnt721TokenBankAddress, client)
+	tnt721TokenBankContract, err := ct.NewTNT721TokenBank(tnt721TokenBankAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authAccount0 := mainchainSelectAccount(client, 0)
-	tx, err := instanceTNT721VoucherContract.Mint(authAccount0, user, tokenID, tokenID.String())
+	authAccount0 := mainchainSelectAccount(mainchainClient, 0)
+	_, err = tnt721VoucherContract.Mint(authAccount0, sender, tokenID, tokenID.String())
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Lock tx hash is", tx.Hash().Hex())
-	authUser := mainchainSelectAccount(client, 1)
-	tx, err = instanceTNT721VoucherContract.Approve(authUser, tnt721TokenBankAddress, tokenID)
+	fmt.Printf("Mainchain TNT721 contract address: %v\n", tnt721ContractAddress)
+	// fmt.Printf("Mint TNT721 tx hash (Mainchain): %v\n", tx.Hash().Hex())
+	time.Sleep(12 * time.Second) // This is needed otherwise the "Approve tx" below might fail
+	// authUser := mainchainSelectAccount(client, 1)
+	// tx, err = tnt721VoucherContract.SetApprovalForAll(authUser, tnt721TokenBankAddress, true)
+	authUser := mainchainSelectAccount(mainchainClient, 1)
+	_, err = tnt721VoucherContract.Approve(authUser, tnt721TokenBankAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//fmt.Println(tx.Hash().Hex())
-	authUser = mainchainSelectAccount(client, 1)
-	//
-	firstOnwer, _ := instanceTNT721VoucherContract.OwnerOf(nil, tokenID)
-	fmt.Println("The mainchain owner of ", tokenID, "is", firstOnwer)
-	//
-	LockTx, err := instanceTNT721TokenBank.LockTokens(authUser, subchainID, tnt721VoucherContractAddress, user, tokenID)
+	// fmt.Printf("Approve TNT721 tx hash (Mainchain): %v\n", tx.Hash().Hex())
+
+	mainchainNFTOwner, _ := tnt721VoucherContract.OwnerOf(nil, tokenID)
+	if mainchainNFTOwner != sender {
+		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", mainchainNFTOwner, sender)
+	}
+	fmt.Printf("Mainchain NFT sender : %v, tokenID: %v\n", sender, tokenID)
+	fmt.Printf("Subchain NFT receiver: %v, tokenID: %v\n", receiver, tokenID)
+
+	authUser = mainchainSelectAccount(mainchainClient, 1)
+	lockTx, err := tnt721TokenBankContract.LockTokens(authUser, subchainID, tnt721VoucherContractAddress, receiver, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	receipt, err := client.TransactionReceipt(context.Background(), LockTx.Hash())
+
+	fmt.Printf("TNT721 Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
+	fmt.Printf("Transfering TNT721 NFT (tokenID: %v) from the Mainchain to Subchain %v...\n\n", tokenID, subchainID)
+
+	receipt, err := mainchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
 	if receipt.Status != 1 {
-		fmt.Println("lock error")
+		fmt.Printf("lock error\n")
 		return
 	}
-	//
-	SecondOnwer, _ := instanceTNT721VoucherContract.OwnerOf(nil, tokenID)
-	fmt.Println("The mainchain owner of ", tokenID, "is", SecondOnwer)
-	fmt.Println("---------Detecting---------")
-	//
-	// subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
-	// fromHeight, _ := subchainClient.BlockNumber(context.Background())
-	// receipt, err := client.TransactionReceipt(context.Background(), LockTx.Hash())
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// if receipt.Status != 1 {
-	// 	fmt.Println("lock error")
-	// }
-	fmt.Println("lock tx hash is ", LockTx.Hash().Hex())
-	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
+
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	var subchainVoucherAddress common.Address
 	for {
-		time.Sleep(2 * time.Second)
+		time.Sleep(6 * time.Second)
 		toHeight, _ := subchainClient.BlockNumber(context.Background())
-		result := getSubchainTNT721VoucherMintLogs(int(fromHeight), int(toHeight), subchainTNT721TokenBankAddress, user)
+		result := getSubchainTNT721VoucherMintLogs(int(fromHeight), int(toHeight), subchainTNT721TokenBankAddress, receiver)
 		if result != nil {
 			subchainVoucherAddress = *result
 			break
 		}
+		fmt.Printf("waiting for cross-chain transfer completion (scanning Subchain from height %v to %v)...\n", fromHeight, toHeight)
 	}
-	fmt.Println("Subchain TNT721 Voucher contract address is ", subchainVoucherAddress)
-	instanceSubchainVoucherAddress, _ := ct.NewTNT721VoucherContract(subchainVoucherAddress, subchainClient)
-	//
-	thirdOnwer, _ := instanceSubchainVoucherAddress.OwnerOf(nil, tokenID)
-	fmt.Println("The subchain owner of ", tokenID, "is", thirdOnwer)
-	//
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	mainchainNFTOwner, _ = tnt721VoucherContract.OwnerOf(nil, tokenID)
+	if mainchainNFTOwner != tnt721TokenBankAddress {
+		log.Fatalf("mainchain token owner should be the TNT721TokenBank contract: %v vs. %v\n", mainchainNFTOwner, tnt721TokenBankAddress)
+	}
+
+	subchainVoucherContract, _ := ct.NewTNT721VoucherContract(subchainVoucherAddress, subchainClient)
+	subchainNFTOwner, _ := subchainVoucherContract.OwnerOf(nil, tokenID)
+	if subchainNFTOwner != receiver {
+		log.Fatalf("subchain token owner and receiver mismatch: %v vs. %v\n", subchainNFTOwner, receiver)
+	}
+
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v\n", subchainVoucherAddress)
+	fmt.Printf("Mainchain NFT owner: %v, tokenID: %v (Note: the mainchain NFT owner is the TNT721TokenBank contract since the NFT has been locked)\n", mainchainNFTOwner, tokenID)
+	fmt.Printf("Subchain NFT owner : %v, tokenID: %v\n\n", subchainNFTOwner, tokenID)
 }
+
 func SubchainTNT721Burn(tokenID *big.Int) {
-	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Preparing for TNT721 cross-chain transfer...\n")
+
+	sender := accountList[1].fromAddress
+	receiver := accountList[6].fromAddress
+
+	subchainTNT721TokenBank, _ := ct.NewTNT721TokenBank(subchainTNT721TokenBankAddress, subchainClient)
+
 	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
-	subchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, client)
-	subchainTNT721TokenBankinstance, err := ct.NewTNT721TokenBank(subchainTNT721TokenBankAddress, client)
+	subchainTNT721Voucher, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, subchainClient)
+	authUser := subchainSelectAccount(subchainClient, 1)
+	_, err = subchainTNT721Voucher.Approve(authUser, subchainTNT721TokenBankAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	authUser := subchainSelectAccount(client, 1)
-	tx, err := subchainTNT721VoucherInstance.Approve(authUser, subchainTNT721TokenBankAddress, tokenID)
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v\n", subchainTNT721VoucherAddress)
+
+	subchainNFTOwner, _ := subchainTNT721Voucher.OwnerOf(nil, tokenID)
+	if subchainNFTOwner != sender {
+		log.Fatalf("subchain token owner and sender mismatch: %v vs. %v\n", subchainNFTOwner, sender)
+	}
+	fmt.Printf("Subchain NFT Voucher sender: %v, tokenID: %v\n", sender, tokenID)
+	fmt.Printf("Mainchain NFT receiver     : %v, tokenID: %v\n", receiver, tokenID)
+
+	mainchainTNT721ContractAddress := tnt721VoucherContractAddress
+	mainchainTNT721Contract, _ := ct.NewTNT721VoucherContract(mainchainTNT721ContractAddress, mainchainClient)
+	mainchainTNT721Owner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
+
+	authUser = subchainSelectAccount(subchainClient, 1)
+	burnTx, err := subchainTNT721TokenBank.BurnVouchers(authUser, subchainTNT721VoucherAddress, receiver, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//
-	firstOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The subchain owner of ", tokenID, "is", firstOnwer)
-	//
-	authUser = subchainSelectAccount(client, 1)
-	tx, err = subchainTNT721TokenBankinstance.BurnVouchers(authUser, subchainTNT721VoucherAddress, accountList[6].fromAddress, tokenID)
-	if err != nil {
-		log.Fatal(err)
-	}
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -125,53 +156,72 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 		fmt.Println("burn error")
 		return
 	}
-	fmt.Println("burn tx hash is", tx.Hash().Hex())
-	//
-	secondOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
-	fmt.Println("---------Detecting---------")
-	//
-	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
-	mainchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(tnt721VoucherContractAddress, mainchainClient)
-	result, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("the mainchain owner of ", tokenID, "is", result)
+
+	fmt.Printf("TNT721 Token Voucher burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
+	fmt.Printf("Burn TNT721 NFT Voucher (tokenID: %v) on Subchain %v to recover the authentic token on the Mainchain...\n\n", tokenID, subchainID)
+
 	for {
-		time.Sleep(2 * time.Second)
-		new_result, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-		if new_result != result {
-			result = new_result
+		time.Sleep(6 * time.Second)
+		updatedOwner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
+		if updatedOwner != mainchainTNT721Owner {
 			break
 		}
+		fmt.Printf("waiting for cross-chain transfer completion...\n")
 	}
-	fmt.Println("the mainchain owner of ", tokenID, "is", result)
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	mainchainNFTOwner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
+	if mainchainNFTOwner != receiver {
+		log.Fatalf("mainchain token owner and receiver mismatch: %v vs. %v\n", mainchainNFTOwner, receiver)
+	}
+
+	fmt.Printf("Mainchain TNT721 Voucher contract address: %v\n", mainchainTNT721ContractAddress)
+	fmt.Printf("Mainchain NFT owner: %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
 }
+
 func SubchainTNT721Lock(tokenID *big.Int) {
-	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
-	subchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, client)
-	subchainTNT721TokenBankinstance, err := ct.NewTNT721TokenBank(subchainTNT721TokenBankAddress, client)
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth := subchainSelectAccount(client, 1)
+	fmt.Printf("Preparing for TNT721 cross-chain transfer...\n")
+
+	sender := accountList[1].fromAddress
+	receiver := accountList[6].fromAddress
+
+	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7") // FIXME: should instantiate a mock TNT721 instead of using the Voucher contract (which causes confusion)
+	subchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, subchainClient)
+	subchainTNT721TokenBankinstance, err := ct.NewTNT721TokenBank(subchainTNT721TokenBankAddress, subchainClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth := subchainSelectAccount(subchainClient, 1)
 	_, err = subchainTNT721VoucherInstance.Approve(auth, subchainTNT721TokenBankAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	//
-	firstOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The subchain owner of ", tokenID, "is", firstOnwer)
-	//
-	auth = subchainSelectAccount(client, 1)
-	tx, err := subchainTNT721TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT721VoucherAddress, accountList[6].fromAddress, tokenID)
+
+	subchainNFTOwner, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
+	if subchainNFTOwner != sender {
+		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", subchainNFTOwner, sender)
+	}
+	fmt.Printf("Subchain NFT sender   : %v, tokenID: %v\n", sender, tokenID)
+	fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n", receiver, tokenID)
+
+	auth = subchainSelectAccount(subchainClient, 1)
+	lockTx, err := subchainTNT721TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT721VoucherAddress, accountList[6].fromAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("lock tx hash is", tx.Hash().Hex())
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+
+	fmt.Printf("TNT721 Token Lock tx hash (Subchain): %v\n", lockTx.Hash().Hex())
+	fmt.Printf("Transfering TNT721 NFT (tokenID: %v) from Subchain %v to the Mainchain...\n\n", tokenID, subchainID)
+
+	receipt, err := subchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -179,12 +229,9 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 		fmt.Println("burn error")
 		return
 	}
-	//
-	secondOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
-	fmt.Println("---------Detecting---------")
-	//
-	mainchainClient, _ := ethclient.Dial("http://localhost:18888/rpc")
+
+	// secondOnwer, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
+	// fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
 
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	var mainchainVoucherAddress common.Address
@@ -196,33 +243,69 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 			mainchainVoucherAddress = *result
 			break
 		}
+		fmt.Printf("waiting for cross-chain transfer completion (scanning Mainchain from height %v to %v)...\n", fromHeight, toHeight)
 	}
-	fmt.Println("Mainchain TNT721 Voucher Contract Address is", mainchainVoucherAddress)
-	mainchainTNT721VoucherInstance, err := ct.NewTNT721VoucherContract(mainchainVoucherAddress, mainchainClient)
-	result, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The mainchain token owner of ", tokenID, "is", result)
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	subchainNFTOwner, _ = subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
+	if subchainNFTOwner != subchainTNT721TokenBankAddress {
+		log.Fatalf("subchain token owner should be the TNT721TokenBank contract: %v vs. %v\n", subchainNFTOwner, subchainTNT721TokenBankAddress)
+	}
+
+	mainchainVoucherContract, _ := ct.NewTNT721VoucherContract(mainchainVoucherAddress, mainchainClient)
+	mainchainNFTOwner, _ := mainchainVoucherContract.OwnerOf(nil, tokenID)
+	if mainchainNFTOwner != receiver {
+		log.Fatalf("mainchain token owner and receiver mismatch: %v vs. %v\n", mainchainNFTOwner, receiver)
+	}
+
+	fmt.Printf("Mainchain TNT721 Voucher contract address: %v\n", mainchainVoucherAddress)
+	fmt.Printf("Subchain NFT owner : %v, tokenID: %v (Note: the subchain NFT owner is the TNT721TokenBank contract since the NFT has been locked)\n", subchainNFTOwner, tokenID)
+	fmt.Printf("Mainchain NFT owner: %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
 }
+
 func MainchainTNT721Burn(tokenID *big.Int) {
-	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Preparing for TNT721 cross-chain transfer...\n")
+
+	sender := accountList[6].fromAddress
+	receiver := accountList[1].fromAddress
+
+	mainchainTNT721TokenBank, _ := ct.NewTNT721TokenBank(tnt721TokenBankAddress, mainchainClient)
+
 	mainchainTNT721VoucherAddr := common.HexToAddress("0x20B2897c4f95df71a5a8A62Ae812f5843AA92E25")
-	mainchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(mainchainTNT721VoucherAddr, client)
-	auth := mainchainSelectAccount(client, 6)
-	_, err = mainchainTNT721VoucherInstance.Approve(auth, tnt721TokenBankAddress, tokenID)
+	mainchainTNT721VoucherContract, _ := ct.NewTNT721VoucherContract(mainchainTNT721VoucherAddr, mainchainClient)
+	auth := mainchainSelectAccount(mainchainClient, 6)
+	_, err = mainchainTNT721VoucherContract.Approve(auth, tnt721TokenBankAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	mainchainTNT721TokenBankInstance, _ := ct.NewTNT721TokenBank(tnt721TokenBankAddress, client)
+	fmt.Printf("Mainchain TNT721 Voucher contract address: %v\n", mainchainTNT721VoucherAddr)
+
+	mainchainNFTOwner, _ := mainchainTNT721VoucherContract.OwnerOf(nil, tokenID)
+	if mainchainNFTOwner != sender {
+		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", mainchainNFTOwner, sender)
+	}
+	fmt.Printf("Mainchain NFT Voucher sender: %v, tokenID: %v\n", sender, tokenID)
+	fmt.Printf("Subchain NFT receiver       : %v, tokenID: %v\n", receiver, tokenID)
+
+	subchainTNT721ContractAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
+	subchainTNT721Contract, _ := ct.NewTNT721VoucherContract(subchainTNT721ContractAddress, subchainClient)
+	subchainTNT721Owner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
+
 	//
-	firstOnwer, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The mainchain owner of ", tokenID, "is", firstOnwer)
-	//
-	auth = mainchainSelectAccount(client, 6)
-	tx, err := mainchainTNT721TokenBankInstance.BurnVouchers(auth, mainchainTNT721VoucherAddr, accountList[1].fromAddress, tokenID)
-	fmt.Println("burn tx hash is", tx.Hash().Hex())
-	receipt, err := client.TransactionReceipt(context.Background(), tx.Hash())
+	auth = mainchainSelectAccount(mainchainClient, 6)
+	burnTx, err := mainchainTNT721TokenBank.BurnVouchers(auth, mainchainTNT721VoucherAddr, accountList[1].fromAddress, tokenID)
+	if err != nil {
+		log.Fatal(err)
+	}
+	receipt, err := mainchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -230,23 +313,25 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 		fmt.Println("burn error")
 		return
 	}
-	//
-	secondOnwer, _ := mainchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The mainchain owner of ", tokenID, "is", secondOnwer)
-	fmt.Println("---------Detecting---------")
-	//
-	subchainClient, _ := ethclient.Dial("http://localhost:19888/rpc")
-	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
-	subchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, subchainClient)
-	result, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-	fmt.Println("The subchain owner of ", tokenID, " is", result)
+
+	fmt.Printf("TNT721 Token Voucher burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
+	fmt.Printf("Burn TNT721 NFT Voucher (tokenID: %v) on the Mainchian to recover the authentic token on Subchain %v...\n\n", tokenID, subchainID)
+
 	for {
-		time.Sleep(2 * time.Second)
-		new_result, _ := subchainTNT721VoucherInstance.OwnerOf(nil, tokenID)
-		if new_result != result {
-			result = new_result
+		time.Sleep(6 * time.Second)
+		updatedOwner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
+		if updatedOwner != subchainTNT721Owner {
 			break
 		}
+		fmt.Printf("waiting for cross-chain transfer completion...\n")
 	}
-	fmt.Println("The subchain owner of ", tokenID, " is", result)
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	subchainNFTOwner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
+	if subchainNFTOwner != receiver {
+		log.Fatalf("subchain token owner and receiver mismatch: %v vs. %v\n", mainchainNFTOwner, receiver)
+	}
+
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v\n", subchainTNT721ContractAddress)
+	fmt.Printf("Subchain NFT owner: %v, tokenID: %v\n\n", subchainNFTOwner, tokenID)
 }

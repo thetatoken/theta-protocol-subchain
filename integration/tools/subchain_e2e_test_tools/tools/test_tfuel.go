@@ -101,7 +101,7 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	}
 
 	fmt.Printf("TFuel Voucher Burn tx hash (Subchain): %v\n", tx.Hash().Hex())
-	fmt.Printf("Transfering %v TFuelWei from Subchain %v back to Mainchain...\n\n", burnAmount, subchainID)
+	fmt.Printf("Burn %v TFuelWei on Subchain %v to recover authentic TFuel on the Mainchain...\n\n", burnAmount, subchainID)
 
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	for {

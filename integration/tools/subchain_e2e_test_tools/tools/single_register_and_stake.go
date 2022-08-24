@@ -80,12 +80,11 @@ func init() {
 	map1 = append(map1, "8888888888888888888888888888888888888888888888888888888888888888")
 	map1 = append(map1, "9999999999999999999999999999999999999999999999999999999999999999")
 	map1 = append(map1, "1000000000000000000000000000000000000000000000000000000000000000")
-
 	map1 = append(map1, "a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d") //10
 	map1 = append(map1, "d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013") //11
 	map1 = append(map1, "83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d")
 
-	fmt.Println("-------------------------------------------------------- List of Accounts -------------------------------------------------------")
+	// fmt.Println("-------------------------------------------------------- List of Accounts -------------------------------------------------------")
 	for _, value := range map1 {
 
 		privateKey, err := crypto.HexToECDSA(value)
@@ -102,39 +101,11 @@ func init() {
 		}
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
-		fmt.Println("Private key:", value, "address:", fromAddress)
+		// fmt.Println("Private key:", value, "address:", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
-	fmt.Println("---------------------------------------------------------------------------------------------------------------------------------")
-	fmt.Println("")
-
-	// var dec18 = new(big.Int)
-	// dec18.SetString("1000000000000000000", 10)
-	// //amount := new(big.Int).Mul(dec18, big.NewInt(200000))
-	// client, err := ethclient.Dial("http://localhost:18888/rpc")
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// nonce, err := client.PendingNonceAt(context.Background(), accountList[9].fromAddress)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"thetacli.Send","params":[{"chain_id":"privatenet", "from":"%v", "to":"%v", "thetawei":"9900000", "tfuelwei":"88000000", "fee":"100000000", "sequence":"%v", "async":true}],"id":1}`, accountList[9].fromAddress, accountList[10].fromAddress, fmt.Sprintf("%d", nonce))
-	// var jsonData = []byte(queryStr)
-
-	// request, err := http.NewRequest("POST", "http://localhost:18888/rpc", bytes.NewBuffer(jsonData))
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// request.Header.Set("Content-Type", "application/json")
-
-	// client1 := &http.Client{}
-	// response, err := client1.Do(request)
-	// if err != nil {
-	// 	log.Fatalf("response error : %v", err)
-	// }
-	// defer response.Body.Close()
-	// fmt.Println(response)
+	// fmt.Println("---------------------------------------------------------------------------------------------------------------------------------")
+	// fmt.Println("")
 }
 
 func mainchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
