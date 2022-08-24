@@ -57,7 +57,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", mainchainNFTOwner, sender)
 	}
 	fmt.Printf("Mainchain NFT sender : %v, tokenID: %v\n", sender, tokenID)
-	fmt.Printf("Subchain NFT receiver: %v, tokenID: %v\n", receiver, tokenID)
+	fmt.Printf("Subchain NFT receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
 	authUser = mainchainSelectAccount(mainchainClient, 1)
 	lockTx, err := tnt721TokenBankContract.LockTokens(authUser, subchainID, tnt721VoucherContractAddress, receiver, tokenID)
@@ -137,7 +137,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 		log.Fatalf("subchain token owner and sender mismatch: %v vs. %v\n", subchainNFTOwner, sender)
 	}
 	fmt.Printf("Subchain NFT Voucher sender: %v, tokenID: %v\n", sender, tokenID)
-	fmt.Printf("Mainchain NFT receiver     : %v, tokenID: %v\n", receiver, tokenID)
+	fmt.Printf("Mainchain NFT receiver     : %v, tokenID: %v\n\n", receiver, tokenID)
 
 	mainchainTNT721ContractAddress := tnt721VoucherContractAddress
 	mainchainTNT721Contract, _ := ct.NewTNT721VoucherContract(mainchainTNT721ContractAddress, mainchainClient)
@@ -210,7 +210,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", subchainNFTOwner, sender)
 	}
 	fmt.Printf("Subchain NFT sender   : %v, tokenID: %v\n", sender, tokenID)
-	fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n", receiver, tokenID)
+	fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
 	auth = subchainSelectAccount(subchainClient, 1)
 	lockTx, err := subchainTNT721TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT721VoucherAddress, accountList[6].fromAddress, tokenID)
@@ -236,7 +236,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	var mainchainVoucherAddress common.Address
 	for {
-		time.Sleep(2 * time.Second)
+		time.Sleep(6 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
 		result := getMainchainTNT721VoucherMintLogs(int(fromHeight), int(toHeight), tnt721TokenBankAddress, accountList[6].fromAddress)
 		if result != nil {
@@ -293,7 +293,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", mainchainNFTOwner, sender)
 	}
 	fmt.Printf("Mainchain NFT Voucher sender: %v, tokenID: %v\n", sender, tokenID)
-	fmt.Printf("Subchain NFT receiver       : %v, tokenID: %v\n", receiver, tokenID)
+	fmt.Printf("Subchain NFT receiver       : %v, tokenID: %v\n\n", receiver, tokenID)
 
 	subchainTNT721ContractAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
 	subchainTNT721Contract, _ := ct.NewTNT721VoucherContract(subchainTNT721ContractAddress, subchainClient)
@@ -315,7 +315,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	}
 
 	fmt.Printf("TNT721 Token Voucher burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
-	fmt.Printf("Burn TNT721 NFT Voucher (tokenID: %v) on the Mainchian to recover the authentic token on Subchain %v...\n\n", tokenID, subchainID)
+	fmt.Printf("Burn TNT721 NFT Voucher (tokenID: %v) on the Mainchain to recover the authentic token on Subchain %v...\n\n", tokenID, subchainID)
 
 	for {
 		time.Sleep(6 * time.Second)

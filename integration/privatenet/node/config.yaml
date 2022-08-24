@@ -6,10 +6,10 @@ p2p:
 rpc:
   enabled: true
 log:
-  #levels: "*:info"
-  levels: "*:debug"
+  levels: "*:info"
+  #levels: "*:debug"
 consensus:
-  minBlockInterval: 3
+  minBlockInterval: 1
 subchain:
   mainchainEthRpcURL: "http://localhost:18888/rpc"
   subchainEthRpcURL: "http://localhost:19888/rpc"
