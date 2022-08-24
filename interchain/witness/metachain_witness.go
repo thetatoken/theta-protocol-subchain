@@ -52,16 +52,16 @@ type MetachainWitness struct {
 	lastQueryedMainChainHeight *big.Int
 
 	// The subchain
-	subchainID                    *big.Int
-	subchainEthRpcUrl             string
-	subchainEthRpcClient          *ec.Client
-	subchainBlockHeight           *big.Int
-	subchainTFuelTokenBankAddr    common.Address
-	subchainTFuelTokenBankAddress *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the subchain
-	subchainTNT20TokenBankAddr    common.Address
-	subchainTNT20TokenBank        *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the subchain
-	subchainTNT721TokenBankAddr   common.Address
-	subchainTNT721TokenBank       *scta.TNT721TokenBank
+	subchainID                  *big.Int
+	subchainEthRpcUrl           string
+	subchainEthRpcClient        *ec.Client
+	subchainBlockHeight         *big.Int
+	subchainTFuelTokenBankAddr  common.Address
+	subchainTFuelTokenBank      *scta.TFuelTokenBank // the TFuelTokenBank contract deployed on the subchain
+	subchainTNT20TokenBankAddr  common.Address
+	subchainTNT20TokenBank      *scta.TNT20TokenBank // the TNT20TokenBank contract deployed on the subchain
+	subchainTNT721TokenBankAddr common.Address
+	subchainTNT721TokenBank     *scta.TNT721TokenBank
 
 	// Validator set
 	cacheMutex        *sync.Mutex // mutex to for validatorSetCache concurrent write protection
@@ -181,7 +181,7 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
 	}
 	mw.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
-	mw.subchainTFuelTokenBankAddress, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
+	mw.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
@@ -293,7 +293,8 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address, tnt721TokenBankAddr common.Address) {
 	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock)
 	if err == store.ErrKeyNotFound {
-		mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, common.Big0)
+		fromBlock = mw.getBlockScanStartingHeight() // set the proper fromBlock for the code-start scenario, i.e, bootstrapping a new validator
+		mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, fromBlock)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
@@ -305,6 +306,77 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 		logger.Panicf("failed to insert events into cache")
 	}
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
+}
+
+func (mw *MetachainWitness) getBlockScanStartingHeight() *big.Int {
+	updateHeight := big.NewInt(0).Set(common.BigMaxUint64)
+
+	eventTypes := []score.InterChainMessageEventType{
+		score.IMCEventTypeCrossChainTokenLockTFuel,
+		score.IMCEventTypeCrossChainTokenLockTNT20,
+		score.IMCEventTypeCrossChainTokenLockTNT721,
+		score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherBurnTNT721,
+	}
+
+	for _, eventType := range eventTypes {
+		height := mw.getMainchainMaxProcessedNonceUpdateHeight(eventType)
+		if height.Cmp(updateHeight) < 0 {
+			updateHeight.Set(height)
+		}
+
+		height = mw.getSubchainMaxProcessedNonceUpdateHeight(eventType)
+		if height.Cmp(updateHeight) < 0 {
+			updateHeight.Set(height)
+		}
+	}
+
+	return updateHeight
+}
+
+func (mw *MetachainWitness) getMainchainMaxProcessedNonceUpdateHeight(icmeType score.InterChainMessageEventType) *big.Int {
+	updateHeight := big.NewInt(0)
+
+	switch icmeType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel:
+		updateHeight = mw.mainchainTFuelTokenBank.GetMaxProcessedTokenLockNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainTokenLockTNT20:
+		updateHeight = mw.mainchainTNT20TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainTokenLockTNT721:
+		updateHeight = mw.mainchainTNT721TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
+		updateHeight = mw.mainchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
+		updateHeight = mw.mainchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
+		updateHeight = mw.mainchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight()
+	default:
+		logger.Panicf("invalid event type") // should not happen
+	}
+	return updateHeight
+}
+
+func (mw *MetachainWitness) getSubchainMaxProcessedNonceUpdateHeight(icmeType score.InterChainMessageEventType) *big.Int {
+	updateHeight := big.NewInt(0)
+
+	switch icmeType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel:
+		updateHeight = mw.subchainTFuelTokenBank.GetMaxProcessedTokenLockNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainTokenLockTNT20:
+		updateHeight = mw.subchainTNT20TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainTokenLockTNT721:
+		updateHeight = mw.subchainTNT721TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
+		updateHeight = mw.subchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
+		updateHeight = mw.subchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight()
+	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
+		updateHeight = mw.subchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight()
+	default:
+		logger.Panicf("invalid event type") // should not happen
+	}
+	return updateHeight
 }
 
 func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID *big.Int) *big.Int {
