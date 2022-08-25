@@ -7,6 +7,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/result"
 	"github.com/thetatoken/theta/core"
+	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
 
 	scom "github.com/thetatoken/thetasubchain/common"
@@ -262,9 +263,14 @@ func adjustByOutputs(view *slst.StoreView, accounts map[string]*types.Account, o
 	}
 }
 
-func sanityCheckForGasPrice(gasPrice *big.Int, blockHeight uint64) bool {
+func sanityCheckForGasPrice(fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
+	ledger score.Ledger, valMgr score.ValidatorManager, gasPrice *big.Int, blockHeight uint64) bool {
 	if gasPrice == nil {
 		return false
+	}
+
+	if isWhitelistedOperation(fromAddr, contractAddr, calldata, ledger, valMgr) && gasPrice.Cmp(common.Big0) == 0 {
+		return true
 	}
 
 	minimumGasPrice := scom.GetMinimumGasPrice()
@@ -273,6 +279,55 @@ func sanityCheckForGasPrice(gasPrice *big.Int, blockHeight uint64) bool {
 	}
 
 	return true
+}
+
+// Allow subchain validators to vote for inter-chain events without gas fees
+func isWhitelistedOperation(fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
+	ledger score.Ledger, valMgr score.ValidatorManager) bool {
+
+	// check if the from address is a validator
+	validatorSet := getValidatorSet(ledger, valMgr)
+	validatorAddresses := getValidatorAddresses(validatorSet)
+	res := isAValidator(fromAddr, validatorAddresses)
+	if res.IsError() {
+		return false
+	}
+
+	// check if this tx is for inter-chain event voting
+	if !isVotingForInterchainEvents(contractAddr, calldata, ledger) {
+		return false
+	}
+
+	return true
+}
+
+func isVotingForInterchainEvents(contractAddr common.Address, calldata common.Bytes, ledger score.Ledger) bool {
+	if len(calldata) < 4 {
+		return false
+	}
+
+	whitelistedMethodSignatures := []string{}
+	if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,address,uint256,uint256,uint256)") // TFuelTokenBank.mintVouchers
+		// Note: TFuelTokenBank.unlockTokens is NOT whitelisted since it can only be called on the main chain
+	} else if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,string,string,uint8,address,uint256,uint256,uint256)") // TNT20TokenBank.mintVouchers
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "unlockTokens(uint256,string,address,uint256,uint256,uint256)")             // TNT20TokenBank.unlockTokens
+	} else if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,string,string,address,uint256,string,uint256,uint256)") // TNT721TokenBank.mintVouchers
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "unlockTokens(uint256,string,address,uint256,uint256,uint256)")              // TNT721TokenBank.unlockTokens
+	} else {
+		return false
+	}
+
+	for _, wms := range whitelistedMethodSignatures {
+		funcSelector := string(crypto.Keccak256(common.Bytes(wms))[:4])
+		if string(calldata[:4]) == funcSelector {
+			return true
+		}
+	}
+
+	return false
 }
 
 func sanityCheckForFee(fee types.Coins, blockHeight uint64) (minimumFee *big.Int, success bool) {

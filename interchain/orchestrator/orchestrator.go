@@ -150,9 +150,10 @@ func (oc *Orchestrator) Wait() {
 func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 	oc.ledger = ledger
 
-	subchainTFuelTokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
-	if subchainTFuelTokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
+	var err error
+	subchainTFuelTokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
+	if subchainTFuelTokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address\n")
 	}
 	oc.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
 	oc.subchainTFuelTokenBankAddress, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, oc.subchainEthRpcClient)
@@ -160,9 +161,9 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
 
-	subchainTNT20TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
-	if subchainTNT20TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	subchainTNT20TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
+	if subchainTNT20TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address\n")
 	}
 	oc.subchainTNT20TokenBankAddr = *subchainTNT20TokenBankAddr
 	oc.subchainTNT20TokenBank, err = scta.NewTNT20TokenBank(*subchainTNT20TokenBankAddr, oc.subchainEthRpcClient)
@@ -170,9 +171,9 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
 
-	subchainTNT721TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	subchainTNT721TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
+	if subchainTNT721TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address\n")
 	}
 	oc.subchainTNT721TokenBankAddr = *subchainTNT721TokenBankAddr
 	oc.subchainTNT721TokenBank, err = scta.NewTNT721TokenBank(*subchainTNT721TokenBankAddr, oc.subchainEthRpcClient)
@@ -475,7 +476,8 @@ func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bin
 	} else {
 		// eth_gasPrice returns a hardcoded nubmer for the mainchain, which could be much higher than min gasPrice required by the subchain
 		// TODO: parameterize the subchain ETH RPC service to suggest the proper gasPrice for different chains
-		gasPrice = big.NewInt(int64(scom.MinimumGasPrice) * 2)
+		// gasPrice = big.NewInt(int64(scom.MinimumGasPrice) * 2)
+		gasPrice = common.Big0
 	}
 
 	nonce, err := ecClient.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())

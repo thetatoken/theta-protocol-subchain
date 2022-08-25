@@ -159,35 +159,18 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 	return nil, fmt.Errorf("Failed to find a directly finalized ancestor block for %v", blockHash)
 }
 
-func (ledger *Ledger) GetTokenBankContractAddress(tokenType score.CrossChainTokenType) (*common.Address, error) {
-	db := ledger.state.DB()
-	store := kvstore.NewKVStore(db)
-
-	blockHash := ledger.chain.Root().Hash()
-
-	block, err := findBlock(store, blockHash)
-
-	if err != nil {
-		logger.Errorf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err)
-		return nil, err
-	}
-	if block == nil {
-		return nil, fmt.Errorf("block is nil for hash %v", blockHash.Hex())
-	}
-
-	stateRoot := block.BlockHeader.StateHash
-	storeView := slst.NewStoreView(block.Height, stateRoot, db)
+func (ledger *Ledger) GetTokenBankContractAddress(tokenType score.CrossChainTokenType) *common.Address {
+	storeView := ledger.state.Delivered()
 	switch tokenType {
 	case score.CrossChainTokenTypeTFuel:
-		return storeView.GetTFuelTokenBankContractAddress(), nil
+		return storeView.GetTFuelTokenBankContractAddress()
 	case score.CrossChainTokenTypeTNT20:
-		return storeView.GetTNT20TokenBankContractAddress(), nil
+		return storeView.GetTNT20TokenBankContractAddress()
 	case score.CrossChainTokenTypeTNT721:
-		return storeView.GetTNT721TokenBankContractAddress(), nil
+		return storeView.GetTNT721TokenBankContractAddress()
 	default:
-		return nil, nil
+		return nil
 	}
-
 }
 
 func findBlock(store store.Store, blockHash common.Hash) (*score.ExtendedBlock, error) {

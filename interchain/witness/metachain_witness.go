@@ -176,9 +176,10 @@ func (mw *MetachainWitness) Wait() {
 }
 
 func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
-	subchainTFuelTokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
-	if subchainTFuelTokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
+	var err error
+	subchainTFuelTokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
+	if subchainTFuelTokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address\n")
 	}
 	mw.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
 	mw.subchainTFuelTokenBankAddress, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
@@ -186,9 +187,9 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
 
-	subchainTNT20TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
-	if subchainTNT20TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	subchainTNT20TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
+	if subchainTNT20TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address\n")
 	}
 	mw.subchainTNT20TokenBankAddr = *subchainTNT20TokenBankAddr
 	mw.subchainTNT20TokenBank, err = scta.NewTNT20TokenBank(*subchainTNT20TokenBankAddr, mw.subchainEthRpcClient)
@@ -196,9 +197,9 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
 
-	subchainTNT721TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	subchainTNT721TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
+	if subchainTNT721TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address\n")
 	}
 	mw.subchainTNT721TokenBankAddr = *subchainTNT721TokenBankAddr
 	mw.subchainTNT721TokenBank, err = scta.NewTNT721TokenBank(*subchainTNT721TokenBankAddr, mw.subchainEthRpcClient)
