@@ -30,8 +30,8 @@ var (
 
 // TokenBankMetaData contains all meta data concerning the TokenBank contract.
 var TokenBankMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mainchainID_\",\"type\":\"uint256\"},{\"internalType\":\"contractChainRegistrar\",\"name\":\"chainRegistrar_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"mainchainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenLockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tokenLockVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenUnlockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherBurnNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"voucherBurnVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherMintNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b5060405161030838038061030883398101604081905261002f9161005e565b6001600081905591909155600280546001600160a01b0319166001600160a01b0390921691909117905561009b565b6000806040838503121561007157600080fd5b825160208401519092506001600160a01b038116811461009057600080fd5b809150509250929050565b61025e806100aa6000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80638883931e116100665780638883931e1461013b578063ca2075691461015b578063ccf187c71461017b578063f95627ac1461019b578063feaff052146101bb57600080fd5b8063073b9502146100985780631eb78737146100b4578063740cb7f8146100fb578063766f8fb01461011b575b600080fd5b6100a160015481565b6040519081526020015b60405180910390f35b6100e66100c2366004610206565b60096020908152600092835260408084209091529082529020805460029091015482565b604080519283526020830191909152016100ab565b6100a16101093660046101ed565b60066020526000908152604090205481565b6100a16101293660046101ed565b60009081526008602052604090205490565b6100a16101493660046101ed565b60036020526000908152604090205481565b6100a16101693660046101ed565b60056020526000908152604090205481565b6100a16101893660046101ed565b60046020526000908152604090205481565b6100a16101a93660046101ed565b60009081526007602052604090205490565b6100e66101c9366004610206565b600a6020908152600092835260408084209091529082529020805460029091015482565b6000602082840312156101ff57600080fd5b5035919050565b6000806040838503121561021957600080fd5b5050803592602090910135915056fea26469706673582212204462a9758566475416288dc6b96e2b97f1ff547890654b9da99f1ba7171e4ef764736f6c63430008070033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mainchainID_\",\"type\":\"uint256\"},{\"internalType\":\"contractChainRegistrar\",\"name\":\"chainRegistrar_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"mainchainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenLockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tokenLockVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenUnlockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherBurnNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"voucherBurnVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherMintNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonceUpdateHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonceUpdateHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b506040516103a43803806103a483398101604081905261002f9161005e565b6001600081905591909155600280546001600160a01b0319166001600160a01b0390921691909117905561009b565b6000806040838503121561007157600080fd5b825160208401519092506001600160a01b038116811461009057600080fd5b809150509250929050565b6102fa806100aa6000396000f3fe608060405234801561001057600080fd5b50600436106100a95760003560e01c80638883931e116100715780638883931e14610164578063a4495fd314610184578063ca20756914610197578063ccf187c7146101b7578063f95627ac146101d7578063feaff052146101f757600080fd5b8063073b9502146100ae5780631eb78737146100ca57806345c216a214610111578063740cb7f814610124578063766f8fb014610144575b600080fd5b6100b760015481565b6040519081526020015b60405180910390f35b6100fc6100d83660046102a2565b60096020908152600092835260408084209091529082529020805460029091015482565b604080519283526020830191909152016100c1565b6100b761011f366004610289565b610229565b6100b7610132366004610289565b60066020526000908152604090205481565b6100b7610152366004610289565b60009081526008602052604090205490565b6100b7610172366004610289565b60036020526000908152604090205481565b6100b7610192366004610289565b610259565b6100b76101a5366004610289565b60056020526000908152604090205481565b6100b76101c5366004610289565b60046020526000908152604090205481565b6100b76101e5366004610289565b60009081526007602052604090205490565b6100fc6102053660046102a2565b600a6020908152600092835260408084209091529082529020805460029091015482565b600081815260086020526040812054610243575043919050565b5060009081526008602052604090206001015490565b600081815260076020526040812054610273575043919050565b5060009081526007602052604090206001015490565b60006020828403121561029b57600080fd5b5035919050565b600080604083850312156102b557600080fd5b5050803592602090910135915056fea2646970667358221220860319efd3315eaeab39ef6b401124ce094378a86fa12d41df72070555b2271c64736f6c63430008070033",
 }
 
 // TokenBankABI is the input ABI used to generate the binding from.
@@ -232,6 +232,37 @@ func (_TokenBank *TokenBankCallerSession) GetMaxProcessedTokenLockNonce(chainID 
 	return _TokenBank.Contract.GetMaxProcessedTokenLockNonce(&_TokenBank.CallOpts, chainID)
 }
 
+// GetMaxProcessedTokenLockNonceUpdateHeight is a free data retrieval call binding the contract method 0xa4495fd3.
+//
+// Solidity: function getMaxProcessedTokenLockNonceUpdateHeight(uint256 chainID) view returns(uint256)
+func (_TokenBank *TokenBankCaller) GetMaxProcessedTokenLockNonceUpdateHeight(opts *bind.CallOpts, chainID *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getMaxProcessedTokenLockNonceUpdateHeight", chainID)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetMaxProcessedTokenLockNonceUpdateHeight is a free data retrieval call binding the contract method 0xa4495fd3.
+//
+// Solidity: function getMaxProcessedTokenLockNonceUpdateHeight(uint256 chainID) view returns(uint256)
+func (_TokenBank *TokenBankSession) GetMaxProcessedTokenLockNonceUpdateHeight(chainID *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetMaxProcessedTokenLockNonceUpdateHeight(&_TokenBank.CallOpts, chainID)
+}
+
+// GetMaxProcessedTokenLockNonceUpdateHeight is a free data retrieval call binding the contract method 0xa4495fd3.
+//
+// Solidity: function getMaxProcessedTokenLockNonceUpdateHeight(uint256 chainID) view returns(uint256)
+func (_TokenBank *TokenBankCallerSession) GetMaxProcessedTokenLockNonceUpdateHeight(chainID *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetMaxProcessedTokenLockNonceUpdateHeight(&_TokenBank.CallOpts, chainID)
+}
+
 // GetMaxProcessedVoucherBurnNonce is a free data retrieval call binding the contract method 0x766f8fb0.
 //
 // Solidity: function getMaxProcessedVoucherBurnNonce(uint256 chainID) view returns(uint256)
@@ -261,6 +292,37 @@ func (_TokenBank *TokenBankSession) GetMaxProcessedVoucherBurnNonce(chainID *big
 // Solidity: function getMaxProcessedVoucherBurnNonce(uint256 chainID) view returns(uint256)
 func (_TokenBank *TokenBankCallerSession) GetMaxProcessedVoucherBurnNonce(chainID *big.Int) (*big.Int, error) {
 	return _TokenBank.Contract.GetMaxProcessedVoucherBurnNonce(&_TokenBank.CallOpts, chainID)
+}
+
+// GetMaxProcessedVoucherBurnNonceUpdateHeight is a free data retrieval call binding the contract method 0x45c216a2.
+//
+// Solidity: function getMaxProcessedVoucherBurnNonceUpdateHeight(uint256 chainID) view returns(uint256)
+func (_TokenBank *TokenBankCaller) GetMaxProcessedVoucherBurnNonceUpdateHeight(opts *bind.CallOpts, chainID *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getMaxProcessedVoucherBurnNonceUpdateHeight", chainID)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetMaxProcessedVoucherBurnNonceUpdateHeight is a free data retrieval call binding the contract method 0x45c216a2.
+//
+// Solidity: function getMaxProcessedVoucherBurnNonceUpdateHeight(uint256 chainID) view returns(uint256)
+func (_TokenBank *TokenBankSession) GetMaxProcessedVoucherBurnNonceUpdateHeight(chainID *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetMaxProcessedVoucherBurnNonceUpdateHeight(&_TokenBank.CallOpts, chainID)
+}
+
+// GetMaxProcessedVoucherBurnNonceUpdateHeight is a free data retrieval call binding the contract method 0x45c216a2.
+//
+// Solidity: function getMaxProcessedVoucherBurnNonceUpdateHeight(uint256 chainID) view returns(uint256)
+func (_TokenBank *TokenBankCallerSession) GetMaxProcessedVoucherBurnNonceUpdateHeight(chainID *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetMaxProcessedVoucherBurnNonceUpdateHeight(&_TokenBank.CallOpts, chainID)
 }
 
 // MainchainID is a free data retrieval call binding the contract method 0x073b9502.
