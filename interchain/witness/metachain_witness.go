@@ -291,10 +291,12 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,
 	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address, tnt721TokenBankAddr common.Address) {
-	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock)
+	// mw.getBlockScanStartingHeight(queriedChainID) // testing code
+
+	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID)
 	if err == store.ErrKeyNotFound {
 		fromBlock = mw.getBlockScanStartingHeight(queriedChainID) // set the proper fromBlock for the code-start scenario, i.e, bootstrapping a new validator
-		mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, fromBlock)
+		mw.witnessState.setLastQueryedHeightForType(queriedChainID, fromBlock)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
@@ -305,7 +307,7 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	if err != nil { // should not happen
 		logger.Panicf("failed to insert events into cache")
 	}
-	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
+	mw.witnessState.setLastQueryedHeightForType(queriedChainID, toBlock)
 }
 
 func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) *big.Int {
@@ -324,9 +326,9 @@ func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) 
 		var height *big.Int
 
 		if queriedChainID.Cmp(mw.mainchainID) == 0 {
-			height = mw.getMainchainMaxProcessedNonceUpdateHeight(eventType)
+			height = mw.getMainchainMaxProcessedNonceEventHeight(eventType)
 		} else if queriedChainID.Cmp(mw.subchainID) == 0 {
-			height = mw.getSubchainMaxProcessedNonceUpdateHeight(eventType)
+			height = mw.getSubchainMaxProcessedNonceEventHeight(eventType)
 		} else {
 			logger.Panicf("invalid queriedChainID") // should not happen
 		}
@@ -336,62 +338,147 @@ func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) 
 		}
 	}
 
-	logger.Infof("Mainchain block scanning starting height: %v", updateHeight)
+	startHeight := big.NewInt(0).Set(updateHeight)
+	margin := big.NewInt(5)
+	if startHeight.Cmp(margin) > 0 {
+		startHeight = big.NewInt(0).Sub(startHeight, margin)
+	} else {
+		startHeight = common.Big0
+	}
 
-	return updateHeight
+	logger.Infof("Block scanning starting height for chain %v: %v (nonce updateHeight: %v)", queriedChainID, startHeight, updateHeight)
+
+	return startHeight
 }
 
-func (mw *MetachainWitness) getMainchainMaxProcessedNonceUpdateHeight(icmeType score.InterChainMessageEventType) *big.Int {
-	var updateHeight *big.Int
+func (mw *MetachainWitness) getMainchainMaxProcessedNonceEventHeight(icmeType score.InterChainMessageEventType) *big.Int {
+	var maxProcessedNonce *big.Int
+	var eventHeight *big.Int
 	var err error
 
+	// For mainchain -> subchain asset transfers, the "max processed nonce" (for each event type) is recorded on the subchain side.
+	// Yet the height for the corresponding event is recorded on the mainchain. Hence we get the "max processed nonce" from the subchain
+	// and use it to lookup the event height on the mainchain.
 	switch icmeType {
 	case score.IMCEventTypeCrossChainTokenLockTFuel:
-		updateHeight, err = mw.mainchainTFuelTokenBank.GetMaxProcessedTokenLockNonceUpdateHeight(nil, mw.mainchainID)
+		maxProcessedNonce, err = mw.subchainTFuelTokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTFuelTokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainTokenLockTNT20:
-		updateHeight, err = mw.mainchainTNT20TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight(nil, mw.mainchainID)
+		maxProcessedNonce, err = mw.subchainTNT20TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT20TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainTokenLockTNT721:
-		updateHeight, err = mw.mainchainTNT721TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight(nil, mw.mainchainID)
+		maxProcessedNonce, err = mw.subchainTNT721TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
-		updateHeight, err = mw.mainchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight(nil, mw.mainchainID)
+		// Note: TFuelVoucherBurn is not allowed on the Mainchain so it is safe to return the latest block height
+		maxProcessedNonce = common.Big0
+		h, _ := mw.mainchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
 	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
-		updateHeight, err = mw.mainchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight(nil, mw.mainchainID)
+		maxProcessedNonce, err = mw.subchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT20TokenBank.GetVoucherBurnEventHeight(nil, mw.subchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
-		updateHeight, err = mw.mainchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight(nil, mw.mainchainID)
+		maxProcessedNonce, err = mw.subchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT721TokenBank.GetVoucherBurnEventHeight(nil, mw.subchainID, maxProcessedNonce)
 	default:
-		logger.Panicf("invalid event type") // should not happen
+		logger.Panicf("invalid event type: %v", icmeType) // should not happen
 	}
 	if err != nil {
 		logger.Warnf("Failed to get the update height for max processed nonce on the main chain for event type %v: %v", icmeType, err)
 	}
 
-	return updateHeight
+	if maxProcessedNonce == nil || eventHeight == nil {
+		eventHeight = big.NewInt(0)
+	} else if maxProcessedNonce.Cmp(common.Big0) == 0 {
+		// no event of the current icmeType has ever been processed, hence it is safe to scan from the current block height
+		h, _ := mw.mainchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
+	}
+
+	logger.Infof("On the Mainchain, event type: %v, max processed nonce: %v, update height: %v", icmeType, maxProcessedNonce, eventHeight)
+
+	return eventHeight
 }
 
-func (mw *MetachainWitness) getSubchainMaxProcessedNonceUpdateHeight(icmeType score.InterChainMessageEventType) *big.Int {
-	var updateHeight *big.Int
+func (mw *MetachainWitness) getSubchainMaxProcessedNonceEventHeight(icmeType score.InterChainMessageEventType) *big.Int {
+	var maxProcessedNonce *big.Int
+	var eventHeight *big.Int
 	var err error
 
-	switch icmeType {
+	// For subchain -> mainchain asset transfers, the "max processed nonce" (for each event type) is recorded on the mainchain side.
+	// Yet the height for the corresponding event is recorded on the subchain. Hence we get the "max processed nonce" from the mainchain
+	// and use it to lookup the event height on the subchain.
+	switch icmeType { // Note: TFuelTokenLock is not allowed on a Subchain so this event is not processed below
+
 	case score.IMCEventTypeCrossChainTokenLockTFuel:
-		updateHeight, err = mw.subchainTFuelTokenBank.GetMaxProcessedTokenLockNonceUpdateHeight(nil, mw.subchainID)
+		// Note: TFuelTokenLock is not allowed on a Subchain so it is safe to return the latest block height
+		maxProcessedNonce = common.Big0
+		h, _ := mw.subchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
 	case score.IMCEventTypeCrossChainTokenLockTNT20:
-		updateHeight, err = mw.subchainTNT20TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight(nil, mw.subchainID)
+		maxProcessedNonce, err = mw.mainchainTNT20TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT20TokenBank.GetTokenLockEventHeight(nil, mw.mainchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainTokenLockTNT721:
-		updateHeight, err = mw.subchainTNT721TokenBank.GetMaxProcessedTokenLockNonceUpdateHeight(nil, mw.subchainID)
+		maxProcessedNonce, err = mw.mainchainTNT721TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
-		updateHeight, err = mw.subchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight(nil, mw.subchainID)
+		maxProcessedNonce, err = mw.mainchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTFuelTokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
-		updateHeight, err = mw.subchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight(nil, mw.subchainID)
+		maxProcessedNonce, err = mw.mainchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT20TokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
 	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
-		updateHeight, err = mw.subchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonceUpdateHeight(nil, mw.subchainID)
+		maxProcessedNonce, err = mw.mainchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT721TokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
 	default:
-		logger.Panicf("invalid event type") // should not happen
+		logger.Panicf("invalid event type: %v", icmeType) // should not happen
 	}
 	if err != nil {
 		logger.Warnf("Failed to get the update height for max processed nonce on subchain %v for event type %v: %v", mw.subchainID, icmeType, err)
 	}
-	return updateHeight
+
+	if maxProcessedNonce == nil || eventHeight == nil {
+		eventHeight = big.NewInt(0)
+	} else if maxProcessedNonce.Cmp(common.Big0) == 0 {
+		// no event of the current icmeType has ever been processed, hence it is safe to scan from the current block height
+		h, _ := mw.subchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
+	}
+
+	logger.Infof("On the Subchain, event type: %v, max processed nonce: %v, update height: %v", icmeType, maxProcessedNonce, eventHeight)
+
+	return eventHeight
 }
 
 func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID *big.Int) *big.Int {
