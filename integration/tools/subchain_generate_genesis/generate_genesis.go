@@ -197,7 +197,8 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	//
 
 	sequence := 0
-	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, predeployed.ChainRegistrarContractBytecode, deployer, sequence, slst.ChainRegistrarContractAddressKey())
+	numMainchainBlockPerDynastyBigInt := big.NewInt(scom.NumMainchainBlocksPerDynasty)
+	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, addConstructorArgumentForChainRegistrarBytecode(predeployed.ChainRegistrarContractBytecode, numMainchainBlockPerDynastyBigInt), deployer, sequence, slst.ChainRegistrarContractAddressKey())
 	if err != nil {
 		logger.Panicf("Failed to deploy the chain registrar smart contract (sequence = %v): %v", sequence, err)
 	}
@@ -222,8 +223,36 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 }
 
 // Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
+func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, numBlocksPerDynasty *big.Int) string {
+	rawABI := `[
+		{
+		"inputs": [
+			{
+			"internalType": "uint256",
+			"name": "numBlocksPerDynasty_",
+			"type": "uint256"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+		}
+    ]`
+	parsed, err := abi.JSON(strings.NewReader(rawABI))
+	if err != nil {
+		panic(err)
+	}
+	encodedConstructorArgument, err := parsed.Pack("", numBlocksPerDynasty)
+	if err != nil {
+		panic(err)
+	}
+	encodedConstructorArgumentString := hex.EncodeToString(encodedConstructorArgument)
+	ff := contractBytecode + encodedConstructorArgumentString
+	return ff
+}
+
+// Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
 func addConstructorArgumentForTokenBankBytecode(contractBytecode string, mainchainIDInt *big.Int, chainRegistrarContractAddr common.Address) string {
-	RawABI := `[
+	rawABI := `[
 		{
 		"inputs": [
 			{
@@ -241,7 +270,7 @@ func addConstructorArgumentForTokenBankBytecode(contractBytecode string, maincha
 		"type": "constructor"
 		}
     ]`
-	parsed, err := abi.JSON(strings.NewReader(RawABI))
+	parsed, err := abi.JSON(strings.NewReader(rawABI))
 	if err != nil {
 		panic(err)
 	}

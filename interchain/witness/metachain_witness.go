@@ -493,7 +493,7 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID 
 		return fromBlock
 	}
 	maxBlockRange := int64(300) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
-	minBlockGap := int64(10)    // tentative, to ensure the chain has enough time to finalize the event
+	minBlockGap := int64(2)     // tentative, to ensure the chain has enough time to finalize the event
 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
 		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))

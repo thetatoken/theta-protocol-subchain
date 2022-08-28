@@ -313,5 +313,5 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 
 	fmt.Printf("Mainchain TNT20 token contract address: %v\n", mainchainTNT20ContractAddress)
 	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
-	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchain  : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
+	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchain : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
 }
