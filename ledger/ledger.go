@@ -160,7 +160,20 @@ func (ledger *Ledger) GetFinalizedValidatorSet(blockHash common.Hash, isNext boo
 }
 
 func (ledger *Ledger) GetTokenBankContractAddress(tokenType score.CrossChainTokenType) *common.Address {
-	storeView := ledger.state.Delivered()
+	// storeView := ledger.state.Finalized()
+	db := ledger.state.DB()
+	store := kvstore.NewKVStore(db)
+	blockHash := ledger.chain.Root().Hash()
+	block, err := findBlock(store, blockHash)
+	if err != nil {
+		logger.Fatalf("Failed to find block for last processed nonce: %v, err: %v", blockHash.Hex(), err) // should not happen
+	}
+	if block == nil {
+		logger.Fatalf("block is nil for hash %v", blockHash.Hex()) // should not happend
+	}
+
+	stateRoot := block.BlockHeader.StateHash
+	storeView := slst.NewStoreView(block.Height, stateRoot, db)
 	switch tokenType {
 	case score.CrossChainTokenTypeTFuel:
 		return storeView.GetTFuelTokenBankContractAddress()

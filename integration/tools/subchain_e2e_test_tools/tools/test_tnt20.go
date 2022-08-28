@@ -27,6 +27,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	dec18.SetString("1000000000000000000", 10)
 	sender := mainchainSelectAccount(mainchainClient, 1)
 	receiver := accountList[1].fromAddress
+	sender.Value.Set(crossChainFee)
 
 	tnt20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
 	instaceTNT20Contract, err := ct.NewTNT20VoucherContract(tnt20ContractAddress, mainchainClient)
@@ -210,6 +211,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	mainchainTNT20VoucherContract.Approve(authUser, tnt20TokenBankAddress, burnAmount)
 
 	authUser = mainchainSelectAccount(mainchainClient, 6)
+	authUser.Value.Set(crossChainFee)
 	burnTx, err := mainchainTNT20TokenBankInstance.BurnVouchers(authUser, mainchainTNT20VoucherAddress, accountList[1].fromAddress, burnAmount)
 	if err != nil {
 		log.Fatal(err)

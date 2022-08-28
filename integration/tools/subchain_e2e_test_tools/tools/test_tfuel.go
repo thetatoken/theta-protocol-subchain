@@ -11,6 +11,9 @@ import (
 	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
+var dec18, _ = new(big.Int).SetString("1000000000000000000", 10)
+var crossChainFee = new(big.Int).Mul(big.NewInt(10), dec18)
+
 func MainchainTFuelLock(lockAmount *big.Int) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
@@ -21,13 +24,11 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 		log.Fatal(err)
 	}
 
-	var dec18 = new(big.Int)
-	dec18.SetString("1000000000000000000", 10)
 	receiver := accountList[1].fromAddress
 
 	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(tfuelTokenBankAddress, mainchainClient)
 	sender := mainchainSelectAccount(mainchainClient, 3)
-	sender.Value = lockAmount // big.NewInt(2000000) //new(big.Int).Mul(dec18, big.NewInt(200000))
+	sender.Value = big.NewInt(0).Add(lockAmount, crossChainFee)
 
 	mainchainHeight, _ := mainchainClient.BlockNumber(context.Background())
 	senderMainchainTFuelBalance, _ := mainchainClient.BalanceAt(context.Background(), sender.From, big.NewInt(int64(mainchainHeight)))

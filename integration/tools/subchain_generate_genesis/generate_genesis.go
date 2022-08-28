@@ -155,7 +155,7 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		validator := score.NewValidator(v.Address, stake)
 		validatorSet.AddValidator(validator)
 
-		// setInitialBalance(sv, common.HexToAddress(v.Address), validatorInitialBalance)
+		setInitialBalance(sv, common.HexToAddress(v.Address), common.Big0) // need to create accounts with zero balances for the inital validators
 	}
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
@@ -168,18 +168,18 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 	return validatorSet
 }
 
-// func setInitialBalance(sv *slst.StoreView, address common.Address, tfuelBalance *big.Int) {
-// 	acc := &types.Account{
-// 		Address:  address,
-// 		Root:     common.Hash{},
-// 		CodeHash: types.EmptyCodeHash,
-// 		Balance: types.Coins{
-// 			ThetaWei: big.NewInt(0),
-// 			TFuelWei: tfuelBalance,
-// 		},
-// 	}
-// 	sv.SetAccount(acc.Address, acc)
-// }
+func setInitialBalance(sv *slst.StoreView, address common.Address, tfuelBalance *big.Int) {
+	acc := &types.Account{
+		Address:  address,
+		Root:     common.Hash{},
+		CodeHash: types.EmptyCodeHash,
+		Balance: types.Coins{
+			ThetaWei: big.NewInt(0),
+			TFuelWei: tfuelBalance,
+		},
+	}
+	sv.SetAccount(acc.Address, acc)
+}
 
 func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	vp := &score.ValidatorSetProof{}

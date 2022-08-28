@@ -60,6 +60,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	fmt.Printf("Subchain NFT Voucher receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
 	authUser = mainchainSelectAccount(mainchainClient, 1)
+	authUser.Value.Set(crossChainFee)
 	lockTx, err := tnt721TokenBankContract.LockTokens(authUser, subchainID, tnt721VoucherContractAddress, receiver, tokenID)
 	if err != nil {
 		log.Fatal(err)
@@ -310,6 +311,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	subchainTNT721Owner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
 
 	auth = mainchainSelectAccount(mainchainClient, 6)
+	auth.Value.Set(crossChainFee)
 	burnTx, err := mainchainTNT721TokenBank.BurnVouchers(auth, mainchainTNT721VoucherAddr, accountList[1].fromAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
