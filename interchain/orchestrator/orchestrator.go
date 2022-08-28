@@ -329,6 +329,14 @@ func (oc *Orchestrator) updateEventProcessedTime(event *score.InterChainMessageE
 func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventType score.InterChainMessageEventType, sourceEvent *score.InterChainMessageEvent) error {
 	var err error
 
+	dynasty := oc.getDynasty()
+	logger.Debugf("calling contracts on target chain %v for event type %v, current dynasty: %v", targetChainID, targetEventType, dynasty)
+
+	vsQueriedFromMC, _ := oc.mainchainTFuelTokenBank.GetAdjustedValidatorSet(nil, oc.subchainID, dynasty)
+	vsQueriedFromSC, _ := oc.subchainTNT20TokenBank.GetAdjustedValidatorSet(nil, oc.subchainID, dynasty)
+	logger.Debugf("Subchain %v adjusted ValSet queried from the Mainchain for dynasty %v: %v\n", oc.subchainID, dynasty, vsQueriedFromMC)
+	logger.Debugf("Subchain %v adjusted ValSet queried from the Subchain  for dynasty %v: %v\n", oc.subchainID, dynasty, vsQueriedFromSC)
+
 	targetChainEthRpcClient := oc.getEthRpcClient(targetChainID)
 	txOpts, err := oc.buildTxOpts(targetChainID, targetChainEthRpcClient)
 	if err != nil {
