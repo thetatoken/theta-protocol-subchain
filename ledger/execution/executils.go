@@ -263,13 +263,13 @@ func adjustByOutputs(view *slst.StoreView, accounts map[string]*types.Account, o
 	}
 }
 
-func sanityCheckForGasPrice(fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
+func sanityCheckForGasPrice(view *slst.StoreView, fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
 	ledger score.Ledger, valMgr score.ValidatorManager, gasPrice *big.Int, blockHeight uint64) bool {
 	if gasPrice == nil {
 		return false
 	}
 
-	if isWhitelistedOperation(fromAddr, contractAddr, calldata, ledger, valMgr) && gasPrice.Cmp(common.Big0) == 0 {
+	if isWhitelistedOperation(view, fromAddr, contractAddr, calldata, ledger, valMgr) && gasPrice.Cmp(common.Big0) == 0 {
 		return true
 	}
 
@@ -282,11 +282,11 @@ func sanityCheckForGasPrice(fromAddr common.Address, contractAddr common.Address
 }
 
 // Allow subchain validators to vote for inter-chain events without gas fees
-func isWhitelistedOperation(fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
+func isWhitelistedOperation(view *slst.StoreView, fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
 	ledger score.Ledger, valMgr score.ValidatorManager) bool {
 
 	// check if the from address is a validator
-	validatorSet := getValidatorSet(ledger, valMgr)
+	validatorSet := view.GetValidatorSet()
 	validatorAddresses := getValidatorAddresses(validatorSet)
 	res := isAValidator(fromAddr, validatorAddresses)
 	if res.IsError() {

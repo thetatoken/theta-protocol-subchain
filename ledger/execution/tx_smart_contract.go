@@ -106,7 +106,7 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 			WithErrorCode(result.CodeInvalidValueToTransfer)
 	}
 
-	if !sanityCheckForGasPrice(tx.From.Address, tx.To.Address, tx.Data, exec.ledger, exec.valMgr, tx.GasPrice, blockHeight) {
+	if !sanityCheckForGasPrice(view, tx.From.Address, tx.To.Address, tx.Data, exec.ledger, exec.valMgr, tx.GasPrice, blockHeight) {
 		minimumGasPrice := scom.GetMinimumGasPrice()
 		return result.Error("Insufficient gas price. Gas price needs to be at least %v TFuelWei", minimumGasPrice).
 			WithErrorCode(result.CodeInvalidGasPrice)
