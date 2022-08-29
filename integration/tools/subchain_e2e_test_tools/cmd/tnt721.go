@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/spf13/cobra"
@@ -8,30 +9,46 @@ import (
 )
 
 var startMainchainTNT721LockCmd = &cobra.Command{
-	Use:   "MainchainTNT721Lock",
+	Use: "MainchainTNT721Lock",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.MainchainTNT721Lock(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.MainchainTNT721Lock(amountInt)
 	},
 }
 
 var startSubchainTNT721LockCmd = &cobra.Command{
-	Use:   "SubchainTNT721Lock",
+	Use: "SubchainTNT721Lock",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.SubchainTNT721Lock(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.SubchainTNT721Lock(amountInt)
 	},
 }
 
 var startSubchainTNT721BurnCmd = &cobra.Command{
-	Use:   "SubchainTNT721Burn",
+	Use: "SubchainTNT721Burn",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.SubchainTNT721Burn(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.SubchainTNT721Burn(amountInt)
 	},
 }
 
 var startMainchainTNT721BurnCmd = &cobra.Command{
-	Use:   "MainchainTNT721Burn",
+	Use: "MainchainTNT721Burn",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.MainchainTNT721Burn(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.MainchainTNT721Burn(amountInt)
 	},
 }
 
