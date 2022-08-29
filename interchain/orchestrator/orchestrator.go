@@ -528,7 +528,7 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	return nil
 }
 
-//TNT721
+//TNT1155
 func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
 	se, err := score.ParseToCrossChainTNT1155VoucherBurnedEvent(sourceEvent)
 	if err != nil {
@@ -539,10 +539,15 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 		return nil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce, []byte("")) //calldata?
+	tx1, _ := TNT1155TokenBank.TotalLockedAmounts(nil, big.NewInt(360777), common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61"), big.NewInt(1))
+	fmt.Println(tx1)
+	tx, err := TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce, []byte("")) //calldata?
 	if err != nil {
 		return err
 	}
+	fmt.Println(tx.Hash().Hex())
+	tx1, _ = TNT1155TokenBank.TotalLockedAmounts(nil, big.NewInt(360777), common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61"), big.NewInt(1))
+	fmt.Println(tx1)
 	return nil
 }
 

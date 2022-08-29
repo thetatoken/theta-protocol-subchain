@@ -27,6 +27,9 @@ func config() []string {
 
 	mainchainTNT1155TokenBankAddress = common.HexToAddress("0x27e5Ee255a177D1902D7FF48D66f950ed9408867")
 	mainchainTNT1155VoucherContractAddress = common.HexToAddress("0xc7253857256391E518c4aF60aDa5Eb5972Dd6Dbc")
+	subchainTNT1155TokenBankAddress = common.HexToAddress("0x47c5e40890bcE4a473A49D7501808b9633F29782")
+	subchainTNT1155VoucherContractAddress = common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61")
+
 	var map1 []string
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
 	map1 = append(map1, "93a90ea508331dfdf27fb79757d4250b4e84954927ba0073cd67454ac432c737")
@@ -47,7 +50,7 @@ func config() []string {
 func main() {
 
 	//oneAccountRegister() //register subchain , its id is 360777
-	//oneAcoountStake(1) // use the 10th account to deposit and become validator
+	//oneAcoountStake(1)   // use the 10th account to deposit and become validator
 
 	// //Tfuel
 	// mainchainTfuelLock(big.NewInt(10)) //lock some tfuel tokens on mainchain and transfer to subchain 360777
@@ -64,5 +67,8 @@ func main() {
 	// subchainTNT721Lock(big.NewInt(12))  //last address printed in console is mainchain voucher contract address
 	// mainchainTNT721Burn(big.NewInt(12))
 	// subchainTNT721Burn(big.NewInt(13))
-	MainchainTNT1155Lock()
+	//MainchainTNT1155Lock()
+	//SubchainTNT1155Lock(big.NewInt(1))
+	MainchainTNT1155Burn(big.NewInt(1))
+	//SubchainTNT1155Burn(big.NewInt(1))
 }
