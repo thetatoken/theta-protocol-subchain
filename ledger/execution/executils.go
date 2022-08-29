@@ -292,6 +292,7 @@ func isWhitelistedOperation(view *slst.StoreView, fromAddr common.Address, contr
 	if res.IsError() {
 		return false
 	}
+	logger.Debugf("Checking whitelisted operation, Validators: %v, fromAddr: %v", validatorAddresses, fromAddr)
 
 	// check if this tx is for inter-chain event voting
 	if !isVotingForInterchainEvents(contractAddr, calldata, ledger) {
@@ -321,8 +322,11 @@ func isVotingForInterchainEvents(contractAddr common.Address, calldata common.By
 	}
 
 	for _, wms := range whitelistedMethodSignatures {
-		funcSelector := string(crypto.Keccak256(common.Bytes(wms))[:4])
-		if string(calldata[:4]) == funcSelector {
+		funcSelector := hex.EncodeToString(crypto.Keccak256(common.Bytes(wms))[:4])
+		calldataLeadingBytes := hex.EncodeToString(calldata[:4])
+		logger.Debugf("Checking whitelisted operation, funcSelector : 0x%v, calldata[:4]: 0x%v", funcSelector, calldataLeadingBytes)
+
+		if calldataLeadingBytes == funcSelector {
 			return true
 		}
 	}

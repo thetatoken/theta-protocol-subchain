@@ -27,7 +27,6 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	dec18.SetString("1000000000000000000", 10)
 	sender := mainchainSelectAccount(mainchainClient, 1)
 	receiver := accountList[1].fromAddress
-	sender.Value.Set(crossChainFee)
 
 	tnt20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
 	instaceTNT20Contract, err := ct.NewTNT20VoucherContract(tnt20ContractAddress, mainchainClient)
@@ -62,10 +61,12 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	fmt.Printf("Subchain receiver: %v, TNT20 voucher balance on Subchain: %v\n\n", receiver, receiverTNT20VoucherBalance)
 
 	sender = mainchainSelectAccount(mainchainClient, 1)
+	sender.Value.Set(crossChainFee)
 	lockTx, err := instanceTNT20TokenBank.LockTokens(sender, subchainID, tnt20VoucherContractAddress, receiver, lockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
+	sender.Value.Set(common.Big0)
 
 	fmt.Printf("TNT20 Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering %v TNT20 tokens (Wei) from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
