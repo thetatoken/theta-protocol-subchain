@@ -977,7 +977,7 @@ func getMainchainTNT721VoucherMintLogs(fromBlock, toBlock int, contractAddr comm
 
 	//queryStr := `{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"0","toBlock":"83c", "address":"0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D"}`, crypto.Keccak256Hash([]byte("TNT20VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex()
 	queryStr := fmt.Sprintf(`{"jsonrpc":"2.0","method":"eth_getLogs","params":[{"fromBlock":"%v","toBlock":"%v", "address":"%v","topics":["%v"]}],"id":74}`, fmt.Sprintf("%x", fromBlock), fmt.Sprintf("%x", toBlock), contractAddr.Hex(), crypto.Keccak256Hash([]byte("TNT721VoucherMinted(string,address,address,uint256,uint256,uint256)")).Hex())
-	fmt.Println("query str", queryStr)
+	//fmt.Println("query str", queryStr)
 	var jsonData = []byte(queryStr)
 	//fmt.Println(queryStr)
 

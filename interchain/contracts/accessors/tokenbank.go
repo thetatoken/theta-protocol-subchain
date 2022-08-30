@@ -30,8 +30,8 @@ var (
 
 // TokenBankMetaData contains all meta data concerning the TokenBank contract.
 var TokenBankMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mainchainID_\",\"type\":\"uint256\"},{\"internalType\":\"contractChainRegistrar\",\"name\":\"chainRegistrar_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"mainchainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenLockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tokenLockVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenUnlockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherBurnNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"voucherBurnVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherMintNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b5060405161030838038061030883398101604081905261002f9161005e565b6001600081905591909155600280546001600160a01b0319166001600160a01b0390921691909117905561009b565b6000806040838503121561007157600080fd5b825160208401519092506001600160a01b038116811461009057600080fd5b809150509250929050565b61025e806100aa6000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80638883931e116100665780638883931e1461013b578063ca2075691461015b578063ccf187c71461017b578063f95627ac1461019b578063feaff052146101bb57600080fd5b8063073b9502146100985780631eb78737146100b4578063740cb7f8146100fb578063766f8fb01461011b575b600080fd5b6100a160015481565b6040519081526020015b60405180910390f35b6100e66100c2366004610206565b60096020908152600092835260408084209091529082529020805460029091015482565b604080519283526020830191909152016100ab565b6100a16101093660046101ed565b60066020526000908152604090205481565b6100a16101293660046101ed565b60009081526008602052604090205490565b6100a16101493660046101ed565b60036020526000908152604090205481565b6100a16101693660046101ed565b60056020526000908152604090205481565b6100a16101893660046101ed565b60046020526000908152604090205481565b6100a16101a93660046101ed565b60009081526007602052604090205490565b6100e66101c9366004610206565b600a6020908152600092835260408084209091529082529020805460029091015482565b6000602082840312156101ff57600080fd5b5035919050565b6000806040838503121561021957600080fd5b5050803592602090910135915056fea26469706673582212204462a9758566475416288dc6b96e2b97f1ff547890654b9da99f1ba7171e4ef764736f6c63430008070033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mainchainID_\",\"type\":\"uint256\"},{\"internalType\":\"contractChainRegistrar\",\"name\":\"chainRegistrar_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"mainchainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenLockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tokenLockVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenUnlockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherBurnNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"voucherBurnVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherMintNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"eventNonce\",\"type\":\"uint256\"}],\"name\":\"getTokenLockEventHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"eventNonce\",\"type\":\"uint256\"}],\"name\":\"getVoucherBurnEventHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"subchainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"}],\"name\":\"getAdjustedValidatorSet\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"validators\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shareAmounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b5060405161092338038061092383398101604081905261002f9161005e565b6001600081905591909155600280546001600160a01b0319166001600160a01b0390921691909117905561009b565b6000806040838503121561007157600080fd5b825160208401519092506001600160a01b038116811461009057600080fd5b809150509250929050565b610879806100aa6000396000f3fe608060405234801561001057600080fd5b50600436106100b45760003560e01c8063aa861c1511610071578063aa861c15146101a7578063ca207569146101c8578063ccf187c7146101e8578063dd17eb6d14610208578063f95627ac14610233578063feaff0521461025357600080fd5b8063073b9502146100b95780631eb78737146100d55780636ac739b91461011c578063740cb7f814610147578063766f8fb0146101675780638883931e14610187575b600080fd5b6100c260015481565b6040519081526020015b60405180910390f35b6101076100e33660046106f2565b600b6020908152600092835260408084209091529082529020805460029091015482565b604080519283526020830191909152016100cc565b6100c261012a3660046106f2565b600091825260086020908152604080842092845291905290205490565b6100c261015536600461068b565b60066020526000908152604090205481565b6100c261017536600461068b565b6000908152600a602052604090205490565b6100c261019536600461068b565b60036020526000908152604090205481565b6101ba6101b53660046106f2565b610285565b6040516100cc929190610714565b6100c26101d636600461068b565b60056020526000908152604090205481565b6100c26101f636600461068b565b60046020526000908152604090205481565b6100c26102163660046106f2565b600091825260076020908152604080842092845291905290205490565b6100c261024136600461068b565b60009081526009602052604090205490565b6101076102613660046106f2565b600c6020908152600092835260408084209091529082529020805460029091015482565b6060806000600154461490506000600260009054906101000a90046001600160a01b03166001600160a01b031663a7464b126040518163ffffffff1660e01b815260040160206040518083038186803b1580156102e157600080fd5b505afa1580156102f5573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061031991906106a4565b600254604051632f2c13b560e01b81526004810189905291925060009182916001600160a01b031690632f2c13b590602401604080518083038186803b15801561036257600080fd5b505afa158015610376573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061039a91906106bd565b9150915060008180156103b657506103b28885610522565b8310155b80156103d557506103d2846103cc8a6001610535565b90610522565b83105b90508480156103e15750805b1561048a5760006103f3896001610535565b6002546040516343f27e4560e01b8152600481018d9052602481018390529192506001600160a01b0316906343f27e459060440160006040518083038186803b15801561043f57600080fd5b505afa158015610453573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f1916820160405261047b91908101906105b3565b9750975050505050505061051b565b6002546040516343f27e4560e01b8152600481018b9052602481018a90526001600160a01b03909116906343f27e459060440160006040518083038186803b1580156104d557600080fd5b505afa1580156104e9573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f1916820160405261051191908101906105b3565b9650965050505050505b9250929050565b600061052e82846107f8565b9392505050565b600061052e82846107e0565b600082601f83011261055257600080fd5b81516020610567610562836107bc565b61078b565b80838252828201915082860187848660051b890101111561058757600080fd5b60005b858110156105a65781518452928401929084019060010161058a565b5090979650505050505050565b600080604083850312156105c657600080fd5b825167ffffffffffffffff808211156105de57600080fd5b818501915085601f8301126105f257600080fd5b81516020610602610562836107bc565b8083825282820191508286018a848660051b890101111561062257600080fd5b600096505b8487101561065a5780516001600160a01b038116811461064657600080fd5b835260019690960195918301918301610627565b509188015191965090935050508082111561067457600080fd5b5061068185828601610541565b9150509250929050565b60006020828403121561069d57600080fd5b5035919050565b6000602082840312156106b657600080fd5b5051919050565b600080604083850312156106d057600080fd5b82519150602083015180151581146106e757600080fd5b809150509250929050565b6000806040838503121561070557600080fd5b50508035926020909101359150565b604080825283519082018190526000906020906060840190828701845b828110156107565781516001600160a01b031684529284019290840190600101610731565b5050508381038285015284518082528583019183019060005b818110156105a65783518352928401929184019160010161076f565b604051601f8201601f1916810167ffffffffffffffff811182821017156107b4576107b461082d565b604052919050565b600067ffffffffffffffff8211156107d6576107d661082d565b5060051b60200190565b600082198211156107f3576107f3610817565b500190565b600081600019048311821515161561081257610812610817565b500290565b634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052604160045260246000fdfea2646970667358221220408d927b5613d6d93267956a25cf52c15747a56cf4581d7efc258db6b7bab01464736f6c63430008070033",
 }
 
 // TokenBankABI is the input ABI used to generate the binding from.
@@ -201,6 +201,51 @@ func (_TokenBank *TokenBankTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _TokenBank.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TokenBank *TokenBankCaller) GetAdjustedValidatorSet(opts *bind.CallOpts, subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getAdjustedValidatorSet", subchainID, dynasty)
+
+	outstruct := new(struct {
+		Validators   []common.Address
+		ShareAmounts []*big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Validators = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.ShareAmounts = *abi.ConvertType(out[1], new([]*big.Int)).(*[]*big.Int)
+
+	return *outstruct, err
+
+}
+
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TokenBank *TokenBankSession) GetAdjustedValidatorSet(subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	return _TokenBank.Contract.GetAdjustedValidatorSet(&_TokenBank.CallOpts, subchainID, dynasty)
+}
+
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TokenBank *TokenBankCallerSession) GetAdjustedValidatorSet(subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	return _TokenBank.Contract.GetAdjustedValidatorSet(&_TokenBank.CallOpts, subchainID, dynasty)
+}
+
 // GetMaxProcessedTokenLockNonce is a free data retrieval call binding the contract method 0xf95627ac.
 //
 // Solidity: function getMaxProcessedTokenLockNonce(uint256 chainID) view returns(uint256)
@@ -261,6 +306,68 @@ func (_TokenBank *TokenBankSession) GetMaxProcessedVoucherBurnNonce(chainID *big
 // Solidity: function getMaxProcessedVoucherBurnNonce(uint256 chainID) view returns(uint256)
 func (_TokenBank *TokenBankCallerSession) GetMaxProcessedVoucherBurnNonce(chainID *big.Int) (*big.Int, error) {
 	return _TokenBank.Contract.GetMaxProcessedVoucherBurnNonce(&_TokenBank.CallOpts, chainID)
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCaller) GetTokenLockEventHeight(opts *bind.CallOpts, chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getTokenLockEventHeight", chainID, eventNonce)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankSession) GetTokenLockEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetTokenLockEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCallerSession) GetTokenLockEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetTokenLockEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCaller) GetVoucherBurnEventHeight(opts *bind.CallOpts, chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getVoucherBurnEventHeight", chainID, eventNonce)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankSession) GetVoucherBurnEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetVoucherBurnEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCallerSession) GetVoucherBurnEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetVoucherBurnEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
 }
 
 // MainchainID is a free data retrieval call binding the contract method 0x073b9502.

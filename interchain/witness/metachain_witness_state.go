@@ -7,19 +7,10 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/store/database"
 	"github.com/thetatoken/theta/store/kvstore"
-
-	score "github.com/thetatoken/thetasubchain/core"
 )
 
-func lastWitnessQueryedHeightKey(sourceChainID *big.Int, icmeType score.InterChainMessageEventType) common.Bytes {
-	switch icmeType {
-	case score.IMCEventTypeCrossChainTokenLock:
-		return common.Bytes("mw/tlq/" + sourceChainID.String())
-	case score.IMCEventTypeCrossChainVoucherBurn:
-		return common.Bytes("mw/vblq/" + sourceChainID.String())
-	default:
-		return nil
-	}
+func lastWitnessQueryedHeightKey(sourceChainID *big.Int) common.Bytes {
+	return common.Bytes("mw/lwqh/" + sourceChainID.String())
 }
 
 type metachainWitnessState struct {
@@ -35,24 +26,24 @@ func newMetachainWitnessState(db database.Database) *metachainWitnessState {
 	return cache
 }
 
-func (mws *metachainWitnessState) getLastQueryedHeightForType(sourceChainID *big.Int, icmeType score.InterChainMessageEventType) (*big.Int, error) {
+func (mws *metachainWitnessState) getLastQueryedHeightForType(sourceChainID *big.Int) (*big.Int, error) {
 	mws.mutex.Lock()
 	defer mws.mutex.Unlock()
 
 	height := big.NewInt(0)
 	store := kvstore.NewKVStore(mws.db)
-	err := store.Get(lastWitnessQueryedHeightKey(sourceChainID, icmeType), &height)
+	err := store.Get(lastWitnessQueryedHeightKey(sourceChainID), &height)
 	if err == nil {
 		return height, nil
 	}
-	return big.NewInt(0), err 
+	return big.NewInt(0), err
 }
 
-func (mws *metachainWitnessState) setLastQueryedHeightForType(sourceChainID *big.Int, icmeType score.InterChainMessageEventType, height *big.Int) error {
+func (mws *metachainWitnessState) setLastQueryedHeightForType(sourceChainID *big.Int, height *big.Int) error {
 	mws.mutex.Lock()
 	defer mws.mutex.Unlock()
 
 	store := kvstore.NewKVStore(mws.db)
-	err := store.Put(lastWitnessQueryedHeightKey(sourceChainID, icmeType), height)
+	err := store.Put(lastWitnessQueryedHeightKey(sourceChainID), height)
 	return err
 }

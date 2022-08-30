@@ -74,7 +74,7 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the mainchain: %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain, is the mainchain RPC API service running? error: %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
@@ -284,6 +284,9 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 		return // the next event (e.g. Token Lock, or Voucher Burn) has not occurred yet
 	}
 
+	logger.Debugf("Process next event, sourceChainID: %v, targetChainID: %v, sourceChainEventType: %v, nextNonce: %v",
+		sourceChainID, targetChainID, sourceChainEventType, nextNonce)
+
 	targetEventType := oc.getTargetChainCorrespondingEventType(sourceChainEventType)
 	retryThreshold := oc.getRetryThreshold(targetChainID)
 	if oc.timeElapsedSinceEventProcessed(sourceEvent) > retryThreshold { // retry if the tx has been submitted for a long time
@@ -324,6 +327,14 @@ func (oc *Orchestrator) updateEventProcessedTime(event *score.InterChainMessageE
 // For Voucher Burn events on the source chain, call the Unlock Token method  of the corresponding TokenBank contract on the target chain
 func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventType score.InterChainMessageEventType, sourceEvent *score.InterChainMessageEvent) error {
 	var err error
+
+	dynasty := oc.getDynasty()
+	logger.Debugf("calling contracts on target chain %v for event type %v, current dynasty: %v", targetChainID, targetEventType, dynasty)
+
+	vsQueriedFromMC, _ := oc.mainchainTFuelTokenBank.GetAdjustedValidatorSet(nil, oc.subchainID, dynasty)
+	vsQueriedFromSC, _ := oc.subchainTNT20TokenBank.GetAdjustedValidatorSet(nil, oc.subchainID, dynasty)
+	logger.Debugf("Subchain %v adjusted ValSet queried from the Mainchain for dynasty %v: %v\n", oc.subchainID, dynasty, vsQueriedFromMC)
+	logger.Debugf("Subchain %v adjusted ValSet queried from the Subchain  for dynasty %v: %v\n", oc.subchainID, dynasty, vsQueriedFromSC)
 
 	targetChainEthRpcClient := oc.getEthRpcClient(targetChainID)
 	txOpts, err := oc.buildTxOpts(targetChainID, targetChainEthRpcClient)
