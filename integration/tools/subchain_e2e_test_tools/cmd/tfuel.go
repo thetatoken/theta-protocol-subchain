@@ -24,4 +24,6 @@ var startSubchainTFuelBurnCmd = &cobra.Command{
 func init() {
 	rootCmd.AddCommand(startMainchainTFuelLockCmd)
 	rootCmd.AddCommand(startSubchainTFuelBurnCmd)
+	startMainchainTFuelLockCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
+	startSubchainTFuelBurnCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
 }

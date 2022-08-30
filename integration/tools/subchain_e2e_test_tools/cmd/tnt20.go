@@ -34,11 +34,27 @@ var startMainchainTNT20BurnCmd = &cobra.Command{
 		tools.MainchainTNT20Burn(big.NewInt(amount))
 	},
 }
+var contractAddress, accountAddress string
+var chainID int64
+var starTNT20QueryCmd = &cobra.Command{
+	Use: "MainchainTNT20Query",
+	Run: func(cmd *cobra.Command, args []string) {
+		tools.TNT20Query(chainID, contractAddress, accountAddress)
+	},
+}
 
 func init() {
 	rootCmd.AddCommand(startMainchainTNT20LockCmd)
 	rootCmd.AddCommand(startSubchainTNT20LockCmd)
 	rootCmd.AddCommand(startSubchainTNT20BurnCmd)
 	rootCmd.AddCommand(startMainchainTNT20BurnCmd)
+	rootCmd.AddCommand(starTNT20QueryCmd)
 
+	startMainchainTNT20LockCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
+	startSubchainTNT20LockCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
+	startSubchainTNT20BurnCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
+	startMainchainTNT20BurnCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
+	starTNT20QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
+	starTNT20QueryCmd.PersistentFlags().StringVar(&accountAddress, "accountAddress", "", "accountAddress")
+	starTNT20QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")
 }

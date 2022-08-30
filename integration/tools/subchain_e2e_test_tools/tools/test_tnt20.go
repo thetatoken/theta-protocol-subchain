@@ -239,3 +239,31 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	}
 	fmt.Println(accountList[1].fromAddress, "mainchain_account_balance is", tx)
 }
+func TNT20Query(chainID int64, contractAddress, accountAddress string) {
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tnt20ContractAddress := common.HexToAddress(contractAddress) // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
+	var instaceTNT20Contract *ct.TNT20VoucherContract
+	if chainID == 366 {
+		fmt.Printf("Preparing for TNT20 mainchain query...\n")
+		instaceTNT20Contract, err = ct.NewTNT20VoucherContract(tnt20ContractAddress, mainchainClient)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		fmt.Printf("Preparing for TNT20 subchain query...\n")
+		instaceTNT20Contract, err = ct.NewTNT20VoucherContract(tnt20ContractAddress, subchainClient)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	balance ,_:=instaceTNT20Contract.BalanceOf(nil,common.HexToAddress(accountAddress))
+	fmt.Println("Account ",accountAddress," TNT20 balance in ",contractAddress," is ",balance)
+
+}

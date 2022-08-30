@@ -250,3 +250,33 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	}
 	fmt.Println("The subchain owner of ", tokenID, " is", result)
 }
+
+func TNT721Query(chainID int64, contractAddress string,tokenID *big.Int) {
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	
+	tnt721ContractAddress := common.HexToAddress(contractAddress) // FIXME: should instantiate a mock TNT721 instead of using the Voucher contract (which causes confusion)
+	var instaceTNT721Contract *ct.TNT721VoucherContract
+	if chainID == 366 {
+		fmt.Printf("Preparing for TNT721 mainchain query...\n")
+		instaceTNT721Contract, err = ct.NewTNT721VoucherContract(tnt721ContractAddress, mainchainClient)
+		if err != nil {
+			log.Fatal(err)
+		}
+	} else {
+		fmt.Printf("Preparing for TNT721 subchain query...\n")
+		instaceTNT721Contract, err = ct.NewTNT721VoucherContract(tnt721ContractAddress, subchainClient)
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	owner ,_:=instaceTNT721Contract.OwnerOf(nil,tokenID)
+	fmt.Println("TokenID",tokenID," TNT721 owner in ",contractAddress," is ",owner)
+
+}

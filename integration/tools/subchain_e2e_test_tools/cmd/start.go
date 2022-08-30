@@ -13,9 +13,6 @@ var rootCmd = &cobra.Command{
 	Short: "subchain end-to-end test tools",
 }
 
-func init() {
-	rootCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
-}
 func Execute() {
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Println(err)
