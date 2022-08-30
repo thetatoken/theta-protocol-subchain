@@ -39,7 +39,7 @@ var chainID int64
 var starTNT20QueryCmd = &cobra.Command{
 	Use: "MainchainTNT20Query",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.TNT20Query(chainID, contractAddress, accountAddress)
+		tools.QueryTNT20(chainID, contractAddress, accountAddress)
 	},
 }
 

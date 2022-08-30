@@ -39,7 +39,7 @@ var startMainchainTNT721BurnCmd = &cobra.Command{
 var starTNT721QueryCmd = &cobra.Command{
 	Use: "MainchainTNT721Query",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.TNT721Query(chainID,contractAddress,big.NewInt(tokenID))
+		tools.QueryTNT721(big.NewInt(tokenID))
 	},
 }
 
