@@ -40,6 +40,10 @@ var subchainTFuelTokenBankAddress common.Address
 var subchainTNT721TokenBankAddress common.Address
 var subchainID *big.Int
 
+var subchainTNT20TokenAddress common.Address
+var subchainTNT721TokenAddress common.Address
+var subchainTNT1155TokenAddress common.Address
+
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
 	for _, b := range data {
@@ -51,6 +55,37 @@ func pubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := crypto.FromECDSAPub(&p)
 	return common.BytesToAddress(keccak256(pubBytes[1:])[12:])
 }
+func deploy_contracts() {
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	auth := subchainSelectAccount(subchainClient, 1)
+	address, tx, _, err := ct.DeployMockTNT20(auth, subchainClient)
+	fmt.Println("tnt20", address)
+	fmt.Println(tx.Hash().Hex())
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainTNT20TokenAddress = address
+	auth = subchainSelectAccount(subchainClient, 1)
+	address, tx, _, err = ct.DeployMockTNT721(auth, subchainClient)
+	fmt.Println("tnt721", address)
+	fmt.Println(tx.Hash().Hex())
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainTNT721TokenAddress = address
+	auth = subchainSelectAccount(subchainClient, 1)
+	address, tx, _, err = ct.DeployMockTNT1155(auth, subchainClient)
+	fmt.Println("tnt1155", address)
+	fmt.Println(tx.Hash().Hex())
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainTNT1155TokenAddress = address
+}
+
 func init() {
 	subchainID = big.NewInt(360777)
 
@@ -106,6 +141,7 @@ func init() {
 	}
 	// fmt.Println("---------------------------------------------------------------------------------------------------------------------------------")
 	// fmt.Println("")
+	deploy_contracts()
 }
 
 func mainchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {

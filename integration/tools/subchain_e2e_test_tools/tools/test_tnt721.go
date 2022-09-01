@@ -211,7 +211,8 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	sender := accountList[1].fromAddress
 	receiver := accountList[6].fromAddress
 
-	subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7") // FIXME: should instantiate a mock TNT721 instead of using the Voucher contract (which causes confusion)
+	//subchainTNT721VoucherAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7") // FIXME: should instantiate a mock TNT721 instead of using the Voucher contract (which causes confusion)
+	subchainTNT721VoucherAddress:=subchainTNT721TokenAddress
 	subchainTNT721VoucherInstance, _ := ct.NewTNT721VoucherContract(subchainTNT721VoucherAddress, subchainClient)
 	subchainTNT721TokenBankinstance, err := ct.NewTNT721TokenBank(subchainTNT721TokenBankAddress, subchainClient)
 	if err != nil {
@@ -326,7 +327,8 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	fmt.Printf("Mainchain NFT Voucher sender: %v, tokenID: %v\n", sender, tokenID)
 	fmt.Printf("Subchain NFT receiver       : %v, tokenID: %v\n\n", receiver, tokenID)
 
-	subchainTNT721ContractAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
+	//subchainTNT721ContractAddress := common.HexToAddress("0xd5125d7bB9c4Fb222C522c4b1922cabC631E52D7")
+	subchainTNT721ContractAddress := subchainTNT721TokenAddress
 	subchainTNT721Contract, _ := ct.NewTNT721VoucherContract(subchainTNT721ContractAddress, subchainClient)
 	subchainTNT721Owner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
 
