@@ -43,6 +43,10 @@ var mainchainTNT1155VoucherContractAddress common.Address
 var subchainTNT1155TokenBankAddress common.Address
 var subchainTNT1155VoucherContractAddress common.Address
 
+var subchainTNT20TokenAddress common.Address
+var subchainTNT721TokenAddress common.Address
+var subchainTNT1155TokenAddress common.Address
+
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
 	for _, b := range data {
@@ -77,6 +81,7 @@ func init() {
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
+	deploy_contracts()
 	// var dec18 = new(big.Int)
 	// dec18.SetString("1000000000000000000", 10)
 	// //amount := new(big.Int).Mul(dec18, big.NewInt(200000))

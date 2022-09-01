@@ -73,7 +73,8 @@ func subchainTNT20Lock(mintLockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
+	//subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
+	subchainTNT20VoucherAddress := subchainTNT20TokenAddress
 	if err != nil {
 		log.Fatal(err)
 	}

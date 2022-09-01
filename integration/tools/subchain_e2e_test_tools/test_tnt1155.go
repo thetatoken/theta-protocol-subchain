@@ -103,11 +103,11 @@ func SubchainTNT1155Lock(tokenID *big.Int) {
 	// fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
 	auth = subchainSelectAccount(subchainClient, 1)
-	lockTx, err := subchainTNT1155TokenBankinstance.LockTokens(auth, subchainID, subchainTNT1155VoucherAddress, receiver, big.NewInt(1), big.NewInt(1), []byte(""))
+	lockTx, err := subchainTNT1155TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT1155VoucherAddress, receiver, big.NewInt(1), big.NewInt(1), []byte(""))
 	if err != nil {
 		log.Fatal(err)
 	}
-	tx1, _ := subchainTNT1155TokenBankinstance.TotalLockedAmounts(nil, big.NewInt(360777), common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61"), big.NewInt(1))
+	tx1, _ := subchainTNT1155TokenBankinstance.TotalLockedAmounts(nil, big.NewInt(366), common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61"), big.NewInt(1))
 	fmt.Println(tx1)
 	fmt.Printf("TNT1155 Token Lock tx hash (Subchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering TNT1155 NFT (tokenID: %v) from Subchain %v to the Mainchain...\n\n", tokenID, subchainID)
