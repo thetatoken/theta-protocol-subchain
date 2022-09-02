@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/spf13/cobra"
@@ -10,28 +11,44 @@ import (
 var startMainchainTNT20LockCmd = &cobra.Command{
 	Use: "MainchainTNT20Lock",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.MainchainTNT20Lock(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.MainchainTNT20Lock(amountInt)
 	},
 }
 
 var startSubchainTNT20LockCmd = &cobra.Command{
 	Use: "SubchainTNT20Lock",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.SubchainTNT20Lock(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.SubchainTNT20Lock(amountInt)
 	},
 }
 
 var startSubchainTNT20BurnCmd = &cobra.Command{
 	Use: "SubchainTNT20Burn",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.SubchainTNT20Burn(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.SubchainTNT20Burn(amountInt)
 	},
 }
 
 var startMainchainTNT20BurnCmd = &cobra.Command{
 	Use: "MainchainTNT20Burn",
 	Run: func(cmd *cobra.Command, args []string) {
-		tools.MainchainTNT20Burn(big.NewInt(amount))
+		amountInt, success := big.NewInt(0).SetString(amount, 10)
+		if !success {
+			panic(fmt.Sprintf("Failed to read amount: %v", amount))
+		}
+		tools.MainchainTNT20Burn(amountInt)
 	},
 }
 var contractAddress, accountAddress string
@@ -50,10 +67,10 @@ func init() {
 	rootCmd.AddCommand(startMainchainTNT20BurnCmd)
 	rootCmd.AddCommand(starTNT20QueryCmd)
 
-	startMainchainTNT20LockCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
-	startSubchainTNT20LockCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
-	startSubchainTNT20BurnCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
-	startMainchainTNT20BurnCmd.PersistentFlags().Int64Var(&amount, "amount", 10, "amount")
+	startMainchainTNT20LockCmd.PersistentFlags().StringVar(&amount, "amount", "10", "amount")
+	startSubchainTNT20LockCmd.PersistentFlags().StringVar(&amount, "amount", "10", "amount")
+	startSubchainTNT20BurnCmd.PersistentFlags().StringVar(&amount, "amount", "10", "amount")
+	startMainchainTNT20BurnCmd.PersistentFlags().StringVar(&amount, "amount", "10", "amount")
 	starTNT20QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
 	starTNT20QueryCmd.PersistentFlags().StringVar(&accountAddress, "accountAddress", "", "accountAddress")
 	starTNT20QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")

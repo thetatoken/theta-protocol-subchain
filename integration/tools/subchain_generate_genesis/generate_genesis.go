@@ -136,13 +136,13 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		panic(fmt.Sprintf("failed to read initial stake deposit file: %v", err))
 	}
 
-	// need to create an account with a small amount of TFuel Vouchers for the initial validators,
-	// so that they can vote for the cross-chain transfers
-	//     validatorInitialBalance = crossChainTFuelTransferGasPerTx * minGasPrice * numInitialTFuelCrossChainTransfers
-	crossChainTFuelTransferGasPerTx := big.NewInt(CrossChainTFuelTransferGasPerTx)
-	numInitialTFuelCrossChainTransfers := big.NewInt(NumInitialTFuelCrossChainTransfers)
-	validatorInitialBalance := big.NewInt(1).Mul(crossChainTFuelTransferGasPerTx, scom.GetMinimumGasPrice())
-	validatorInitialBalance = big.NewInt(1).Mul(validatorInitialBalance, numInitialTFuelCrossChainTransfers)
+	// // need to create an account with a small amount of TFuel Vouchers for the initial validators,
+	// // so that they can vote for the cross-chain transfers
+	// //     validatorInitialBalance = crossChainTFuelTransferGasPerTx * minGasPrice * numInitialTFuelCrossChainTransfers
+	// crossChainTFuelTransferGasPerTx := big.NewInt(CrossChainTFuelTransferGasPerTx)
+	// numInitialTFuelCrossChainTransfers := big.NewInt(NumInitialTFuelCrossChainTransfers)
+	// validatorInitialBalance := big.NewInt(1).Mul(crossChainTFuelTransferGasPerTx, scom.GetMinimumGasPrice())
+	// validatorInitialBalance = big.NewInt(1).Mul(validatorInitialBalance, numInitialTFuelCrossChainTransfers)
 
 	json.Unmarshal(initValidatorSetByteValue, &validators)
 	initialDynasty := big.NewInt(0)
@@ -155,7 +155,7 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		validator := score.NewValidator(v.Address, stake)
 		validatorSet.AddValidator(validator)
 
-		setInitialBalance(sv, common.HexToAddress(v.Address), validatorInitialBalance)
+		setInitialBalance(sv, common.HexToAddress(v.Address), common.Big0) // need to create accounts with zero balances for the inital validators
 	}
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)

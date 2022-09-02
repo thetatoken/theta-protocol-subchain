@@ -28,7 +28,6 @@ import (
 	sld "github.com/thetatoken/thetasubchain/ledger"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 	snsync "github.com/thetatoken/thetasubchain/netsync"
-	srp "github.com/thetatoken/thetasubchain/report"
 	srpc "github.com/thetatoken/thetasubchain/rpc"
 	ssnst "github.com/thetatoken/thetasubchain/snapshot"
 	srollingdb "github.com/thetatoken/thetasubchain/store/rollingdb"
@@ -48,7 +47,7 @@ type Node struct {
 	MainchainWitness     witness.ChainWitness
 	Orchestrator         orchestrator.ChainOrchestrator
 
-	reporter *srp.Reporter
+	// reporter *srp.Reporter
 
 	// Life cycle
 	wg      *sync.WaitGroup
@@ -101,9 +100,9 @@ func NewNode(params *Params) *Node {
 	)
 
 	consensus := sconsensus.NewConsensusEngine(params.PrivateKey, store, chain, dispatcher, validatorManager, metachainWitness)
-	reporter := srp.NewReporter(dispatcher, consensus, chain)
+	// reporter := srp.NewReporter(dispatcher, consensus, chain)
 
-	syncMgr := snsync.NewSyncManager(chain, consensus, params.NetworkOld, params.Network, dispatcher, consensus, reporter)
+	syncMgr := snsync.NewSyncManager(chain, consensus, params.NetworkOld, params.Network, dispatcher, consensus)
 	mempool := smp.CreateMempool(dispatcher, consensus)
 	ledger := sld.NewLedger(params.ChainID, params.RollingDB, params.RollingDB, chain, consensus, validatorManager, mempool, metachainWitness)
 
@@ -149,10 +148,10 @@ func NewNode(params *Params) *Node {
 		Dispatcher:           dispatcher,
 		Ledger:               ledger,
 		Mempool:              mempool,
-		reporter:             reporter,
 		InterChainEventCache: interChainEventCache,
 		MainchainWitness:     metachainWitness,
 		Orchestrator:         orchestrator,
+		// reporter:             reporter,
 	}
 
 	if viper.GetBool(common.CfgRPCEnabled) {
@@ -171,7 +170,7 @@ func (n *Node) Start(ctx context.Context) {
 	n.SyncManager.Start(n.ctx)
 	n.Dispatcher.Start(n.ctx)
 	n.Mempool.Start(n.ctx)
-	n.reporter.Start(n.ctx)
+	// n.reporter.Start(n.ctx)
 	n.MainchainWitness.Start(n.ctx)
 	n.Orchestrator.Start(n.ctx)
 

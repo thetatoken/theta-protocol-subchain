@@ -56,7 +56,7 @@ func NewExecutor(db database.Database, chain *sbc.Chain, state *slst.LedgerState
 		coinbaseTxExec:                   NewCoinbaseTxExecutor(db, chain, state, consensus, valMgr),
 		subchainValidatorSetUpdateTxExec: NewSubchainValidatorSetUpdateTxExecutor(db, chain, state, consensus, valMgr, metachainWitness),
 		sendTxExec:                       NewSendTxExecutor(state),
-		smartContractTxExec:              NewSmartContractTxExecutor(chain, state, ledger),
+		smartContractTxExec:              NewSmartContractTxExecutor(chain, state, ledger, valMgr),
 		skipSanityCheck:                  false,
 	}
 

@@ -29,14 +29,16 @@ type SmartContractTxExecutor struct {
 	state  *slst.LedgerState
 	chain  *sbc.Chain
 	ledger score.Ledger
+	valMgr score.ValidatorManager
 }
 
 // NewSmartContractTxExecutor creates a new instance of SmartContractTxExecutor
-func NewSmartContractTxExecutor(chain *sbc.Chain, state *slst.LedgerState, ledger score.Ledger) *SmartContractTxExecutor {
+func NewSmartContractTxExecutor(chain *sbc.Chain, state *slst.LedgerState, ledger score.Ledger, valMgr score.ValidatorManager) *SmartContractTxExecutor {
 	return &SmartContractTxExecutor{
 		state:  state,
 		chain:  chain,
 		ledger: ledger,
+		valMgr: valMgr,
 	}
 }
 
@@ -104,7 +106,7 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 			WithErrorCode(result.CodeInvalidValueToTransfer)
 	}
 
-	if !sanityCheckForGasPrice(tx.GasPrice, blockHeight) {
+	if !sanityCheckForGasPrice(view, tx.From.Address, tx.To.Address, tx.Data, exec.ledger, exec.valMgr, tx.GasPrice, blockHeight) {
 		minimumGasPrice := scom.GetMinimumGasPrice()
 		return result.Error("Insufficient gas price. Gas price needs to be at least %v TFuelWei", minimumGasPrice).
 			WithErrorCode(result.CodeInvalidGasPrice)

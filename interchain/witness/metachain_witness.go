@@ -176,9 +176,10 @@ func (mw *MetachainWitness) Wait() {
 }
 
 func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
-	subchainTFuelTokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
-	if subchainTFuelTokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
+	var err error
+	subchainTFuelTokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
+	if subchainTFuelTokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address\n")
 	}
 	mw.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
 	mw.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
@@ -186,9 +187,9 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
 
-	subchainTNT20TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
-	if subchainTNT20TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	subchainTNT20TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
+	if subchainTNT20TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address\n")
 	}
 	mw.subchainTNT20TokenBankAddr = *subchainTNT20TokenBankAddr
 	mw.subchainTNT20TokenBank, err = scta.NewTNT20TokenBank(*subchainTNT20TokenBankAddr, mw.subchainEthRpcClient)
@@ -196,9 +197,9 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
 
-	subchainTNT721TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	subchainTNT721TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
+	if subchainTNT721TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address\n")
 	}
 	mw.subchainTNT721TokenBankAddr = *subchainTNT721TokenBankAddr
 	mw.subchainTNT721TokenBank, err = scta.NewTNT721TokenBank(*subchainTNT721TokenBankAddr, mw.subchainEthRpcClient)
@@ -495,7 +496,7 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID 
 	maxBlockRange := int64(300) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
 	minBlockGap := int64(2)     // tentative, to ensure the chain has enough time to finalize the event
 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
-		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
+		// catch-up phase, gap is over maxBlockRange，catch-up at full speed
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
 	} else {
 		// steady phase, gap is between minBlockGap and maxBlockRange

@@ -40,5 +40,5 @@ type Ledger interface {
 	FinalizeState(height uint64, rootHash common.Hash) result.Result
 	GetFinalizedValidatorSet(blockHash common.Hash, isNext bool) (*ValidatorSet, error)
 	PruneState(endHeight uint64) error
-	GetTokenBankContractAddress(tokenType CrossChainTokenType) (*common.Address, error)
+	GetTokenBankContractAddress(tokenType CrossChainTokenType) *common.Address
 }
