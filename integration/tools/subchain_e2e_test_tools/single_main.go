@@ -22,11 +22,9 @@ func config() []string {
 	tnt20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
 	subchaintnt20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 
-
 	tnt721TokenBankAddress = common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
 	tnt721VoucherContractAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
 	Subchaintnt721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
-	
 
 	tfuelTokenbankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
 	subchainTfuelTokenBank = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
@@ -63,8 +61,8 @@ func main() {
 	// subchainTfuelBurn(big.NewInt(10))
 
 	// //TNT20
-	// mainchainTNT20Lock(big.NewInt(100)) //mainchainTNT20Lock(tokenAmount) last address printed in console is subchain voucher contract address
-	 subchainTNT20Lock(big.NewInt(10))   //last address printed in console is mainchain voucher contract address
+	//mainchainTNT20Lock(big.NewInt(100)) //mainchainTNT20Lock(tokenAmount) last address printed in console is subchain voucher contract address
+	//subchainTNT20Lock(big.NewInt(10)) //last address printed in console is mainchain voucher contract address
 	// mainchainTNT20Burn(big.NewInt(10))
 	// subchainTNT20Burn(big.NewInt(10))
 
@@ -78,7 +76,52 @@ func main() {
 	//MainchainTNT1155Burn(big.NewInt(1))
 	//SubchainTNT1155Burn(big.NewInt(1))
 	//getSubchainTNT1155VoucherMintLog(39,45)
+	// mintLockAmount := big.NewInt(100)
+	// client, err := ethclient.Dial("http://localhost:18888/rpc")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// var dec18 = new(big.Int)
+	// dec18.SetString("1000000000000000000", 10)
+	// user := accountList[1].fromAddress
 
+	// instanceTNT20VoucherContract, err := ct.NewTNT20VoucherContract(tnt20VoucherContractAddress, client)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+
+	// authAccount0 := mainchainSelectAccount(client, 0)
+	// _, err = instanceTNT20VoucherContract.Mint(authAccount0, user, mintLockAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// authUser := mainchainSelectAccount(client, 1)
+	// _, err = instanceTNT20VoucherContract.Approve(authUser, tnt20TokenBankAddress, mintLockAmount)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// chs := make([]chan int, 10)
+	// for i := 0; i < 10; i++ {
+	// 	chs[i] = make(chan int)
+	// 	go parallelLock(chs[i])
+	// }
+	// for _, ch := range chs {
+	// 	<-ch
+	// }
+	query()
+}
+func query() {
+	client, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
+	subchainTNT20VoucherAddressInstance, _ := ct.NewMockTNT20(subchainAddress, client)
+	tx, err := subchainTNT20VoucherAddressInstance.BalanceOf(nil, accountList[1].fromAddress)
+	fmt.Println(tx)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 func deploy_contracts() {
 	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
@@ -92,7 +135,7 @@ func deploy_contracts() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainTNT20TokenAddress=address
+	subchainTNT20TokenAddress = address
 	auth = subchainSelectAccount(subchainClient, 1)
 	address, tx, _, err = ct.DeployMockTNT721(auth, subchainClient)
 	fmt.Println("tnt721", address)
@@ -100,7 +143,7 @@ func deploy_contracts() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainTNT721TokenAddress=address
+	subchainTNT721TokenAddress = address
 	auth = subchainSelectAccount(subchainClient, 1)
 	address, tx, _, err = ct.DeployMockTNT1155(auth, subchainClient)
 	fmt.Println("tnt1155", address)
@@ -108,5 +151,5 @@ func deploy_contracts() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	subchainTNT1155TokenAddress=address
+	subchainTNT1155TokenAddress = address
 }

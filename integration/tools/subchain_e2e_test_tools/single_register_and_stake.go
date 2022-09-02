@@ -81,7 +81,7 @@ func init() {
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 
-	deploy_contracts()
+	//deploy_contracts()
 	// var dec18 = new(big.Int)
 	// dec18.SetString("1000000000000000000", 10)
 	// //amount := new(big.Int).Mul(dec18, big.NewInt(200000))

@@ -12,6 +12,39 @@ import (
 	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
+func parallelLock(ch chan int) {
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(tnt20TokenBankAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	mintLockAmount := big.NewInt(10)
+	user := accountList[1].fromAddress
+	for {
+		authUser := mainchainSelectAccount(client, 1)
+		LockTx, err := instanceTNT20TokenBank.LockTokens(authUser, subchainID, tnt20VoucherContractAddress, user, mintLockAmount)
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		receipt, err := client.TransactionReceipt(context.Background(), LockTx.Hash())
+		if err != nil {
+			fmt.Println(err)
+			continue
+		}
+		if receipt.Status != 1 {
+			fmt.Println("lock error")
+			continue
+		}
+		fmt.Println(LockTx.Hash().Hex())
+		break
+	}
+
+	ch <- 1
+}
 func mainchainTNT20Lock(mintLockAmount *big.Int) {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
