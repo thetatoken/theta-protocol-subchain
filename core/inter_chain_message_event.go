@@ -24,28 +24,28 @@ const (
 	IMCEventTypeUnknown InterChainMessageEventType = 0
 	// 1 - 9999 reserved for future use
 
-	IMCEventTypeCrossChainTokenLock       InterChainMessageEventType = 10000
-	IMCEventTypeCrossChainTokenLockTFuel  InterChainMessageEventType = 10001
-	IMCEventTypeCrossChainTokenLockTNT20  InterChainMessageEventType = 10002
-	IMCEventTypeCrossChainTokenLockTNT721 InterChainMessageEventType = 10003
+	IMCEventTypeCrossChainTokenLock        InterChainMessageEventType = 10000
+	IMCEventTypeCrossChainTokenLockTFuel   InterChainMessageEventType = 10001
+	IMCEventTypeCrossChainTokenLockTNT20   InterChainMessageEventType = 10002
+	IMCEventTypeCrossChainTokenLockTNT721  InterChainMessageEventType = 10003
 	IMCEventTypeCrossChainTokenLockTNT1155 InterChainMessageEventType = 10004
 
-	IMCEventTypeCrossChainVoucherMint       InterChainMessageEventType = 20000
-	IMCEventTypeCrossChainVoucherMintTFuel  InterChainMessageEventType = 20001
-	IMCEventTypeCrossChainVoucherMintTNT20  InterChainMessageEventType = 20002
-	IMCEventTypeCrossChainVoucherMintTNT721 InterChainMessageEventType = 20003
+	IMCEventTypeCrossChainVoucherMint        InterChainMessageEventType = 20000
+	IMCEventTypeCrossChainVoucherMintTFuel   InterChainMessageEventType = 20001
+	IMCEventTypeCrossChainVoucherMintTNT20   InterChainMessageEventType = 20002
+	IMCEventTypeCrossChainVoucherMintTNT721  InterChainMessageEventType = 20003
 	IMCEventTypeCrossChainVoucherMintTNT1155 InterChainMessageEventType = 20004
 
-	IMCEventTypeCrossChainTokenUnlock       InterChainMessageEventType = 30000
-	IMCEventTypeCrossChainTokenUnlockTFuel  InterChainMessageEventType = 30001
-	IMCEventTypeCrossChainTokenUnlockTNT20  InterChainMessageEventType = 30002
-	IMCEventTypeCrossChainTokenUnlockTNT721 InterChainMessageEventType = 30003
+	IMCEventTypeCrossChainTokenUnlock        InterChainMessageEventType = 30000
+	IMCEventTypeCrossChainTokenUnlockTFuel   InterChainMessageEventType = 30001
+	IMCEventTypeCrossChainTokenUnlockTNT20   InterChainMessageEventType = 30002
+	IMCEventTypeCrossChainTokenUnlockTNT721  InterChainMessageEventType = 30003
 	IMCEventTypeCrossChainTokenUnlockTNT1155 InterChainMessageEventType = 30004
 
-	IMCEventTypeCrossChainVoucherBurn       InterChainMessageEventType = 40000
-	IMCEventTypeCrossChainVoucherBurnTFuel  InterChainMessageEventType = 40001
-	IMCEventTypeCrossChainVoucherBurnTNT20  InterChainMessageEventType = 40002
-	IMCEventTypeCrossChainVoucherBurnTNT721 InterChainMessageEventType = 40003
+	IMCEventTypeCrossChainVoucherBurn        InterChainMessageEventType = 40000
+	IMCEventTypeCrossChainVoucherBurnTFuel   InterChainMessageEventType = 40001
+	IMCEventTypeCrossChainVoucherBurnTNT20   InterChainMessageEventType = 40002
+	IMCEventTypeCrossChainVoucherBurnTNT721  InterChainMessageEventType = 40003
 	IMCEventTypeCrossChainVoucherBurnTNT1155 InterChainMessageEventType = 40004
 )
 
@@ -336,6 +336,7 @@ type CrossChainTNT1155TokenLockedEvent struct { // corresponding to the "TNT721T
 	LockedAmount               *big.Int
 	TokenURI                   string
 	TokenLockNonce             *big.Int
+	MintData                   []byte
 }
 
 func ParseToCrossChainTNT1155TokenLockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT1155TokenLockedEvent, error) {
@@ -505,6 +506,7 @@ func ParseToCrossChainTNT1155VoucherMintedEvent(icme *InterChainMessageEvent) (*
 
 	return &event, nil
 }
+
 // ------------------------------------ Cross-Chain: Voucher Burn --------------------------------------------
 
 type VoucherBurnEventStatus byte
@@ -628,8 +630,9 @@ type CrossChainTNT1155VoucherBurnedEvent struct { // corresponding to the "TNT11
 	SourceChainVoucherOwner  common.Address
 	TargetChainTokenReceiver common.Address
 	TokenID                  *big.Int
-	BurnedAmount  			 *big.Int
+	BurnedAmount             *big.Int
 	VoucherBurnNonce         *big.Int
+	TransferData             []byte
 }
 
 func ParseToCrossChainTNT1155VoucherBurnedEvent(icme *InterChainMessageEvent) (*CrossChainTNT1155VoucherBurnedEvent, error) {
@@ -770,7 +773,7 @@ type CrossChainTNT1155TokenUnlockedEvent struct { // corresponding to the "TNT11
 	Denom                       string
 	TargetChainTokenReceiver    common.Address
 	TokenID                     *big.Int
-	UnlockedAmount				*big.Int
+	UnlockedAmount              *big.Int
 	SourceChainVoucherBurnNonce *big.Int
 	TokenUnlockNonce            *big.Int
 }
@@ -799,6 +802,7 @@ func ParseToCrossChainTNT1155TokenUnlockedEvent(icme *InterChainMessageEvent) (*
 	}
 	return &event, nil
 }
+
 // ------------------------------------ Denom Utils ----------------------------------------------
 
 type CrossChainTokenType int
@@ -808,7 +812,7 @@ const (
 	CrossChainTokenTypeTFuel   CrossChainTokenType = 0
 	CrossChainTokenTypeTNT20   CrossChainTokenType = 20
 	CrossChainTokenTypeTNT721  CrossChainTokenType = 721
-	CrossChainTokenTypeTNT1155  CrossChainTokenType = 1155
+	CrossChainTokenTypeTNT1155 CrossChainTokenType = 1155
 )
 
 const tfuelAddressPlaceholder = "0x0000000000000000000000000000000000000000"

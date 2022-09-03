@@ -83,9 +83,9 @@ var EventSelectors = map[score.InterChainMessageEventType]string{
 	score.IMCEventTypeCrossChainTokenUnlockTNT721: crypto.Keccak256Hash([]byte("TNT721TokenUnlocked(string,address,uint256,uint256,uint256)")).Hex(),
 
 	//TNT1155
-	score.IMCEventTypeCrossChainTokenLockTNT1155:   crypto.Keccak256Hash([]byte("TNT1155TokenLocked(string,address,uint256,address,uint256,uint256,string,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainTokenLockTNT1155:   crypto.Keccak256Hash([]byte("TNT1155TokenLocked(string,address,uint256,address,uint256,uint256,string,uint256,bytes)")).Hex(),
 	score.IMCEventTypeCrossChainVoucherMintTNT1155: crypto.Keccak256Hash([]byte("TNT1155VoucherMinted(string,address,address,uint256,uint256,uint256,uint256)")).Hex(),
-	score.IMCEventTypeCrossChainVoucherBurnTNT1155: crypto.Keccak256Hash([]byte("TNT1155VoucherBurned(string,address,address,uint256,uint256,uint256)")).Hex(),
+	score.IMCEventTypeCrossChainVoucherBurnTNT1155: crypto.Keccak256Hash([]byte("TNT1155VoucherBurned(string,address,address,uint256,uint256,uint256,bytes)")).Hex(),
 	score.IMCEventTypeCrossChainTokenUnlockTNT1155: crypto.Keccak256Hash([]byte("TNT1155TokenUnlocked(string,address,uint256,uint256,uint256,uint256)")).Hex(),
 }
 
