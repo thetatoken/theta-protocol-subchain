@@ -48,7 +48,7 @@ type Validator struct {
 //
 // Example:
 // cd $SUBCHAIN_HOME/integration/privatenet/node
-// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub360777 -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
+// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub360777 -initValidatorSet=./data/init_validator_set.json -feeSetter=0x2E833968E5bB786Ae419c4d13189fB081Cc43bab -genesis=./genesis
 //
 func main() {
 	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, feeSetter := parseArguments()
@@ -58,7 +58,11 @@ func main() {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
 
+	logger.Infof("-----------------------------------------------------------------------------")
+	logger.Infof("Cross-chain fee setter: %v", feeSetter)
 	err = sanityChecks(sv)
+	logger.Infof("-----------------------------------------------------------------------------")
+
 	if err != nil {
 		panic(fmt.Sprintf("Sanity checks failed: %v", err))
 	} else {
@@ -241,7 +245,7 @@ func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, nu
 				"internalType": "uint256",
 				"name": "crossChainFee_",
 				"type": "uint256"
-			}
+			},
 			{
 				"internalType": "uint256",
 				"name": "feeSetter_",
@@ -394,8 +398,6 @@ func writeStoreView(db database.Database, sv *slst.StoreView, needAccountStorage
 }
 
 func sanityChecks(sv *slst.StoreView) error {
-	logger.Infof("-----------------------------------------------------------------------------")
-
 	vsAnalyzed := false
 	sv.GetStore().Traverse(nil, func(key, val common.Bytes) bool {
 		if bytes.Equal(key, slst.CurrentValidatorSetKey()) {
@@ -445,7 +447,6 @@ func sanityChecks(sv *slst.StoreView) error {
 		panic("TNT721 token bank contract is not set")
 	}
 	logger.Infof("TNT721Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
-	logger.Infof("-----------------------------------------------------------------------------")
 
 	// Sanity checks for the initial validator set
 	vsProof, err := proveValidatorSet(sv)
