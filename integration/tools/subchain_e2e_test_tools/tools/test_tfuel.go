@@ -26,7 +26,7 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 
 	receiver := accountList[1].fromAddress
 
-	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(tfuelTokenBankAddress, mainchainClient)
+	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(mainchainTFuelTokenBankAddress, mainchainClient)
 	sender := mainchainSelectAccount(mainchainClient, 3)
 	sender.Value = big.NewInt(0).Add(lockAmount, crossChainFee)
 
@@ -111,7 +111,7 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	for {
 		time.Sleep(1 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
-		result := getMainchainTFuelUnlockLogs(int(fromHeight), int(toHeight), tfuelTokenBankAddress, receiver)
+		result := getMainchainTFuelUnlockLogs(int(fromHeight), int(toHeight), mainchainTFuelTokenBankAddress, receiver)
 		if result != nil {
 			break
 		}

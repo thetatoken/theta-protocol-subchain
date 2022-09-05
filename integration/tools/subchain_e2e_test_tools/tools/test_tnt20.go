@@ -28,7 +28,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	sender := mainchainSelectAccount(mainchainClient, 1)
 	receiver := accountList[1].fromAddress
 
-	tnt20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
+	tnt20ContractAddress := common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4")
 	instaceTNT20Contract, err := ct.NewTNT20VoucherContract(tnt20ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
@@ -41,7 +41,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(tnt20TokenBankAddress, mainchainClient)
+	instanceTNT20TokenBank, err := ct.NewTNT20TokenBank(mainchainTNT20TokenBankAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -52,7 +52,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	_, err = instaceTNT20Contract.Approve(sender, tnt20TokenBankAddress, lockAmount)
+	_, err = instaceTNT20Contract.Approve(sender, mainchainTNT20TokenBankAddress, lockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,7 +65,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 
 	sender = mainchainSelectAccount(mainchainClient, 1)
 	sender.Value.Set(crossChainFee)
-	lockTx, err := instanceTNT20TokenBank.LockTokens(sender, subchainID, tnt20VoucherContractAddress, receiver, lockAmount)
+	lockTx, err := instanceTNT20TokenBank.LockTokens(sender, subchainID, tnt20ContractAddress, receiver, lockAmount)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -122,21 +122,26 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	}
 	fmt.Printf("Preparing for TNT20 cross-chain transfer...\n")
 
-	//subchainTNT20Address := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
-	subchainTNT20Address := subchainTNT20TokenAddress
-	if err != nil {
-		log.Fatal(err)
-	}
+	subchainTNT20Address := common.HexToAddress("0x9572eCEA04Fe74B642400dBb04952E91049C9B3D")
+
 	sender := accountList[1].fromAddress
 	receiver := accountList[6].fromAddress
 	subchainTNT20TokenBankInstance, _ := ct.NewTNT20TokenBank(subchainTNT20TokenBankAddress, subchainClient)
-	subchainTNT20Instance, _ := ct.NewTNT20VoucherContract(subchainTNT20Address, subchainClient)
+	subchainTNT20Instance, _ := ct.NewMockTNT20(subchainTNT20Address, subchainClient)
+
+	mintAmount := big.NewInt(1).Mul(big.NewInt(5), lockAmount)
+	fmt.Printf("Minting %v TNT20 tokens\n", mintAmount)
+
+	authUser := subchainSelectAccount(subchainClient, 1)
+	subchainTNT20Instance.Mint(authUser, sender, mintAmount)
+	time.Sleep(6 * time.Second)
+
 	senderTNT20Balance, _ := subchainTNT20Instance.BalanceOf(nil, sender)
 	subchainTNT20Name, _ := subchainTNT20Instance.Name(nil)
 	subchainTNT20Symbol, _ := subchainTNT20Instance.Symbol(nil)
 	subchainTNT20Decimals, _ := subchainTNT20Instance.Decimals(nil)
 
-	expectedMainchainTNT20VoucherAddress := common.HexToAddress("0xb0DBBcba1Be5B71Dcb42aB1935773B3675e645e8")
+	expectedMainchainTNT20VoucherAddress := common.HexToAddress("0xb127E6e6D2b3434352f03dA2dE8446C39aCc3bB8")
 	expectedMainchainTNT20VoucherContractInstance, _ := ct.NewTNT20VoucherContract(expectedMainchainTNT20VoucherAddress, mainchainClient)
 	receiverMainchainTNT20VoucherBalance, _ := expectedMainchainTNT20VoucherContractInstance.BalanceOf(nil, receiver)
 
@@ -144,7 +149,7 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	fmt.Printf("Subchain sender   : %v, TNT20 balance on Subchain         : %v\n", sender, senderTNT20Balance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 voucher balance on Mainchain: %v\n\n", receiver, receiverMainchainTNT20VoucherBalance)
 
-	authUser := subchainSelectAccount(subchainClient, 1)
+	authUser = subchainSelectAccount(subchainClient, 1)
 	subchainTNT20Instance.Approve(authUser, subchainTNT20TokenBankAddress, lockAmount)
 
 	authUser = subchainSelectAccount(subchainClient, 1)
@@ -171,7 +176,7 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	for {
 		time.Sleep(1 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
-		result := getMainchainTNT20VoucherMintLogs(int(fromHeight), int(toHeight), tnt20TokenBankAddress, accountList[6].fromAddress)
+		result := getMainchainTNT20VoucherMintLogs(int(fromHeight), int(toHeight), mainchainTNT20TokenBankAddress, accountList[6].fromAddress)
 		if result != nil {
 			mainchainVoucherAddress = *result
 			break
@@ -206,7 +211,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	sender := accountList[6].fromAddress
 	receiver := accountList[1].fromAddress
 
-	mainchainTNT20TokenBankInstance, _ := ct.NewTNT20TokenBank(tnt20TokenBankAddress, mainchainClient)
+	mainchainTNT20TokenBankInstance, _ := ct.NewTNT20TokenBank(mainchainTNT20TokenBankAddress, mainchainClient)
 
 	mainchainTNT20VoucherAddress := common.HexToAddress("0xb0DBBcba1Be5B71Dcb42aB1935773B3675e645e8")
 	mainchainTNT20VoucherContract, _ := ct.NewTNT20VoucherContract(mainchainTNT20VoucherAddress, mainchainClient)
@@ -215,7 +220,8 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	mainchainTNT20Symbol, _ := mainchainTNT20VoucherContract.Symbol(nil)
 	mainchainTNT20Decimals, _ := mainchainTNT20VoucherContract.Decimals(nil)
 
-	//subchainTNT20TokenAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f") // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
+	subchainTNT20TokenAddress := common.HexToAddress("0x9572eCEA04Fe74B642400dBb04952E91049C9B3D")
+	// subchainTNT20TokenAddress := deployMockTNT20(subchainClient)
 	subchainTNT20TokenContract, _ := ct.NewTNT20VoucherContract(subchainTNT20TokenAddress, subchainClient)
 	receiverSubchainTNT20TokenBalance, _ := subchainTNT20TokenContract.BalanceOf(nil, receiver)
 
@@ -224,7 +230,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	fmt.Printf("Subchain receiver: %v, TNT20 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT20TokenBalance)
 
 	authUser := mainchainSelectAccount(mainchainClient, 6)
-	mainchainTNT20VoucherContract.Approve(authUser, tnt20TokenBankAddress, burnAmount)
+	mainchainTNT20VoucherContract.Approve(authUser, mainchainTNT20TokenBankAddress, burnAmount)
 
 	authUser = mainchainSelectAccount(mainchainClient, 6)
 	authUser.Value.Set(crossChainFee)
@@ -284,15 +290,15 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 
 	subchainTNT20TokenBank, _ := ct.NewTNT20TokenBank(subchainTNT20TokenBankAddress, subchainClient)
 
-	//subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
-	subchainTNT20VoucherAddress := subchainTNT20TokenAddress
+	subchainTNT20VoucherAddress := common.HexToAddress("0x7D7e270b7E279C94b265A535CdbC00Eb62E6e68f")
+	// subchainTNT20VoucherAddress := subchainTNT20TokenAddress
 	subchainTNT20VoucherContract, _ := ct.NewTNT20VoucherContract(subchainTNT20VoucherAddress, subchainClient)
 	senderSubchainTNT20VoucherBalance, _ := subchainTNT20VoucherContract.BalanceOf(nil, sender)
 	subchainTNT20Name, _ := subchainTNT20VoucherContract.Name(nil)
 	subchainTNT20Symbol, _ := subchainTNT20VoucherContract.Symbol(nil)
 	subchainTNT20Decimals, _ := subchainTNT20VoucherContract.Decimals(nil)
 
-	mainchainTNT20ContractAddress := tnt20VoucherContractAddress // FIXME: should instantiate a mock TNT20 instead of using the Voucher contract (which causes confusion)
+	mainchainTNT20ContractAddress := common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4")
 	mainchainTNT20Contract, _ := ct.NewTNT20VoucherContract(mainchainTNT20ContractAddress, mainchainClient)
 	receiverMainchainTNT20TokenBalance, _ := mainchainTNT20Contract.BalanceOf(nil, receiver)
 
@@ -342,6 +348,7 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchain : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
 }
+
 func QueryTNT20(chainID int64, contractAddress, accountAddress string) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
