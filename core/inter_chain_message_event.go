@@ -24,25 +24,21 @@ const (
 	IMCEventTypeUnknown InterChainMessageEventType = 0
 	// 1 - 9999 reserved for future use
 
-	IMCEventTypeCrossChainTokenLock        InterChainMessageEventType = 10000
 	IMCEventTypeCrossChainTokenLockTFuel   InterChainMessageEventType = 10001
 	IMCEventTypeCrossChainTokenLockTNT20   InterChainMessageEventType = 10002
 	IMCEventTypeCrossChainTokenLockTNT721  InterChainMessageEventType = 10003
 	IMCEventTypeCrossChainTokenLockTNT1155 InterChainMessageEventType = 10004
 
-	IMCEventTypeCrossChainVoucherMint        InterChainMessageEventType = 20000
 	IMCEventTypeCrossChainVoucherMintTFuel   InterChainMessageEventType = 20001
 	IMCEventTypeCrossChainVoucherMintTNT20   InterChainMessageEventType = 20002
 	IMCEventTypeCrossChainVoucherMintTNT721  InterChainMessageEventType = 20003
 	IMCEventTypeCrossChainVoucherMintTNT1155 InterChainMessageEventType = 20004
 
-	IMCEventTypeCrossChainTokenUnlock        InterChainMessageEventType = 30000
 	IMCEventTypeCrossChainTokenUnlockTFuel   InterChainMessageEventType = 30001
 	IMCEventTypeCrossChainTokenUnlockTNT20   InterChainMessageEventType = 30002
 	IMCEventTypeCrossChainTokenUnlockTNT721  InterChainMessageEventType = 30003
 	IMCEventTypeCrossChainTokenUnlockTNT1155 InterChainMessageEventType = 30004
 
-	IMCEventTypeCrossChainVoucherBurn        InterChainMessageEventType = 40000
 	IMCEventTypeCrossChainVoucherBurnTFuel   InterChainMessageEventType = 40001
 	IMCEventTypeCrossChainVoucherBurnTNT20   InterChainMessageEventType = 40002
 	IMCEventTypeCrossChainVoucherBurnTNT721  InterChainMessageEventType = 40003
