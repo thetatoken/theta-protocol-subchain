@@ -115,7 +115,7 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	}
 
 	if !newValidatorSet.Equals(witnessedValidatorSet) {
-		return common.Hash{}, result.Error("validator set mismatch")
+		return common.Hash{}, result.Error("validator set mismatch: %v vs %v", *newValidatorSet, *witnessedValidatorSet)
 	}
 
 	// update the dynasty and the subchain validator set

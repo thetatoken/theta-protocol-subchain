@@ -49,6 +49,7 @@ var PrecompiledContracts = map[common.Address]PrecompiledContract{
 	common.BytesToAddress([]byte{7}): &bn256ScalarMul{},
 	common.BytesToAddress([]byte{8}): &bn256Pairing{},
 
+	common.BytesToAddress([]byte{180}): &dynasty{},
 	common.BytesToAddress([]byte{181}): &validatorSet{},
 	common.BytesToAddress([]byte{182}): &mintTFuel{},
 	common.BytesToAddress([]byte{183}): &burnTFuel{},
@@ -369,6 +370,23 @@ func (c *bn256Pairing) Run(evm *EVM, input []byte, callerAddr common.Address) ([
 		return true32Byte, nil
 	}
 	return false32Byte, nil
+}
+
+// dynasty return the current dynasty
+type dynasty struct {
+}
+
+func (c *dynasty) RequiredGas(input []byte, blockHeight uint64) uint64 {
+	const dynastyGas = uint64(200)
+	return dynastyGas
+}
+
+func (c *dynasty) Run(evm *EVM, input []byte, callerAddr common.Address) ([]byte, error) {
+	dynasty := evm.StateDB.GetDynasty()
+
+	dynastyBytes := dynasty.Bytes()
+	dynastyBytes32 := common.LeftPadBytes(dynastyBytes[:], 32) // easier to convert bytes32 into uint256 in smart contracts
+	return dynastyBytes32, nil
 }
 
 // validatorSet return the validator set of a chain for a given dynasty

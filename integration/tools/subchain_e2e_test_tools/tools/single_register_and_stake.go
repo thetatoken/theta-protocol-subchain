@@ -29,20 +29,14 @@ type accounts struct {
 var wthetaAddress common.Address
 var registrarOnMainchainAddress common.Address
 var governanceTokenAddress common.Address
-var tnt20VoucherContractAddress common.Address
-var tnt20TokenBankAddress common.Address
+var mainchainTNT20TokenBankAddress common.Address
 var subchainTNT20TokenBankAddress common.Address
 var accountList []accounts
-var tnt721TokenBankAddress common.Address
-var tnt721VoucherContractAddress common.Address
-var tfuelTokenBankAddress common.Address
+var mainchainTNT721TokenBankAddress common.Address
+var mainchainTFuelTokenBankAddress common.Address
 var subchainTFuelTokenBankAddress common.Address
 var subchainTNT721TokenBankAddress common.Address
 var subchainID *big.Int
-
-var subchainTNT20TokenAddress common.Address
-var subchainTNT721TokenAddress common.Address
-var subchainTNT1155TokenAddress common.Address
 
 func keccak256(data ...[]byte) []byte {
 	d := sha3.NewKeccak256()
@@ -51,40 +45,108 @@ func keccak256(data ...[]byte) []byte {
 	}
 	return d.Sum(nil)
 }
+
 func pubkeyToAddress(p ecdsa.PublicKey) common.Address {
 	pubBytes := crypto.FromECDSAPub(&p)
 	return common.BytesToAddress(keccak256(pubBytes[1:])[12:])
 }
-func deploy_contracts() {
+
+func DeployTokens() {
+	// fmt.Printf("Deploying Tokens to the mainchain...\n\n")
+	// mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// deployMockTNT20(mainchainClient)
+	// deployMockTNT721(mainchainClient)
+	// deployMockTNT1155(mainchainClient)
+	// fmt.Println("")
+
+	fmt.Printf("Deploying Tokens to the subchain...\n\n")
 	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-	auth := subchainSelectAccount(subchainClient, 1)
-	address, tx, _, err := ct.DeployMockTNT20(auth, subchainClient)
-	fmt.Println("tnt20", address)
-	fmt.Println(tx.Hash().Hex())
-	if err != nil {
-		log.Fatal(err)
-	}
-	subchainTNT20TokenAddress = address
-	auth = subchainSelectAccount(subchainClient, 1)
-	address, tx, _, err = ct.DeployMockTNT721(auth, subchainClient)
-	fmt.Println("tnt721", address)
-	fmt.Println(tx.Hash().Hex())
-	if err != nil {
-		log.Fatal(err)
-	}
-	subchainTNT721TokenAddress = address
-	auth = subchainSelectAccount(subchainClient, 1)
-	address, tx, _, err = ct.DeployMockTNT1155(auth, subchainClient)
-	fmt.Println("tnt1155", address)
-	fmt.Println(tx.Hash().Hex())
-	if err != nil {
-		log.Fatal(err)
-	}
-	subchainTNT1155TokenAddress = address
+	deployMockTNT20(subchainClient)
+	deployMockTNT721(subchainClient)
+	deployMockTNT1155(subchainClient)
 }
+
+func deployMockTNT20(ethClient *ethclient.Client) common.Address {
+	fmt.Printf("Deploying mock TNT20 token...\n")
+	auth := subchainSelectAccount(ethClient, 1)
+	address, _, _, err := ct.DeployMockTNT20(auth, ethClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Mock TNT20 token deployed, Address:", address)
+	// fmt.Println("Deployment tx:", tx.Hash().Hex())
+	fmt.Println("")
+	time.Sleep(6 * time.Second)
+	return address
+}
+
+func deployMockTNT721(ethClient *ethclient.Client) common.Address {
+	fmt.Printf("Deploying mock TNT721 token...\n")
+	auth := subchainSelectAccount(ethClient, 1)
+	address, _, _, err := ct.DeployMockTNT721(auth, ethClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Mock TNT721 token deployed, Address:", address)
+	// fmt.Println("Deployment tx:", tx.Hash().Hex())
+	fmt.Println("")
+	time.Sleep(6 * time.Second)
+	return address
+}
+
+func deployMockTNT1155(ethClient *ethclient.Client) common.Address {
+	fmt.Printf("Deploying mock TNT1155 token...\n")
+	auth := subchainSelectAccount(ethClient, 1)
+	address, _, _, err := ct.DeployMockTNT1155(auth, ethClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Mock TNT1155 token deployed, Address:", address)
+	// fmt.Println("Deployment tx:", tx.Hash().Hex())
+	fmt.Println("")
+	time.Sleep(6 * time.Second)
+	return address
+}
+
+// func deploy_contracts() {
+// 	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	auth := subchainSelectAccount(subchainClient, 1)
+// 	address, tx, _, err := ct.DeployMockTNT20(auth, subchainClient)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Println("tnt20", address)
+// 	fmt.Println(tx.Hash().Hex())
+
+// 	subchainTNT20TokenAddress = address
+// 	auth = subchainSelectAccount(subchainClient, 1)
+// 	address, tx, _, err = ct.DeployMockTNT721(auth, subchainClient)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Println("tnt721", address)
+// 	fmt.Println(tx.Hash().Hex())
+
+// 	subchainTNT721TokenAddress = address
+// 	auth = subchainSelectAccount(subchainClient, 1)
+// 	address, tx, _, err = ct.DeployMockTNT1155(auth, subchainClient)
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Println("tnt1155", address)
+// 	fmt.Println(tx.Hash().Hex())
+
+// 	subchainTNT1155TokenAddress = address
+// }
 
 func init() {
 	subchainID = big.NewInt(360777)
@@ -93,16 +155,14 @@ func init() {
 	registrarOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
 	governanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
 
-	tfuelTokenBankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
+	mainchainTFuelTokenBankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
 	subchainTFuelTokenBankAddress = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
 
-	tnt20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
+	mainchainTNT20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
 	subchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
-	tnt20VoucherContractAddress = common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4")
 
-	tnt721TokenBankAddress = common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
+	mainchainTNT721TokenBankAddress = common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
 	subchainTNT721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
-	tnt721VoucherContractAddress = common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
 
 	var map1 []string
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
@@ -141,7 +201,7 @@ func init() {
 	}
 	// fmt.Println("---------------------------------------------------------------------------------------------------------------------------------")
 	// fmt.Println("")
-	deploy_contracts()
+	// deploy_contracts()
 }
 
 func mainchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts {
@@ -209,13 +269,10 @@ func subchainSelectAccount(client *ethclient.Client, id int) *bind.TransactOpts 
 }
 
 func OneAccountRegister() {
-	//func main() {
 	client, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
 	}
-
-	//tnt20TokenBankAddress := common.HexToAddress("0x1f629139b3b4A03799c6e6655b7F59a1F01598E7")
 
 	chainGuarantor := accountList[7].fromAddress
 
