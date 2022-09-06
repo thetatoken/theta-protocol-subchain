@@ -43,7 +43,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Mainchain TNT721 contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", tnt721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
+	fmt.Printf("Mainchain TNT721 contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", tnt721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
 	// fmt.Printf("Mint TNT721 tx hash (Mainchain): %v\n", tx.Hash().Hex())
 	time.Sleep(12 * time.Second) // This is needed otherwise the "Approve tx" below might fail
 	// authUser := mainchainSelectAccount(client, 1)
@@ -113,7 +113,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	subchainTNT721Symbol, _ := subchainVoucherContract.Symbol(nil)
 	subchainTNT721TokenURI, _ := subchainVoucherContract.TokenURI(nil, tokenID)
 
-	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", subchainVoucherAddress, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", subchainVoucherAddress, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
 	fmt.Printf("Mainchain NFT owner          : %v, tokenID: %v (Note: the mainchain NFT owner is the TNT721TokenBank contract since the NFT has been locked)\n", mainchainNFTOwner, tokenID)
 	fmt.Printf("Subchain NFT Voucher owner   : %v, tokenID: %v\n\n", subchainNFTOwner, tokenID)
 }
@@ -144,7 +144,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	subchainTNT721Name, _ := subchainTNT721Voucher.Name(nil)
 	subchainTNT721Symbol, _ := subchainTNT721Voucher.Symbol(nil)
 	subchainTNT721TokenURI, _ := subchainTNT721Voucher.TokenURI(nil, tokenID)
-	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", subchainTNT721VoucherAddress, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", subchainTNT721VoucherAddress, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
 
 	subchainNFTOwner, _ := subchainTNT721Voucher.OwnerOf(nil, tokenID)
 	if subchainNFTOwner != sender {
@@ -197,7 +197,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	mainchainTNT721Name, _ := mainchainTNT721Contract.Name(nil)
 	mainchainTNT721Symbol, _ := mainchainTNT721Contract.Symbol(nil)
 	mainchainTNT721TokenURI, _ := mainchainTNT721Contract.TokenURI(nil, tokenID)
-	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", mainchainTNT721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
+	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", mainchainTNT721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
 	fmt.Printf("Mainchain NFT owner: %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
 }
 
@@ -241,7 +241,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	subchainTNT721Name, _ := subchainTNT721Instance.Name(nil)
 	subchainTNT721Symbol, _ := subchainTNT721Instance.Symbol(nil)
 	subchainTNT721TokenURI, _ := subchainTNT721Instance.TokenURI(nil, tokenID)
-	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", subchainTNT721Address, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", subchainTNT721Address, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
 
 	fmt.Printf("Subchain NFT sender           : %v, tokenID: %v\n", sender, tokenID)
 	fmt.Printf("Mainchain NFT Voucher receiver: %v, tokenID: %v\n\n", receiver, tokenID)
@@ -299,7 +299,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	mainchainTNT721Name, _ := mainchainVoucherContract.Name(nil)
 	mainchainTNT721Symbol, _ := mainchainVoucherContract.Symbol(nil)
 	mainchainTNT721TokenURI, _ := mainchainVoucherContract.TokenURI(nil, tokenID)
-	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", mainchainVoucherAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
+	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", mainchainVoucherAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
 	fmt.Printf("Subchain NFT owner            : %v, tokenID: %v (Note: the subchain NFT owner is the TNT721TokenBank contract since the NFT has been locked)\n", subchainNFTOwner, tokenID)
 	fmt.Printf("Mainchain NFT Voucher owner   : %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
 }
@@ -330,7 +330,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	mainchainTNT721Name, _ := mainchainTNT721VoucherContract.Name(nil)
 	mainchainTNT721Symbol, _ := mainchainTNT721VoucherContract.Symbol(nil)
 	mainchainTNT721TokenURI, _ := mainchainTNT721VoucherContract.TokenURI(nil, tokenID)
-	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", mainchainTNT721VoucherAddr, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
+	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", mainchainTNT721VoucherAddr, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
 
 	mainchainNFTOwner, _ := mainchainTNT721VoucherContract.OwnerOf(nil, tokenID)
 	if mainchainNFTOwner != sender {
@@ -384,7 +384,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	subchainTNT721Name, _ := subchainTNT721Contract.Name(nil)
 	subchainTNT721Symbol, _ := subchainTNT721Contract.Symbol(nil)
 	subchainTNT721TokenURI, _ := subchainTNT721Contract.TokenURI(nil, tokenID)
-	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name:%v, Symbol:%v, TokenUri:%v\n", subchainTNT721ContractAddress, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
+	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", subchainTNT721ContractAddress, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
 	fmt.Printf("Subchain NFT owner: %v, tokenID: %v\n\n", subchainNFTOwner, tokenID)
 }
 

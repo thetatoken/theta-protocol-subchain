@@ -46,7 +46,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 		log.Fatal(err)
 	}
 	mintAmount := big.NewInt(1).Mul(lockAmount, big.NewInt(10))
-	fmt.Printf("Mainchain TNT20 contract address: %v, Name:%v, Symbol:%v, Decimals:%v\n", tnt20ContractAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
+	fmt.Printf("Mainchain TNT20 contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", tnt20ContractAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
 	fmt.Printf("Minting %v TNT20 tokens (Wei) on the Mainchain to address %v\n", mintAmount, sender.From)
 	_, err = instaceTNT20Contract.Mint(mainchainSelectAccount(mainchainClient, 0), sender.From, mintAmount)
 	if err != nil {
@@ -106,7 +106,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	subchainTNT20Name, _ := instanceSubchainTNT20VoucherContract.Name(nil)
 	subchainTNT20Symbol, _ := instanceSubchainTNT20VoucherContract.Symbol(nil)
 	subchainTNT20Decimals, _ := instanceSubchainTNT20VoucherContract.Decimals(nil)
-	fmt.Printf("Subchain TNT20 voucher contract address: %v, Name:%v, Symbol:%v, Decimals:%v\n", subchainVoucherAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
+	fmt.Printf("Subchain TNT20 voucher contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", subchainVoucherAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
 	fmt.Printf("Mainchain sender : %v, TNT20 balance on Mainchain       : %v\n", sender.From, senderTNT20Balance)
 	fmt.Printf("Subchain receiver: %v, TNT20 voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTNT20VoucherBalance)
 }
@@ -145,7 +145,7 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	expectedMainchainTNT20VoucherContractInstance, _ := ct.NewTNT20VoucherContract(expectedMainchainTNT20VoucherAddress, mainchainClient)
 	receiverMainchainTNT20VoucherBalance, _ := expectedMainchainTNT20VoucherContractInstance.BalanceOf(nil, receiver)
 
-	fmt.Printf("Subchain TNT20 contract address: %v, Name:%v, Symbol:%v, Decimals:%v\n", subchainTNT20Address, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
+	fmt.Printf("Subchain TNT20 contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", subchainTNT20Address, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
 	fmt.Printf("Subchain sender   : %v, TNT20 balance on Subchain         : %v\n", sender, senderTNT20Balance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 voucher balance on Mainchain: %v\n\n", receiver, receiverMainchainTNT20VoucherBalance)
 
@@ -194,7 +194,7 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	mainchainTNT20Name, _ := instanceMainchainTNT20VoucherContract.Name(nil)
 	mainchainTNT20Symbol, _ := instanceMainchainTNT20VoucherContract.Symbol(nil)
 	mainchainTNT20Decimals, _ := instanceMainchainTNT20VoucherContract.Decimals(nil)
-	fmt.Printf("Mainchain TNT20 voucher contract address: %v, Name:%v, Symbol:%v, Decimals:%v\n", mainchainVoucherAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
+	fmt.Printf("Mainchain TNT20 voucher contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", mainchainVoucherAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
 	fmt.Printf("Subchain sender   : %v, TNT20 balance on Subchain         : %v\n", sender, senderTNT20Balance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 voucher balance on Mainchain: %v\n\n", receiver, receiverMainchainTNT20VoucherBalance)
 }
@@ -227,7 +227,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	subchainTNT20TokenContract, _ := ct.NewTNT20VoucherContract(subchainTNT20TokenAddress, subchainClient)
 	receiverSubchainTNT20TokenBalance, _ := subchainTNT20TokenContract.BalanceOf(nil, receiver)
 
-	fmt.Printf("Mainchain TNT20 Voucher address: %v, Name:%v, Symbol:%v, Decimals:%v\n", mainchainTNT20VoucherAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
+	fmt.Printf("Mainchain TNT20 Voucher address: %v, Name: %v, Symbol: %v, Decimals: %v\n", mainchainTNT20VoucherAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
 	fmt.Printf("Mainchain sender : %v, TNT20 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT20VoucherBalance)
 	fmt.Printf("Subchain receiver: %v, TNT20 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT20TokenBalance)
 
@@ -272,7 +272,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	subchainTNT20Symbol, _ := subchainTNT20TokenContract.Symbol(nil)
 	subchainTNT20Decimals, _ := subchainTNT20TokenContract.Decimals(nil)
 
-	fmt.Printf("Subchain TNT20 token contract address: %v, Name:%v, Symbol:%v, Decimals:%v\n", subchainTNT20TokenAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
+	fmt.Printf("Subchain TNT20 token contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", subchainTNT20TokenAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
 	fmt.Printf("Mainchain sender : %v, TNT20 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT20VoucherBalance)
 	fmt.Printf("Subchain receiver: %v, TNT20 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT20TokenBalance)
 }
@@ -305,7 +305,7 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	mainchainTNT20Contract, _ := ct.NewTNT20VoucherContract(mainchainTNT20ContractAddress, mainchainClient)
 	receiverMainchainTNT20TokenBalance, _ := mainchainTNT20Contract.BalanceOf(nil, receiver)
 
-	fmt.Printf("Subchain TNT20 Voucher address: %v, Name:%v, Symbol:%v, Decimals:%v\n", subchainTNT20VoucherAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
+	fmt.Printf("Subchain TNT20 Voucher address: %v, Name: %v, Symbol: %v, Decimals: %v\n", subchainTNT20VoucherAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
 	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchin  : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
 
@@ -349,7 +349,7 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	mainchainTNT20Name, _ := mainchainTNT20Contract.Name(nil)
 	mainchainTNT20Symbol, _ := mainchainTNT20Contract.Symbol(nil)
 	mainchainTNT20Decimals, _ := mainchainTNT20Contract.Decimals(nil)
-	fmt.Printf("Mainchain TNT20 token contract address: %v, Name:%v, Symbol:%v, Decimals:%v\n", mainchainTNT20ContractAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
+	fmt.Printf("Mainchain TNT20 token contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", mainchainTNT20ContractAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
 	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchain : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
 }
