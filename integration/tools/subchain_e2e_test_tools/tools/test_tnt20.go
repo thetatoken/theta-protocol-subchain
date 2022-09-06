@@ -66,10 +66,10 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	sender = mainchainSelectAccount(mainchainClient, 1)
 	sender.Value.Set(crossChainFee)
 	lockTx, err := instanceTNT20TokenBank.LockTokens(sender, subchainID, tnt20ContractAddress, receiver, lockAmount)
+	sender.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	sender.Value.Set(common.Big0)
 
 	fmt.Printf("TNT20 Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering %v TNT20 tokens (Wei) from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
@@ -153,7 +153,9 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	subchainTNT20Instance.Approve(authUser, subchainTNT20TokenBankAddress, lockAmount)
 
 	authUser = subchainSelectAccount(subchainClient, 1)
+	authUser.Value.Set(crossChainFee)
 	lockTx, err := subchainTNT20TokenBankInstance.LockTokens(authUser, big.NewInt(366), subchainTNT20Address, accountList[6].fromAddress, lockAmount)
+	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -235,6 +237,7 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	authUser = mainchainSelectAccount(mainchainClient, 6)
 	authUser.Value.Set(crossChainFee)
 	burnTx, err := mainchainTNT20TokenBankInstance.BurnVouchers(authUser, mainchainTNT20VoucherAddress, accountList[1].fromAddress, burnAmount)
+	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -310,7 +313,9 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	subchainTNT20VoucherContract.Approve(authUser, subchainTNT20TokenBankAddress, burnAmount)
 
 	authUser = subchainSelectAccount(subchainClient, 1)
+	authUser.Value.Set(crossChainFee)
 	burnTx, err := subchainTNT20TokenBank.BurnVouchers(authUser, subchainTNT20VoucherAddress, sender, burnAmount)
+	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}

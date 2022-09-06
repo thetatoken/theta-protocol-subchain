@@ -28,7 +28,6 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 
 	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(mainchainTFuelTokenBankAddress, mainchainClient)
 	sender := mainchainSelectAccount(mainchainClient, 3)
-	sender.Value = big.NewInt(0).Add(lockAmount, crossChainFee)
 
 	mainchainHeight, _ := mainchainClient.BlockNumber(context.Background())
 	senderMainchainTFuelBalance, _ := mainchainClient.BalanceAt(context.Background(), sender.From, big.NewInt(int64(mainchainHeight)))
@@ -38,7 +37,9 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 
 	fmt.Printf("Mainchain sender : %v, TFuel balance on Mainchain       : %v\n", sender.From, senderMainchainTFuelBalance)
 	fmt.Printf("Subchain receiver: %v, TFuel voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTFuelBalance)
+	sender.Value = big.NewInt(0).Add(lockAmount, crossChainFee)
 	tx, err := tfuelTokenBankInstance.LockTokens(sender, subchainID, receiver)
+	sender.Value = big.NewInt(0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -86,7 +87,6 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	}
 
 	sender := subchainSelectAccount(subchainClient, 1)
-	sender.Value = burnAmount
 	receiver := accountList[2].fromAddress
 
 	subchainHeight, _ := subchainClient.BlockNumber(context.Background())
@@ -98,7 +98,9 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	fmt.Printf("Subchain sender   : %v, TFuel voucher balance on Subchain : %v\n", sender.From, senderSubchainTFuelBalance)
 	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v\n\n", receiver, receiverMainchainTFuelBalance)
 
+	sender.Value = big.NewInt(0).Add(burnAmount, crossChainFee)
 	tx, err := TFuelTokenBankInstance.BurnVouchers(sender, receiver)
+	sender.Value = big.NewInt(0)
 	if err != nil {
 		log.Fatal(err)
 	}
