@@ -32,10 +32,19 @@ var deploySubchainMockTokensCmd = &cobra.Command{
 	},
 }
 
+var initTestWalletTFuelCmd = &cobra.Command{
+	Use:   "InitWallet",
+	Short: "Init test wallet TFuel.",
+	Run: func(cmd *cobra.Command, args []string) {
+		tools.InitTestWalletTFuel()
+	},
+}
+
 func init() {
 	rootCmd.AddCommand(startOneAccountRegisterCmd)
 	rootCmd.AddCommand(startOneAccountStakeCmd)
 	rootCmd.AddCommand(deploySubchainMockTokensCmd)
+	rootCmd.AddCommand(initTestWalletTFuelCmd)
 	startOneAccountStakeCmd.PersistentFlags().IntVar(&accountID, "accountID", 1, "accountID")
 	startOneAccountStakeCmd.PersistentFlags().StringVar(&validatorAddrStr, "validator", "0x2E833968E5bB786Ae419c4d13189fB081Cc43bab", "validator")
 }

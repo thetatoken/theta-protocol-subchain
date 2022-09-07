@@ -201,7 +201,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	fmt.Printf("Mainchain NFT owner: %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
 }
 
-func SubchainTNT721Lock(tokenID *big.Int) {
+func SubchainTNT721Lock(subchainTNT721AddressString string, tokenID *big.Int) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -215,7 +215,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	sender := accountList[1].fromAddress
 	receiver := accountList[6].fromAddress
 
-	subchainTNT721Address := common.HexToAddress("0x0293801741ceF9465b2cf717578e57255863E8B2")
+	subchainTNT721Address := common.HexToAddress(subchainTNT721AddressString)
 	subchainTNT721Instance, _ := ct.NewMockTNT721(subchainTNT721Address, subchainClient)
 	subchainTNT721TokenBankinstance, err := ct.NewTNT721TokenBank(subchainTNT721TokenBankAddress, subchainClient)
 	if err != nil {

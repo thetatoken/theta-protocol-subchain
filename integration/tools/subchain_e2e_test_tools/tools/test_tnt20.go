@@ -111,7 +111,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	fmt.Printf("Subchain receiver: %v, TNT20 voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTNT20VoucherBalance)
 }
 
-func SubchainTNT20Lock(lockAmount *big.Int) {
+func SubchainTNT20Lock(subchainTNT20AddressString string, lockAmount *big.Int) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -122,7 +122,7 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	}
 	fmt.Printf("Preparing for TNT20 cross-chain transfer...\n")
 
-	subchainTNT20Address := common.HexToAddress("0x9572eCEA04Fe74B642400dBb04952E91049C9B3D")
+	subchainTNT20Address := common.HexToAddress(subchainTNT20AddressString)
 
 	sender := accountList[1].fromAddress
 	receiver := accountList[6].fromAddress

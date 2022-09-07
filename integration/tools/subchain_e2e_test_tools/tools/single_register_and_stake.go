@@ -114,6 +114,37 @@ func deployMockTNT1155(ethClient *ethclient.Client) common.Address {
 	return address
 }
 
+// var dec18, _ = new(big.Int).SetString("1000000000000000000", 10)
+// var crossChainFee = new(big.Int).Mul(big.NewInt(10), dec18)
+
+func InitTestWalletTFuel() {
+	lockAmount := new(big.Int).Mul(big.NewInt(1000), dec18)
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tfuelTokenBankInstance, _ := ct.NewTFuelTokenBank(mainchainTFuelTokenBankAddress, mainchainClient)
+	for i := 0; i <= 13; i++ {
+		fmt.Println("start init test wallet ", i)
+		sender := mainchainSelectAccount(mainchainClient, 3)
+		sender.Value = big.NewInt(0).Add(lockAmount, crossChainFee)
+		tx, err := tfuelTokenBankInstance.LockTokens(sender, subchainID, accountList[i].fromAddress)
+		sender.Value = big.NewInt(0)
+		if err != nil {
+			log.Fatal(err)
+		}
+		receipt, err := mainchainClient.TransactionReceipt(context.Background(), tx.Hash())
+		if err != nil {
+			log.Fatal(err)
+		}
+		if receipt.Status != 1 {
+			log.Fatal("lock error")
+		}
+	}
+
+}
+
 // func deploy_contracts() {
 // 	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
 // 	if err != nil {
@@ -177,7 +208,8 @@ func init() {
 	map1 = append(map1, "1000000000000000000000000000000000000000000000000000000000000000")
 	map1 = append(map1, "a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d") //10
 	map1 = append(map1, "d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013") //11
-	map1 = append(map1, "83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d")
+	map1 = append(map1, "83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d") //12
+	map1 = append(map1, "2222222222222222222222222222222222222222222222222222222222222222")
 
 	// fmt.Println("-------------------------------------------------------- List of Accounts -------------------------------------------------------")
 	for _, value := range map1 {
@@ -196,7 +228,7 @@ func init() {
 		}
 
 		fromAddress := pubkeyToAddress(*publicKeyECDSA)
-		// fmt.Println("Private key:", value, "address:", fromAddress)
+		 fmt.Println("Private key:", value, "address:", fromAddress)
 		accountList = append(accountList, accounts{priKey: value, privateKey: privateKey, fromAddress: fromAddress})
 	}
 	// fmt.Println("---------------------------------------------------------------------------------------------------------------------------------")

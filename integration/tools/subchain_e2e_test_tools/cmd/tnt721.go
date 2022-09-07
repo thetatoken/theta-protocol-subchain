@@ -19,7 +19,7 @@ var startMainchainTNT721LockCmd = &cobra.Command{
 		tools.MainchainTNT721Lock(tokenIDInt)
 	},
 }
-
+var subchainTNT721Address string
 var startSubchainTNT721LockCmd = &cobra.Command{
 	Use: "SubchainTNT721Lock",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -27,7 +27,7 @@ var startSubchainTNT721LockCmd = &cobra.Command{
 		if !success {
 			panic(fmt.Sprintf("Failed to read tokenID: %v", tokenID))
 		}
-		tools.SubchainTNT721Lock(tokenIDInt)
+		tools.SubchainTNT721Lock(subchainTNT721Address, tokenIDInt)
 	},
 }
 
@@ -77,4 +77,5 @@ func init() {
 	starTNT721QueryCmd.PersistentFlags().StringVar(&tokenID, "tokenID", "10", "tokenID")
 	starTNT721QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
 	starTNT721QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")
+	startSubchainTNT721LockCmd.PersistentFlags().StringVar(&subchainTNT721Address, "subchainTNT721Address", "", "subchainTNT721Address")
 }
