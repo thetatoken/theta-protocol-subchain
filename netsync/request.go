@@ -16,7 +16,6 @@ import (
 	"github.com/thetatoken/theta/dispatcher"
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
-	srpc "github.com/thetatoken/thetasubchain/report"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -139,11 +138,9 @@ type RequestManager struct {
 	activePeers    map[string]int
 	refreshCounter int
 	aplock         *sync.RWMutex
-
-	reporter *srpc.Reporter
 }
 
-func NewRequestManager(syncMgr *SyncManager, reporter *srpc.Reporter) *RequestManager {
+func NewRequestManager(syncMgr *SyncManager) *RequestManager {
 	dumpBlockCache, err := lru.New(DumpBlockCacheLimit)
 	if err != nil {
 		log.Panic(err)
@@ -173,8 +170,6 @@ func NewRequestManager(syncMgr *SyncManager, reporter *srpc.Reporter) *RequestMa
 		activePeers:    make(map[string]int),
 		refreshCounter: 0,
 		aplock:         &sync.RWMutex{},
-
-		reporter: reporter,
 	}
 
 	logger := util.GetLoggerForModule("request")

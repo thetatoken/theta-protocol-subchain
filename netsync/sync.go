@@ -18,7 +18,6 @@ import (
 	"github.com/thetatoken/theta/rlp"
 	sbc "github.com/thetatoken/thetasubchain/blockchain"
 	score "github.com/thetatoken/thetasubchain/core"
-	srp "github.com/thetatoken/thetasubchain/report"
 )
 
 const voteCacheLimit = 512
@@ -61,7 +60,7 @@ type SyncManager struct {
 	voteCache *lru.Cache // Cache for votes
 }
 
-func NewSyncManager(chain *sbc.Chain, cons score.ConsensusEngine, networkOld p2p.Network, network p2pl.Network, disp *dispatcher.Dispatcher, consumer MessageConsumer, reporter *srp.Reporter) *SyncManager {
+func NewSyncManager(chain *sbc.Chain, cons score.ConsensusEngine, networkOld p2p.Network, network p2pl.Network, disp *dispatcher.Dispatcher, consumer MessageConsumer) *SyncManager {
 	voteCache, _ := lru.New(voteCacheLimit)
 	sm := &SyncManager{
 		chain:      chain,
@@ -73,7 +72,7 @@ func NewSyncManager(chain *sbc.Chain, cons score.ConsensusEngine, networkOld p2p
 
 		voteCache: voteCache,
 	}
-	sm.requestMgr = NewRequestManager(sm, reporter)
+	sm.requestMgr = NewRequestManager(sm)
 
 	if !reflect.ValueOf(networkOld).IsNil() {
 		networkOld.RegisterMessageHandler(sm)

@@ -7,6 +7,7 @@ import (
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/common/result"
 	"github.com/thetatoken/theta/core"
+	"github.com/thetatoken/theta/crypto"
 	"github.com/thetatoken/theta/ledger/types"
 
 	scom "github.com/thetatoken/thetasubchain/common"
@@ -262,9 +263,14 @@ func adjustByOutputs(view *slst.StoreView, accounts map[string]*types.Account, o
 	}
 }
 
-func sanityCheckForGasPrice(gasPrice *big.Int, blockHeight uint64) bool {
+func sanityCheckForGasPrice(view *slst.StoreView, fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
+	ledger score.Ledger, valMgr score.ValidatorManager, gasPrice *big.Int, blockHeight uint64) bool {
 	if gasPrice == nil {
 		return false
+	}
+
+	if isWhitelistedOperation(view, fromAddr, contractAddr, calldata, ledger, valMgr) && gasPrice.Cmp(common.Big0) == 0 {
+		return true
 	}
 
 	minimumGasPrice := scom.GetMinimumGasPrice()
@@ -273,6 +279,68 @@ func sanityCheckForGasPrice(gasPrice *big.Int, blockHeight uint64) bool {
 	}
 
 	return true
+}
+
+// Allow subchain validators to vote for inter-chain events without gas fees
+func isWhitelistedOperation(view *slst.StoreView, fromAddr common.Address, contractAddr common.Address, calldata common.Bytes,
+	ledger score.Ledger, valMgr score.ValidatorManager) bool {
+	logger.Debugf("Checking whitelisted operation...")
+
+	// check if the from address is a validator
+	validatorSet := view.GetValidatorSet()
+	validatorAddresses := getValidatorAddresses(validatorSet)
+	res := isAValidator(fromAddr, validatorAddresses)
+
+	logger.Debugf("Checking whitelisted operation, Validators: %v, fromAddr: %v, isValidator: %v", validatorAddresses, fromAddr, !res.IsError())
+	if res.IsError() {
+		return false
+	}
+
+	// check if this tx is for inter-chain event voting
+	if !isVotingForInterchainEvents(contractAddr, calldata, ledger) {
+		logger.Debugf("Checking whitelisted operation, isWhitelistedOperation: %v", false)
+		return false
+	}
+
+	logger.Debugf("Checking whitelisted operation, isWhitelistedOperation: %v", true)
+	return true
+}
+
+func isVotingForInterchainEvents(contractAddr common.Address, calldata common.Bytes, ledger score.Ledger) bool {
+	if len(calldata) < 4 {
+		logger.Debugf("Checking whitelisted operation, calldata.len: %v", len(calldata))
+		return false
+	}
+
+	logger.Debugf("Checking whitelisted operation, contract address: %v", contractAddr.Hex())
+	whitelistedMethodSignatures := []string{}
+	if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,address,uint256,uint256,uint256)") // TFuelTokenBank.mintVouchers
+		// Note: TFuelTokenBank.unlockTokens is NOT whitelisted since it can only be called on the main chain
+	} else if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,string,string,uint8,address,uint256,uint256,uint256)") // TNT20TokenBank.mintVouchers
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "unlockTokens(uint256,string,address,uint256,uint256,uint256)")             // TNT20TokenBank.unlockTokens
+	} else if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,string,string,address,uint256,string,uint256,uint256)") // TNT721TokenBank.mintVouchers
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "unlockTokens(uint256,string,address,uint256,uint256,uint256)")              // TNT721TokenBank.unlockTokens
+	} else {
+		logger.Debugf("Checking whitelisted operation, contract is not a TokenBank")
+		return false
+	}
+
+	for _, wms := range whitelistedMethodSignatures {
+		funcSelector := hex.EncodeToString(crypto.Keccak256(common.Bytes(wms))[:4])
+		calldataLeadingBytes := hex.EncodeToString(calldata[:4])
+		logger.Debugf("Checking whitelisted operation, calldataLeadingBytes: 0x%v, funcSelector : 0x%v", calldataLeadingBytes, funcSelector)
+
+		if calldataLeadingBytes == funcSelector {
+			logger.Debugf("Checking whitelisted operation, the method called IS whitelisted")
+			return true
+		}
+	}
+	logger.Debugf("Checking whitelisted operation, the method called is NOT whitelisted")
+
+	return false
 }
 
 func sanityCheckForFee(fee types.Coins, blockHeight uint64) (minimumFee *big.Int, success bool) {

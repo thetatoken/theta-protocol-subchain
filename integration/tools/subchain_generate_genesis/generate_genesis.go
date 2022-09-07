@@ -48,17 +48,21 @@ type Validator struct {
 //
 // Example:
 // cd $SUBCHAIN_HOME/integration/privatenet/node
-// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub_360777 -initValidatorSet=./data/init_validator_set.json -genesis=./genesis
+// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub360777 -initValidatorSet=./data/init_validator_set.json -feeSetter=0x2E833968E5bB786Ae419c4d13189fB081Cc43bab -genesis=./genesis
 //
 func main() {
-	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath := parseArguments()
+	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, feeSetter := parseArguments()
 
-	db, sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath)
+	db, sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, feeSetter)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
 
+	logger.Infof("-----------------------------------------------------------------------------")
+	logger.Infof("Cross-chain fee setter: %v", feeSetter)
 	err = sanityChecks(sv)
+	logger.Infof("-----------------------------------------------------------------------------")
+
 	if err != nil {
 		panic(fmt.Sprintf("Sanity checks failed: %v", err))
 	} else {
@@ -80,23 +84,25 @@ func main() {
 	fmt.Println("")
 }
 
-func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string) {
+func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string, feeSetter common.Address) {
 	mainchainIDPtr := flag.String("mainchainID", "privatenet", "the ID of the mainchain")
-	subchainIDPtr := flag.String("subchainID", "tsub_360777", "the ID of the subchain")
+	subchainIDPtr := flag.String("subchainID", "tsub360777", "the ID of the subchain")
 	initValidatorSetPathPtr := flag.String("initValidatorSet", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
+	feeSetterPtr := flag.String("feeSetter", "", "the wallet address of the fee setter")
 	flag.Parse()
 
 	mainchainID = *mainchainIDPtr
 	subchainID = *subchainIDPtr
 	initValidatorSetPath = *initValidatorSetPathPtr
 	genesisSnapshotFilePath = *genesisSnapshotFilePathPtr
+	feeSetter = common.HexToAddress(*feeSetterPtr)
 
 	return
 }
 
 // generateGenesisSnapshot generates the genesis snapshot.
-func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string) (database.Database, *slst.StoreView, *score.SnapshotMetadata, error) {
+func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string, feeSetter common.Address) (database.Database, *slst.StoreView, *score.SnapshotMetadata, error) {
 	metadata := &score.SnapshotMetadata{}
 	genesisHeight := score.GenesisBlockHeight
 
@@ -104,7 +110,7 @@ func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, 
 	sv := slst.NewStoreView(0, common.Hash{}, db)
 
 	setInitialValidatorSet(subchainID, initValidatorSetFilePath, genesisHeight, sv)
-	deployInitialSmartContracts(mainchainID, subchainID, sv)
+	deployInitialSmartContracts(mainchainID, subchainID, feeSetter, sv)
 
 	stateHash := sv.Hash()
 
@@ -136,13 +142,13 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		panic(fmt.Sprintf("failed to read initial stake deposit file: %v", err))
 	}
 
-	// need to create an account with a small amount of TFuel Vouchers for the initial validators,
-	// so that they can vote for the cross-chain transfers
-	//     validatorInitialBalance = crossChainTFuelTransferGasPerTx * minGasPrice * numInitialTFuelCrossChainTransfers
-	crossChainTFuelTransferGasPerTx := big.NewInt(CrossChainTFuelTransferGasPerTx)
-	numInitialTFuelCrossChainTransfers := big.NewInt(NumInitialTFuelCrossChainTransfers)
-	validatorInitialBalance := big.NewInt(1).Mul(crossChainTFuelTransferGasPerTx, scom.GetMinimumGasPrice())
-	validatorInitialBalance = big.NewInt(1).Mul(validatorInitialBalance, numInitialTFuelCrossChainTransfers)
+	// // need to create an account with a small amount of TFuel Vouchers for the initial validators,
+	// // so that they can vote for the cross-chain transfers
+	// //     validatorInitialBalance = crossChainTFuelTransferGasPerTx * minGasPrice * numInitialTFuelCrossChainTransfers
+	// crossChainTFuelTransferGasPerTx := big.NewInt(CrossChainTFuelTransferGasPerTx)
+	// numInitialTFuelCrossChainTransfers := big.NewInt(NumInitialTFuelCrossChainTransfers)
+	// validatorInitialBalance := big.NewInt(1).Mul(crossChainTFuelTransferGasPerTx, scom.GetMinimumGasPrice())
+	// validatorInitialBalance = big.NewInt(1).Mul(validatorInitialBalance, numInitialTFuelCrossChainTransfers)
 
 	json.Unmarshal(initValidatorSetByteValue, &validators)
 	initialDynasty := big.NewInt(0)
@@ -155,13 +161,8 @@ func setInitialValidatorSet(subchainID string, initValidatorSetFilePath string, 
 		validator := score.NewValidator(v.Address, stake)
 		validatorSet.AddValidator(validator)
 
-		setInitialBalance(sv, common.HexToAddress(v.Address), validatorInitialBalance)
+		setInitialBalance(sv, common.HexToAddress(v.Address), common.Big0) // need to create accounts with zero balances for the inital validators
 	}
-	var dec18 = new(big.Int)
-	dec18.SetString("1000000000000000000", 10)
-	amount := new(big.Int).Mul(dec18, big.NewInt(2000000))
-	setInitialBalance(sv, common.HexToAddress("0x2E833968E5bB786Ae419c4d13189fB081Cc43bab"), amount)
-
 	subchainIDInt := scom.MapChainID(subchainID)
 	sv.UpdateValidatorSet(subchainIDInt, validatorSet)
 
@@ -193,7 +194,7 @@ func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	return vp, err
 }
 
-func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreView) {
+func deployInitialSmartContracts(mainchainID, subchainID string, feeSetter common.Address, sv *slst.StoreView) {
 	mainchainIDInt := scom.MapChainID(mainchainID)
 	deployer := common.Address{}
 
@@ -202,7 +203,11 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 	//
 
 	sequence := 0
-	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, predeployed.ChainRegistrarContractBytecode, deployer, sequence, slst.ChainRegistrarContractAddressKey())
+	numMainchainBlockPerDynastyBigInt := big.NewInt(scom.NumMainchainBlocksPerDynasty)
+	dec18, _ := big.NewInt(0).SetString("1000000000000000000", 10)
+	initialCrossChainFee := big.NewInt(0).Mul(big.NewInt(10), dec18)
+	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, addConstructorArgumentForChainRegistrarBytecode(predeployed.ChainRegistrarContractBytecode, numMainchainBlockPerDynastyBigInt, initialCrossChainFee, feeSetter),
+		deployer, sequence, slst.ChainRegistrarContractAddressKey())
 	if err != nil {
 		logger.Panicf("Failed to deploy the chain registrar smart contract (sequence = %v): %v", sequence, err)
 	}
@@ -233,8 +238,46 @@ func deployInitialSmartContracts(mainchainID, subchainID string, sv *slst.StoreV
 }
 
 // Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
+func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, numBlocksPerDynasty, crossChainFee *big.Int, feeSetter common.Address) string {
+	rawABI := `[
+		{
+		"inputs": [
+			{
+			"internalType": "uint256",
+			"name": "numBlocksPerDynasty_",
+			"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "crossChainFee_",
+				"type": "uint256"
+			},
+			{
+				"internalType": "uint256",
+				"name": "feeSetter_",
+				"type": "address"
+			}
+		],
+		"stateMutability": "nonpayable",
+		"type": "constructor"
+		}
+    ]`
+	parsed, err := abi.JSON(strings.NewReader(rawABI))
+	if err != nil {
+		panic(err)
+	}
+	encodedConstructorArgument, err := parsed.Pack("", numBlocksPerDynasty, crossChainFee, feeSetter)
+	if err != nil {
+		panic(err)
+	}
+	encodedConstructorArgumentString := hex.EncodeToString(encodedConstructorArgument)
+	ff := contractBytecode + encodedConstructorArgumentString
+	return ff
+}
+
+// Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
 func addConstructorArgumentForTokenBankBytecode(contractBytecode string, mainchainIDInt *big.Int, chainRegistrarContractAddr common.Address) string {
-	RawABI := `[
+	rawABI := `[
 		{
 		"inputs": [
 			{
@@ -252,7 +295,7 @@ func addConstructorArgumentForTokenBankBytecode(contractBytecode string, maincha
 		"type": "constructor"
 		}
     ]`
-	parsed, err := abi.JSON(strings.NewReader(RawABI))
+	parsed, err := abi.JSON(strings.NewReader(rawABI))
 	if err != nil {
 		panic(err)
 	}
@@ -361,8 +404,6 @@ func writeStoreView(db database.Database, sv *slst.StoreView, needAccountStorage
 }
 
 func sanityChecks(sv *slst.StoreView) error {
-	logger.Infof("-----------------------------------------------------------------------------")
-
 	vsAnalyzed := false
 	sv.GetStore().Traverse(nil, func(key, val common.Bytes) bool {
 		if bytes.Equal(key, slst.CurrentValidatorSetKey()) {

@@ -201,6 +201,51 @@ func (_TokenBank *TokenBankTransactorRaw) Transact(opts *bind.TransactOpts, meth
 	return _TokenBank.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TokenBank *TokenBankCaller) GetAdjustedValidatorSet(opts *bind.CallOpts, subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getAdjustedValidatorSet", subchainID, dynasty)
+
+	outstruct := new(struct {
+		Validators   []common.Address
+		ShareAmounts []*big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Validators = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.ShareAmounts = *abi.ConvertType(out[1], new([]*big.Int)).(*[]*big.Int)
+
+	return *outstruct, err
+
+}
+
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TokenBank *TokenBankSession) GetAdjustedValidatorSet(subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	return _TokenBank.Contract.GetAdjustedValidatorSet(&_TokenBank.CallOpts, subchainID, dynasty)
+}
+
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TokenBank *TokenBankCallerSession) GetAdjustedValidatorSet(subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	return _TokenBank.Contract.GetAdjustedValidatorSet(&_TokenBank.CallOpts, subchainID, dynasty)
+}
+
 // GetMaxProcessedTokenLockNonce is a free data retrieval call binding the contract method 0xf95627ac.
 //
 // Solidity: function getMaxProcessedTokenLockNonce(uint256 chainID) view returns(uint256)
@@ -261,6 +306,68 @@ func (_TokenBank *TokenBankSession) GetMaxProcessedVoucherBurnNonce(chainID *big
 // Solidity: function getMaxProcessedVoucherBurnNonce(uint256 chainID) view returns(uint256)
 func (_TokenBank *TokenBankCallerSession) GetMaxProcessedVoucherBurnNonce(chainID *big.Int) (*big.Int, error) {
 	return _TokenBank.Contract.GetMaxProcessedVoucherBurnNonce(&_TokenBank.CallOpts, chainID)
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCaller) GetTokenLockEventHeight(opts *bind.CallOpts, chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getTokenLockEventHeight", chainID, eventNonce)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankSession) GetTokenLockEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetTokenLockEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCallerSession) GetTokenLockEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetTokenLockEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCaller) GetVoucherBurnEventHeight(opts *bind.CallOpts, chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TokenBank.contract.Call(opts, &out, "getVoucherBurnEventHeight", chainID, eventNonce)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankSession) GetVoucherBurnEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetVoucherBurnEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TokenBank *TokenBankCallerSession) GetVoucherBurnEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TokenBank.Contract.GetVoucherBurnEventHeight(&_TokenBank.CallOpts, chainID, eventNonce)
 }
 
 // MainchainID is a free data retrieval call binding the contract method 0x073b9502.

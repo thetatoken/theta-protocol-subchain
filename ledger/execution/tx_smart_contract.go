@@ -14,6 +14,7 @@ import (
 	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 	slst "github.com/thetatoken/thetasubchain/ledger/state"
+	"github.com/thetatoken/thetasubchain/ledger/vm"
 	svm "github.com/thetatoken/thetasubchain/ledger/vm"
 )
 
@@ -25,19 +26,23 @@ const contractAddrInfoKey string = "contract_address"
 
 // SmartContractTxExecutor implements the TxExecutor interface
 type SmartContractTxExecutor struct {
-	state *slst.LedgerState
-	chain *sbc.Chain
+	state  *slst.LedgerState
+	chain  *sbc.Chain
+	ledger score.Ledger
+	valMgr score.ValidatorManager
 }
 
 // NewSmartContractTxExecutor creates a new instance of SmartContractTxExecutor
-func NewSmartContractTxExecutor(chain *sbc.Chain, state *slst.LedgerState) *SmartContractTxExecutor {
+func NewSmartContractTxExecutor(chain *sbc.Chain, state *slst.LedgerState, ledger score.Ledger, valMgr score.ValidatorManager) *SmartContractTxExecutor {
 	return &SmartContractTxExecutor{
-		state: state,
-		chain: chain,
+		state:  state,
+		chain:  chain,
+		ledger: ledger,
+		valMgr: valMgr,
 	}
 }
 
-func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) result.Result {
 	blockHeight := getBlockHeight(exec.state)
 	tx := transaction.(*types.SmartContractTx)
 
@@ -101,7 +106,7 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 			WithErrorCode(result.CodeInvalidValueToTransfer)
 	}
 
-	if !sanityCheckForGasPrice(tx.GasPrice, blockHeight) {
+	if !sanityCheckForGasPrice(view, tx.From.Address, tx.To.Address, tx.Data, exec.ledger, exec.valMgr, tx.GasPrice, blockHeight) {
 		minimumGasPrice := scom.GetMinimumGasPrice()
 		return result.Error("Insufficient gas price. Gas price needs to be at least %v TFuelWei", minimumGasPrice).
 			WithErrorCode(result.CodeInvalidGasPrice)
@@ -113,6 +118,12 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 			WithErrorCode(result.CodeInvalidGasLimit)
 	}
 
+	err := exec.checkIntrinsicGas(tx)
+	if err != nil {
+		return result.Error("Intrinsic gas check failed: %v", err).
+			WithErrorCode(result.CodeInvalidGasLimit)
+	}
+
 	zero := big.NewInt(0)
 	feeLimit := new(big.Int).Mul(tx.GasPrice, new(big.Int).SetUint64(tx.GasLimit))
 	if feeLimit.BitLen() > 255 || feeLimit.Cmp(zero) < 0 {
@@ -120,6 +131,11 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 		// here to prevent potential overflow attack
 		return result.Error("Fee limit too high").
 			WithErrorCode(result.CodeFeeLimitTooHigh)
+	}
+
+	if coins.ThetaWei.Cmp(types.Zero) != 0 { // subchains do not support native THETA
+		return result.Error("Subchain does not support native THETA").
+			WithErrorCode(result.CodeDoNotSupportNativeThetaInSubchain)
 	}
 
 	var minimalBalance types.Coins
@@ -138,10 +154,11 @@ func (exec *SmartContractTxExecutor) sanityCheck(chainID string, view *slst.Stor
 	return result.OK
 }
 
-func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*types.SmartContractTx)
 
 	view.ResetLogs()
+	view.ResetBalanceChanges()
 
 	// Note: for contract deployment, vm.Execute() might transfer coins from the fromAccount to the
 	//       deployed smart contract. Thus, we should call vm.Execute() before calling getInput().
@@ -175,16 +192,38 @@ func (exec *SmartContractTxExecutor) process(chainID string, view *slst.StoreVie
 
 	// TODO: Add tx receipt: status and events
 	logs := view.PopLogs()
+	balanceChanges := view.PopBalanceChanges()
+
 	if evmErr != nil {
 		// Do not record events if transaction is reverted
 		logs = nil
+		balanceChanges = nil
 	}
-	exec.chain.AddTxReceipt(tx, logs, evmRet, contractAddr, gasUsed, evmErr)
+
+	if viewSel == score.DeliveredView { // only record the receipt for the delivered views
+		exec.chain.AddTxReceipt(exec.ledger.GetCurrentBlock(), tx, logs, balanceChanges, evmRet, contractAddr, gasUsed, evmErr)
+	}
 
 	contractInfo := result.Info{}
 	contractInfo[contractAddrInfoKey] = contractAddr
 
 	return txHash, result.OKWith(contractInfo)
+}
+
+func (exec *SmartContractTxExecutor) checkIntrinsicGas(tx *types.SmartContractTx) error {
+	contractAddr := tx.To.Address
+	createContract := (contractAddr == common.Address{})
+	intrinsicGas, err := vm.CalculateIntrinsicGas(tx.Data, createContract)
+	if err != nil {
+		return err
+	}
+
+	gasLimit := tx.GasLimit
+	if intrinsicGas > gasLimit {
+		return vm.ErrOutOfGas
+	}
+
+	return nil
 }
 
 func (exec *SmartContractTxExecutor) getTxInfo(transaction types.Tx) *score.TxInfo {

@@ -1,5 +1,4 @@
 # Theta configuration
-# chainID: tsub_3610001
 genesis:
   hash: "0x91e6b9626c117e4b70c15dc32c528b92907db34e115347c71d90d5a577e53c32"
 p2p:
@@ -10,7 +9,7 @@ log:
   #levels: "*:info"
   levels: "*:debug"
 consensus:
-  minBlockInterval: 3
+  minBlockInterval: 1
 subchain:
   mainchainEthRpcURL: "http://localhost:18888/rpc"
   subchainEthRpcURL: "http://localhost:19888/rpc"
@@ -20,5 +19,5 @@ subchain:
   mainchainTNT721TB: "0xEd8d61f42dC1E56aE992D333A4992C3796b22A74"
   mainchainTNT1155TB: "0x27e5Ee255a177D1902D7FF48D66f950ed9408867"
   updateInterval: 3000
-  #ID: 360777
+  #chainID: 360777
 

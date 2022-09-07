@@ -1,0 +1,14 @@
+theta:
+  rpcEndpoint: "http://127.0.0.1:16900/rpc"
+node:
+  skipInitializeTestWallets: true
+rpc:
+  enabled: true
+  httpAddress: "127.0.0.1"
+  httpPort: 19888
+  wsAddress: "127.0.0.1"
+  wsPort: 19889
+  timeoutSecs: 600 
+  maxConnections: 2048
+log:
+  levels: "*:debug"

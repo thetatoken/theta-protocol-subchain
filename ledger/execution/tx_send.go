@@ -28,7 +28,7 @@ func NewSendTxExecutor(state *slst.LedgerState) *SendTxExecutor {
 	}
 }
 
-func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, transaction types.Tx) result.Result {
+func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) result.Result {
 	tx := transaction.(*types.SendTx)
 
 	// Validate inputs and outputs, basic
@@ -55,6 +55,14 @@ func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, tr
 	accounts, res := getInputs(view, tx.Inputs)
 	if res.IsError() {
 		return res
+	}
+
+	for _, input := range tx.Inputs {
+		coins := input.Coins.NoNil()
+		if coins.ThetaWei.Cmp(types.Zero) != 0 { // subchains do not support native THETA
+			return result.Error("Subchain does not support native THETA").
+				WithErrorCode(result.CodeDoNotSupportNativeThetaInSubchain)
+		}
 	}
 
 	// Get or make outputs.
@@ -95,7 +103,7 @@ func (exec *SendTxExecutor) sanityCheck(chainID string, view *slst.StoreView, tr
 	return result.OK
 }
 
-func (exec *SendTxExecutor) process(chainID string, view *slst.StoreView, transaction types.Tx) (common.Hash, result.Result) {
+func (exec *SendTxExecutor) process(chainID string, view *slst.StoreView, viewSel score.ViewSelector, transaction types.Tx) (common.Hash, result.Result) {
 	tx := transaction.(*types.SendTx)
 
 	accounts, res := getInputs(view, tx.Inputs)

@@ -370,6 +370,51 @@ func (_TFuelTokenBank *TFuelTokenBankCallerSession) Exists0(voucherAddress commo
 	return _TFuelTokenBank.Contract.Exists0(&_TFuelTokenBank.CallOpts, voucherAddress)
 }
 
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TFuelTokenBank *TFuelTokenBankCaller) GetAdjustedValidatorSet(opts *bind.CallOpts, subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	var out []interface{}
+	err := _TFuelTokenBank.contract.Call(opts, &out, "getAdjustedValidatorSet", subchainID, dynasty)
+
+	outstruct := new(struct {
+		Validators   []common.Address
+		ShareAmounts []*big.Int
+	})
+	if err != nil {
+		return *outstruct, err
+	}
+
+	outstruct.Validators = *abi.ConvertType(out[0], new([]common.Address)).(*[]common.Address)
+	outstruct.ShareAmounts = *abi.ConvertType(out[1], new([]*big.Int)).(*[]*big.Int)
+
+	return *outstruct, err
+
+}
+
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TFuelTokenBank *TFuelTokenBankSession) GetAdjustedValidatorSet(subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	return _TFuelTokenBank.Contract.GetAdjustedValidatorSet(&_TFuelTokenBank.CallOpts, subchainID, dynasty)
+}
+
+// GetAdjustedValidatorSet is a free data retrieval call binding the contract method 0xaa861c15.
+//
+// Solidity: function getAdjustedValidatorSet(uint256 subchainID, uint256 dynasty) view returns(address[] validators, uint256[] shareAmounts)
+func (_TFuelTokenBank *TFuelTokenBankCallerSession) GetAdjustedValidatorSet(subchainID *big.Int, dynasty *big.Int) (struct {
+	Validators   []common.Address
+	ShareAmounts []*big.Int
+}, error) {
+	return _TFuelTokenBank.Contract.GetAdjustedValidatorSet(&_TFuelTokenBank.CallOpts, subchainID, dynasty)
+}
+
 // GetDenom is a free data retrieval call binding the contract method 0xebda9962.
 //
 // Solidity: function getDenom(address voucherContractAddr) view returns(string)
@@ -463,6 +508,37 @@ func (_TFuelTokenBank *TFuelTokenBankCallerSession) GetMaxProcessedVoucherBurnNo
 	return _TFuelTokenBank.Contract.GetMaxProcessedVoucherBurnNonce(&_TFuelTokenBank.CallOpts, chainID)
 }
 
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TFuelTokenBank *TFuelTokenBankCaller) GetTokenLockEventHeight(opts *bind.CallOpts, chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TFuelTokenBank.contract.Call(opts, &out, "getTokenLockEventHeight", chainID, eventNonce)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TFuelTokenBank *TFuelTokenBankSession) GetTokenLockEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TFuelTokenBank.Contract.GetTokenLockEventHeight(&_TFuelTokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetTokenLockEventHeight is a free data retrieval call binding the contract method 0xdd17eb6d.
+//
+// Solidity: function getTokenLockEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TFuelTokenBank *TFuelTokenBankCallerSession) GetTokenLockEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TFuelTokenBank.Contract.GetTokenLockEventHeight(&_TFuelTokenBank.CallOpts, chainID, eventNonce)
+}
+
 // GetVoucher is a free data retrieval call binding the contract method 0xa2cc6981.
 //
 // Solidity: function getVoucher(string denom) view returns(address)
@@ -492,6 +568,37 @@ func (_TFuelTokenBank *TFuelTokenBankSession) GetVoucher(denom string) (common.A
 // Solidity: function getVoucher(string denom) view returns(address)
 func (_TFuelTokenBank *TFuelTokenBankCallerSession) GetVoucher(denom string) (common.Address, error) {
 	return _TFuelTokenBank.Contract.GetVoucher(&_TFuelTokenBank.CallOpts, denom)
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TFuelTokenBank *TFuelTokenBankCaller) GetVoucherBurnEventHeight(opts *bind.CallOpts, chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _TFuelTokenBank.contract.Call(opts, &out, "getVoucherBurnEventHeight", chainID, eventNonce)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TFuelTokenBank *TFuelTokenBankSession) GetVoucherBurnEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TFuelTokenBank.Contract.GetVoucherBurnEventHeight(&_TFuelTokenBank.CallOpts, chainID, eventNonce)
+}
+
+// GetVoucherBurnEventHeight is a free data retrieval call binding the contract method 0x6ac739b9.
+//
+// Solidity: function getVoucherBurnEventHeight(uint256 chainID, uint256 eventNonce) view returns(uint256)
+func (_TFuelTokenBank *TFuelTokenBankCallerSession) GetVoucherBurnEventHeight(chainID *big.Int, eventNonce *big.Int) (*big.Int, error) {
+	return _TFuelTokenBank.Contract.GetVoucherBurnEventHeight(&_TFuelTokenBank.CallOpts, chainID, eventNonce)
 }
 
 // IsOnMainchain is a free data retrieval call binding the contract method 0x4250863b.
@@ -911,21 +1018,21 @@ func (_TFuelTokenBank *TFuelTokenBankTransactorSession) MintVouchers(denom strin
 
 // UnlockTokens is a paid mutator transaction binding the contract method 0xff248a44.
 //
-// Solidity: function unlockTokens(uint256 sourceChainID, address targetChainTokenReceiver, uint256 unlockAmount, uint256 dynasty, uint256 sourceChainVoucherBurnNonce) payable returns()
+// Solidity: function unlockTokens(uint256 sourceChainID, address targetChainTokenReceiver, uint256 unlockAmount, uint256 dynasty, uint256 sourceChainVoucherBurnNonce) returns()
 func (_TFuelTokenBank *TFuelTokenBankTransactor) UnlockTokens(opts *bind.TransactOpts, sourceChainID *big.Int, targetChainTokenReceiver common.Address, unlockAmount *big.Int, dynasty *big.Int, sourceChainVoucherBurnNonce *big.Int) (*types.Transaction, error) {
 	return _TFuelTokenBank.contract.Transact(opts, "unlockTokens", sourceChainID, targetChainTokenReceiver, unlockAmount, dynasty, sourceChainVoucherBurnNonce)
 }
 
 // UnlockTokens is a paid mutator transaction binding the contract method 0xff248a44.
 //
-// Solidity: function unlockTokens(uint256 sourceChainID, address targetChainTokenReceiver, uint256 unlockAmount, uint256 dynasty, uint256 sourceChainVoucherBurnNonce) payable returns()
+// Solidity: function unlockTokens(uint256 sourceChainID, address targetChainTokenReceiver, uint256 unlockAmount, uint256 dynasty, uint256 sourceChainVoucherBurnNonce) returns()
 func (_TFuelTokenBank *TFuelTokenBankSession) UnlockTokens(sourceChainID *big.Int, targetChainTokenReceiver common.Address, unlockAmount *big.Int, dynasty *big.Int, sourceChainVoucherBurnNonce *big.Int) (*types.Transaction, error) {
 	return _TFuelTokenBank.Contract.UnlockTokens(&_TFuelTokenBank.TransactOpts, sourceChainID, targetChainTokenReceiver, unlockAmount, dynasty, sourceChainVoucherBurnNonce)
 }
 
 // UnlockTokens is a paid mutator transaction binding the contract method 0xff248a44.
 //
-// Solidity: function unlockTokens(uint256 sourceChainID, address targetChainTokenReceiver, uint256 unlockAmount, uint256 dynasty, uint256 sourceChainVoucherBurnNonce) payable returns()
+// Solidity: function unlockTokens(uint256 sourceChainID, address targetChainTokenReceiver, uint256 unlockAmount, uint256 dynasty, uint256 sourceChainVoucherBurnNonce) returns()
 func (_TFuelTokenBank *TFuelTokenBankTransactorSession) UnlockTokens(sourceChainID *big.Int, targetChainTokenReceiver common.Address, unlockAmount *big.Int, dynasty *big.Int, sourceChainVoucherBurnNonce *big.Int) (*types.Transaction, error) {
 	return _TFuelTokenBank.Contract.UnlockTokens(&_TFuelTokenBank.TransactOpts, sourceChainID, targetChainTokenReceiver, unlockAmount, dynasty, sourceChainVoucherBurnNonce)
 }

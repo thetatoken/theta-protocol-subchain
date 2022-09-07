@@ -66,16 +66,16 @@ func newExecSim(chainID string, db database.Database, snapshot mockSnapshot, val
 	//ledgerState.ResetState(initHeight, snapshot.block.StateHash)
 	ledgerState.ResetState(snapshot.block)
 
-	executor := sexec.NewExecutor(db, chain, ledgerState, consensus, valMgr, nil)
-
 	ledger := &Ledger{
 		consensus: consensus,
 		valMgr:    valMgr,
 		mempool:   mempool,
 		mu:        &sync.RWMutex{},
 		state:     ledgerState,
-		executor:  executor,
 	}
+	executor := sexec.NewExecutor(db, chain, ledgerState, consensus, valMgr, ledger, nil)
+	ledger.SetExecutor(executor)
+
 	consensus.SetLedger(ledger)
 
 	es := &execSim{

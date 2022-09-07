@@ -67,6 +67,7 @@ type MetachainWitness struct {
 	subchainTNT1155TokenBankAddr common.Address
 	subchainTNT1155TokenBank     *scta.TNT1155TokenBank
 	// Validator set
+	cacheMutex        *sync.Mutex // mutex to for validatorSetCache concurrent write protection
 	validatorSetCache map[string]*score.ValidatorSet
 
 	// Inter-chain messaging
@@ -83,31 +84,31 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	mainchainEthRpcURL := viper.GetString(scom.CfgMainchainEthRpcURL)
 	mainchainEthRpcClient, err := ec.Dial(mainchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("the ETH client failed to connect to the mainchain ETH RPC %v\n", err)
+		logger.Fatalf("the ETH client failed to connect to the mainchain ETH RPC: %v\n", err)
 	}
 	mainchainID, err := mainchainEthRpcClient.ChainID(context.Background())
 	if err != nil {
-		logger.Fatalf("failed to get the chainID of the mainchain %v\n", err)
+		logger.Fatalf("failed to get the chainID of the mainchain, is the mainchain RPC API service running? error: %v\n", err)
 	}
 	chainRegistrarOnMainchainAddr := common.HexToAddress(viper.GetString(scom.CfgChainRegistrarOnMainchainContractAddress))
 	chainRegistrarOnMainchain, err := scta.NewChainRegistrarOnMainchain(chainRegistrarOnMainchainAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create ChainRegistrarOnMainchain contract %v\n", err)
+		logger.Fatalf("failed to create ChainRegistrarOnMainchain contract: %v\n", err)
 	}
 	mainchainTFuelTokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTFuelTokenBankContractAddress))
 	mainchainTFuelTokenBank, err := scta.NewTFuelTokenBank(mainchainTFuelTokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTFuelTokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTFuelTokenBank contract: %v\n", err)
 	}
 	mainchainTNT20TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT20TokenBankContractAddress))
 	mainchainTNT20TokenBank, err := scta.NewTNT20TokenBank(mainchainTNT20TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTNT20TokenBank contract: %v\n", err)
 	}
 	mainchainTNT721TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT721TokenBankContractAddress))
 	mainchainTNT721TokenBank, err := scta.NewTNT721TokenBank(mainchainTNT721TokenBankAddr, mainchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to create MainchainTNT20TokenBank contract %v\n", err)
+		logger.Fatalf("failed to create MainchainTNT20TokenBank contract: %v\n", err)
 	}
 	mainchainTNT1155TokenBankAddr := common.HexToAddress(viper.GetString(scom.CfgMainchainTNT1155TokenBankContractAddress))
 	mainchainTNT1155TokenBank, err := scta.NewTNT1155TokenBank(mainchainTNT1155TokenBankAddr, mainchainEthRpcClient)
@@ -119,7 +120,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 	subchainEthRpcURL := viper.GetString(scom.CfgSubchainEthRpcURL)
 	subchainEthRpcClient, err := ec.Dial(subchainEthRpcURL)
 	if err != nil {
-		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC %v\n", err)
+		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC: %v\n", err)
 	}
 
 	witnessState := newMetachainWitnessState(db)
@@ -155,6 +156,7 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		subchainEthRpcUrl:    subchainEthRpcURL,
 		subchainEthRpcClient: subchainEthRpcClient,
 		subchainBlockHeight:  nil,
+		cacheMutex:           &sync.Mutex{},
 		validatorSetCache:    validatorSet,
 		interChainEventCache: interChainEventCache,
 
@@ -184,9 +186,10 @@ func (mw *MetachainWitness) Wait() {
 }
 
 func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
-	subchainTFuelTokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
-	if subchainTFuelTokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address: %v\n", err)
+	var err error
+	subchainTFuelTokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTFuel)
+	if subchainTFuelTokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address\n")
 	}
 	mw.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
 	mw.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, mw.subchainEthRpcClient)
@@ -194,9 +197,9 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
 
-	subchainTNT20TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
-	if subchainTNT20TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address: %v\n", err)
+	subchainTNT20TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT20)
+	if subchainTNT20TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT20TokenBank contract address\n")
 	}
 	mw.subchainTNT20TokenBankAddr = *subchainTNT20TokenBankAddr
 	mw.subchainTNT20TokenBank, err = scta.NewTNT20TokenBank(*subchainTNT20TokenBankAddr, mw.subchainEthRpcClient)
@@ -204,12 +207,21 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
 
-	subchainTNT721TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	subchainTNT721TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721)
+	if subchainTNT721TokenBankAddr == nil {
+		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address\n")
 	}
 	mw.subchainTNT721TokenBankAddr = *subchainTNT721TokenBankAddr
 	mw.subchainTNT721TokenBank, err = scta.NewTNT721TokenBank(*subchainTNT721TokenBankAddr, mw.subchainEthRpcClient)
+	if err != nil {
+		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
+	}
+	subchainTNT1155TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
+	if subchainTNT721TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	}
+	mw.subchainTNT1155TokenBankAddr = *subchainTNT1155TokenBankAddr
+	mw.subchainTNT1155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
@@ -307,10 +319,13 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,
-	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address, tnt721TokenBankAddr common.Address, tnt1155TokenBankAddr common.Address) {
-	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock)
+	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address, tnt721TokenBankAddr common.Address) {
+	// mw.getBlockScanStartingHeight(queriedChainID) // testing code
+
+	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID)
 	if err == store.ErrKeyNotFound {
-		mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, common.Big0)
+		fromBlock = mw.getBlockScanStartingHeight(queriedChainID) // set the proper fromBlock for the code-start scenario, i.e, bootstrapping a new validator
+		mw.witnessState.setLastQueryedHeightForType(queriedChainID, fromBlock)
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
@@ -321,7 +336,178 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	if err != nil { // should not happen
 		logger.Panicf("failed to insert events into cache")
 	}
-	mw.witnessState.setLastQueryedHeightForType(queriedChainID, score.IMCEventTypeCrossChainTokenLock, toBlock)
+	mw.witnessState.setLastQueryedHeightForType(queriedChainID, toBlock)
+}
+
+func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) *big.Int {
+	updateHeight := big.NewInt(0).Set(common.BigMaxUint64)
+
+	eventTypes := []score.InterChainMessageEventType{
+		score.IMCEventTypeCrossChainTokenLockTFuel,
+		score.IMCEventTypeCrossChainTokenLockTNT20,
+		score.IMCEventTypeCrossChainTokenLockTNT721,
+		score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherBurnTNT721,
+	}
+
+	for _, eventType := range eventTypes {
+		var height *big.Int
+
+		if queriedChainID.Cmp(mw.mainchainID) == 0 {
+			height = mw.getMainchainMaxProcessedNonceEventHeight(eventType)
+		} else if queriedChainID.Cmp(mw.subchainID) == 0 {
+			height = mw.getSubchainMaxProcessedNonceEventHeight(eventType)
+		} else {
+			logger.Panicf("invalid queriedChainID") // should not happen
+		}
+
+		if height.Cmp(updateHeight) < 0 {
+			updateHeight.Set(height)
+		}
+	}
+
+	startHeight := big.NewInt(0).Set(updateHeight)
+	margin := big.NewInt(5)
+	if startHeight.Cmp(margin) > 0 {
+		startHeight = big.NewInt(0).Sub(startHeight, margin)
+	} else {
+		startHeight = common.Big0
+	}
+
+	logger.Infof("Block scanning starting height for chain %v: %v (nonce updateHeight: %v)", queriedChainID, startHeight, updateHeight)
+
+	return startHeight
+}
+
+func (mw *MetachainWitness) getMainchainMaxProcessedNonceEventHeight(icmeType score.InterChainMessageEventType) *big.Int {
+	var maxProcessedNonce *big.Int
+	var eventHeight *big.Int
+	var err error
+
+	// For mainchain -> subchain asset transfers, the "max processed nonce" (for each event type) is recorded on the subchain side.
+	// Yet the height for the corresponding event is recorded on the mainchain. Hence we get the "max processed nonce" from the subchain
+	// and use it to lookup the event height on the mainchain.
+	switch icmeType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel:
+		maxProcessedNonce, err = mw.subchainTFuelTokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTFuelTokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainTokenLockTNT20:
+		maxProcessedNonce, err = mw.subchainTNT20TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT20TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainTokenLockTNT721:
+		maxProcessedNonce, err = mw.subchainTNT721TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
+		// Note: TFuelVoucherBurn is not allowed on the Mainchain so it is safe to return the latest block height
+		maxProcessedNonce = common.Big0
+		h, _ := mw.mainchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
+	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
+		maxProcessedNonce, err = mw.subchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT20TokenBank.GetVoucherBurnEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
+		maxProcessedNonce, err = mw.subchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT721TokenBank.GetVoucherBurnEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	default:
+		logger.Panicf("invalid event type: %v", icmeType) // should not happen
+	}
+	if err != nil {
+		logger.Warnf("Failed to get the update height for max processed nonce on the main chain for event type %v: %v", icmeType, err)
+	}
+
+	if maxProcessedNonce == nil || eventHeight == nil {
+		eventHeight = big.NewInt(0)
+	} else if maxProcessedNonce.Cmp(common.Big0) == 0 {
+		// no event of the current icmeType has ever been processed, hence it is safe to scan from the current block height
+		h, _ := mw.mainchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
+	}
+
+	logger.Infof("On the Mainchain, event type: %v, max processed nonce: %v, update height: %v", icmeType, maxProcessedNonce, eventHeight)
+
+	return eventHeight
+}
+
+func (mw *MetachainWitness) getSubchainMaxProcessedNonceEventHeight(icmeType score.InterChainMessageEventType) *big.Int {
+	var maxProcessedNonce *big.Int
+	var eventHeight *big.Int
+	var err error
+
+	// For subchain -> mainchain asset transfers, the "max processed nonce" (for each event type) is recorded on the mainchain side.
+	// Yet the height for the corresponding event is recorded on the subchain. Hence we get the "max processed nonce" from the mainchain
+	// and use it to lookup the event height on the subchain.
+	switch icmeType { // Note: TFuelTokenLock is not allowed on a Subchain so this event is not processed below
+
+	case score.IMCEventTypeCrossChainTokenLockTFuel:
+		// Note: TFuelTokenLock is not allowed on a Subchain so it is safe to return the latest block height
+		maxProcessedNonce = common.Big0
+		h, _ := mw.subchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
+	case score.IMCEventTypeCrossChainTokenLockTNT20:
+		maxProcessedNonce, err = mw.mainchainTNT20TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT20TokenBank.GetTokenLockEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainTokenLockTNT721:
+		maxProcessedNonce, err = mw.mainchainTNT721TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+
+	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
+		maxProcessedNonce, err = mw.mainchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTFuelTokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainVoucherBurnTNT20:
+		maxProcessedNonce, err = mw.mainchainTNT20TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT20TokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainVoucherBurnTNT721:
+		maxProcessedNonce, err = mw.mainchainTNT721TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT721TokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+	default:
+		logger.Panicf("invalid event type: %v", icmeType) // should not happen
+	}
+	if err != nil {
+		logger.Warnf("Failed to get the update height for max processed nonce on subchain %v for event type %v: %v", mw.subchainID, icmeType, err)
+	}
+
+	if maxProcessedNonce == nil || eventHeight == nil {
+		eventHeight = big.NewInt(0)
+	} else if maxProcessedNonce.Cmp(common.Big0) == 0 {
+		// no event of the current icmeType has ever been processed, hence it is safe to scan from the current block height
+		h, _ := mw.subchainEthRpcClient.BlockNumber(context.Background())
+		eventHeight = big.NewInt(int64(h))
+	}
+
+	logger.Infof("On the Subchain, event type: %v, max processed nonce: %v, update height: %v", icmeType, maxProcessedNonce, eventHeight)
+
+	return eventHeight
 }
 
 func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID *big.Int) *big.Int {
@@ -336,9 +522,9 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID 
 		return fromBlock
 	}
 	maxBlockRange := int64(300) // block range query allows at most 5000 blocks, here we intentionally use a much smaller range to limit cpu/mem resource usage
-	minBlockGap := int64(10)    // tentative, to ensure the chain has enough time to finalize the event
+	minBlockGap := int64(2)     // tentative, to ensure the chain has enough time to finalize the event
 	if new(big.Int).Sub(toBlock, fromBlock).Cmp(big.NewInt(maxBlockRange)) > 0 {
-		// catch-up phase, gap is over maxBlockRange， catch-up at full speed
+		// catch-up phase, gap is over maxBlockRange，catch-up at full speed
 		toBlock = new(big.Int).Add(fromBlock, big.NewInt(maxBlockRange))
 	} else {
 		// steady phase, gap is between minBlockGap and maxBlockRange
@@ -348,6 +534,9 @@ func (mw *MetachainWitness) calculateToBlock(fromBlock *big.Int, queriedChainID 
 }
 
 func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.ValidatorSet, error) {
+	mw.cacheMutex.Lock()
+	defer mw.cacheMutex.Unlock()
+
 	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
 	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)

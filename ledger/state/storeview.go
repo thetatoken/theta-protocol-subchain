@@ -28,8 +28,9 @@ type StoreView struct {
 	coinbaseTransactinProcessed             bool
 	subchainValidatorSetTransactinProcessed bool
 	slashIntents                            []types.SlashIntent
-	refund                                  uint64       // Gas refund during smart contract execution
-	logs                                    []*types.Log // Temporary store of events during smart contract execution
+	refund                                  uint64                 // Gas refund during smart contract execution
+	logs                                    []*types.Log           // Temporary store of events during smart contract execution
+	balanceChanges                          []*types.BalanceChange // Temporary store of balance changes during smart contract execution
 }
 
 // NewStoreView creates an instance of the StoreView
@@ -251,6 +252,8 @@ func (sv *StoreView) GetValidatorSet() *score.ValidatorSet {
 
 // UpdateValidatorSet updates the validator set.
 func (sv *StoreView) UpdateValidatorSet(chainID *big.Int, vs *score.ValidatorSet) {
+	logger.Debugf("Update validator set, chainID: %v, valset: %v", chainID, vs)
+
 	vsBytes, err := types.ToBytes(vs)
 	if err != nil {
 		log.Panicf("Error writing validator set %v, error: %v",
@@ -394,6 +397,16 @@ func (sv *StoreView) PopLogs() []*types.Log {
 	return ret
 }
 
+func (sv *StoreView) ResetBalanceChanges() {
+	sv.balanceChanges = []*types.BalanceChange{}
+}
+
+func (sv *StoreView) PopBalanceChanges() []*types.BalanceChange {
+	ret := sv.balanceChanges
+	sv.ResetBalanceChanges()
+	return ret
+}
+
 //
 // ---------- Implement svm.StateDB interface -----------
 //
@@ -433,6 +446,13 @@ func (sv *StoreView) SubBalance(addr common.Address, amount *big.Int) {
 	account.Balance = account.Balance.NoNil()
 	account.Balance.TFuelWei.Sub(account.Balance.TFuelWei, amount)
 	sv.SetAccount(addr, account)
+
+	sv.addBalanceChange(&types.BalanceChange{
+		Address:    addr,
+		TokenType:  1,
+		IsNegative: true,
+		Delta:      new(big.Int).Set(amount),
+	})
 }
 
 func (sv *StoreView) AddBalance(addr common.Address, amount *big.Int) {
@@ -443,6 +463,13 @@ func (sv *StoreView) AddBalance(addr common.Address, amount *big.Int) {
 	account.Balance = account.Balance.NoNil()
 	account.Balance.TFuelWei.Add(account.Balance.TFuelWei, amount)
 	sv.SetAccount(addr, account)
+
+	sv.addBalanceChange(&types.BalanceChange{
+		Address:    addr,
+		TokenType:  1,
+		IsNegative: false,
+		Delta:      new(big.Int).Set(amount),
+	})
 }
 
 func (sv *StoreView) GetBalance(addr common.Address) *big.Int {
@@ -460,6 +487,13 @@ func (sv *StoreView) SubThetaBalance(addr common.Address, amount *big.Int) {
 	account.Balance = account.Balance.NoNil()
 	account.Balance.ThetaWei.Sub(account.Balance.ThetaWei, amount)
 	sv.SetAccount(addr, account)
+
+	sv.addBalanceChange(&types.BalanceChange{
+		Address:    addr,
+		TokenType:  0,
+		IsNegative: true,
+		Delta:      new(big.Int).Set(amount),
+	})
 }
 
 func (sv *StoreView) AddThetaBalance(addr common.Address, amount *big.Int) {
@@ -470,6 +504,13 @@ func (sv *StoreView) AddThetaBalance(addr common.Address, amount *big.Int) {
 	account.Balance = account.Balance.NoNil()
 	account.Balance.ThetaWei.Add(account.Balance.ThetaWei, amount)
 	sv.SetAccount(addr, account)
+
+	sv.addBalanceChange(&types.BalanceChange{
+		Address:    addr,
+		TokenType:  0,
+		IsNegative: false,
+		Delta:      new(big.Int).Set(amount),
+	})
 }
 
 // GetThetaBalance returns the ThetaWei balance of the given address
@@ -622,6 +663,14 @@ func (sv *StoreView) Suicide(addr common.Address) bool {
 		return false
 	}
 	account.CodeHash = score.SuicidedCodeHash
+
+	sv.addBalanceChange(&types.BalanceChange{
+		Address:    addr,
+		TokenType:  1,
+		IsNegative: true,
+		Delta:      new(big.Int).Set(account.Balance.TFuelWei),
+	})
+
 	account.Balance.TFuelWei = big.NewInt(0)
 	sv.SetAccount(addr, account)
 	return true
@@ -696,4 +745,8 @@ func (sv *StoreView) Prune() error {
 
 func (sv *StoreView) AddLog(l *types.Log) {
 	sv.logs = append(sv.logs, l)
+}
+
+func (sv *StoreView) addBalanceChange(bc *types.BalanceChange) {
+	sv.balanceChanges = append(sv.balanceChanges, bc)
 }
