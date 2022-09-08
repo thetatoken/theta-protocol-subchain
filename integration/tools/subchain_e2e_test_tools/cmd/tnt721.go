@@ -77,5 +77,7 @@ func init() {
 	starTNT721QueryCmd.PersistentFlags().StringVar(&tokenID, "tokenID", "10", "tokenID")
 	starTNT721QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
 	starTNT721QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")
-	startSubchainTNT721LockCmd.PersistentFlags().StringVar(&subchainTNT721Address, "subchainTNT721Address", "", "subchainTNT721Address")
+	startSubchainTNT721LockCmd.PersistentFlags().StringVar(&subchainTNT721Address, "subchainTNT721Address", "0xA10A3B175F0f2641Cf41912b887F77D8ef34FAe8", "subchainTNT721Address")
+
+	// TNT1155 0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af
 }

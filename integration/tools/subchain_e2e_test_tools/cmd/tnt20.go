@@ -74,5 +74,5 @@ func init() {
 	starTNT20QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
 	starTNT20QueryCmd.PersistentFlags().StringVar(&accountAddress, "accountAddress", "", "accountAddress")
 	starTNT20QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")
-	startSubchainTNT20LockCmd.PersistentFlags().StringVar(&subchainTNT20Address, "mockContractAddress", "", "mockContractAddress")
+	startSubchainTNT20LockCmd.PersistentFlags().StringVar(&subchainTNT20Address, "mockContractAddress", "0x7d73424a8256C0b2BA245e5d5a3De8820E45F390", "mockContractAddress")
 }
