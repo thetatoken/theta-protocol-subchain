@@ -166,7 +166,7 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to obtain SubchainTFuelTokenBank contract address\n")
 	}
 	oc.subchainTFuelTokenBankAddr = *subchainTFuelTokenBankAddr
-	oc.subchainTFuelTokenBankAddress, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, oc.subchainEthRpcClient)
+	oc.subchainTFuelTokenBank, err = scta.NewTFuelTokenBank(*subchainTFuelTokenBankAddr, oc.subchainEthRpcClient)
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTFuelTokenBank contract: %v\n", err)
 	}
@@ -191,7 +191,7 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT721TokenBankAddr contract: %v\n", err)
 	}
 
-	subchainTNT1155TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
+	subchainTNT1155TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
 	if subchainTNT1155TokenBankAddr == nil || err != nil {
 		logger.Fatalf("failed to obtain SubchainTNT1155TokenBank contract address: %v\n", err)
 	}
@@ -617,7 +617,7 @@ func (oc *Orchestrator) getTFuelTokenBank(chainID *big.Int) *scta.TFuelTokenBank
 	if chainID.Cmp(oc.mainchainID) == 0 {
 		return oc.mainchainTFuelTokenBank
 	} else {
-		return oc.subchainTFuelTokenBankAddress
+		return oc.subchainTFuelTokenBank
 	}
 }
 

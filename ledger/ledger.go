@@ -180,9 +180,9 @@ func (ledger *Ledger) GetTokenBankContractAddress(tokenType score.CrossChainToke
 	case score.CrossChainTokenTypeTNT20:
 		return storeView.GetTNT20TokenBankContractAddress()
 	case score.CrossChainTokenTypeTNT721:
-		return storeView.GetTNT721TokenBankContractAddress(), nil
+		return storeView.GetTNT721TokenBankContractAddress()
 	case score.CrossChainTokenTypeTNT1155:
-		return storeView.GetTNT1155TokenBankContractAddress(), nil
+		return storeView.GetTNT1155TokenBankContractAddress()
 	default:
 		return nil
 	}

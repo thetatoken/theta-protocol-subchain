@@ -216,16 +216,7 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 	if err != nil {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
-	subchainTNT1155TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
-	}
-	mw.subchainTNT1155TokenBankAddr = *subchainTNT1155TokenBankAddr
-	mw.subchainTNT1155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, mw.subchainEthRpcClient)
-	if err != nil {
-		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
-	}
-	subchainTNT1155TokenBankAddr, err := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
+	subchainTNT1155TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
 	if subchainTNT721TokenBankAddr == nil || err != nil {
 		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
 	}
@@ -319,7 +310,7 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnSubchain() {
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID *big.Int, ethRpcUrl string,
-	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address, tnt721TokenBankAddr common.Address) {
+	tfuelTokenBankAddr common.Address, tnt20TokenBankAddr common.Address, tnt721TokenBankAddr common.Address, tnt1155TokenBankAddr common.Address) {
 	// mw.getBlockScanStartingHeight(queriedChainID) // testing code
 
 	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID)
