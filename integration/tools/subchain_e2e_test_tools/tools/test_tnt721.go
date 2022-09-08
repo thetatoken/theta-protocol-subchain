@@ -12,7 +12,7 @@ import (
 	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
-func MainchainTNT721Lock(tokenID *big.Int) {
+func MainchainTNT721Lock(mainchainTNT721AddressString string, tokenID *big.Int) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
 		log.Fatal(err)
@@ -26,7 +26,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	sender := accountList[1].fromAddress
 	receiver := accountList[1].fromAddress
 
-	tnt721ContractAddress := common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
+	tnt721ContractAddress := common.HexToAddress(mainchainTNT721AddressString)
 	tnt721VoucherContract, err := ct.NewTNT721VoucherContract(tnt721ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)

@@ -8,6 +8,7 @@ import (
 	"github.com/thetatoken/thetasubchain/integration/tools/subchain_e2e_test_tools/tools"
 )
 
+var TNT20Address string
 var startMainchainTNT20LockCmd = &cobra.Command{
 	Use: "MainchainTNT20Lock",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -15,10 +16,10 @@ var startMainchainTNT20LockCmd = &cobra.Command{
 		if !success {
 			panic(fmt.Sprintf("Failed to read amount: %v", amount))
 		}
-		tools.MainchainTNT20Lock(amountInt)
+		tools.MainchainTNT20Lock(TNT20Address, amountInt)
 	},
 }
-var subchainTNT20Address string
+
 var startSubchainTNT20LockCmd = &cobra.Command{
 	Use: "SubchainTNT20Lock",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -26,7 +27,7 @@ var startSubchainTNT20LockCmd = &cobra.Command{
 		if !success {
 			panic(fmt.Sprintf("Failed to read amount: %v", amount))
 		}
-		tools.SubchainTNT20Lock(subchainTNT20Address, amountInt)
+		tools.SubchainTNT20Lock(TNT20Address, amountInt)
 	},
 }
 
@@ -74,5 +75,8 @@ func init() {
 	starTNT20QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
 	starTNT20QueryCmd.PersistentFlags().StringVar(&accountAddress, "accountAddress", "", "accountAddress")
 	starTNT20QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")
-	startSubchainTNT20LockCmd.PersistentFlags().StringVar(&subchainTNT20Address, "mockContractAddress", "0x7d73424a8256C0b2BA245e5d5a3De8820E45F390", "mockContractAddress")
+
+	startMainchainTNT20LockCmd.PersistentFlags().StringVar(&TNT20Address, "mockContractAddress", "0x59AF421cB35fc23aB6C8ee42743e6176040031f4", "mainchainTNT20TokenAddress")
+	startSubchainTNT20LockCmd.PersistentFlags().StringVar(&TNT20Address, "mockContractAddress", "0x7d73424a8256C0b2BA245e5d5a3De8820E45F390", "subchainTNT20TokenAddress")
+
 }

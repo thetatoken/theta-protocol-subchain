@@ -16,10 +16,10 @@ var startMainchainTNT721LockCmd = &cobra.Command{
 		if !success {
 			panic(fmt.Sprintf("Failed to read tokenID: %v", tokenID))
 		}
-		tools.MainchainTNT721Lock(tokenIDInt)
+		tools.MainchainTNT721Lock(TNT721Address, tokenIDInt)
 	},
 }
-var subchainTNT721Address string
+var TNT721Address string
 var startSubchainTNT721LockCmd = &cobra.Command{
 	Use: "SubchainTNT721Lock",
 	Run: func(cmd *cobra.Command, args []string) {
@@ -27,7 +27,7 @@ var startSubchainTNT721LockCmd = &cobra.Command{
 		if !success {
 			panic(fmt.Sprintf("Failed to read tokenID: %v", tokenID))
 		}
-		tools.SubchainTNT721Lock(subchainTNT721Address, tokenIDInt)
+		tools.SubchainTNT721Lock(TNT721Address, tokenIDInt)
 	},
 }
 
@@ -77,7 +77,8 @@ func init() {
 	starTNT721QueryCmd.PersistentFlags().StringVar(&tokenID, "tokenID", "10", "tokenID")
 	starTNT721QueryCmd.PersistentFlags().StringVar(&contractAddress, "contractAddress", "", "contractAddress")
 	starTNT721QueryCmd.PersistentFlags().Int64Var(&chainID, "chainID", 366, "chainID")
-	startSubchainTNT721LockCmd.PersistentFlags().StringVar(&subchainTNT721Address, "subchainTNT721Address", "0xA10A3B175F0f2641Cf41912b887F77D8ef34FAe8", "subchainTNT721Address")
+	startMainchainTNT721LockCmd.PersistentFlags().StringVar(&TNT721Address, "mockContractAddress", "0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543", "mainchainTNT721TokenAddress")
+	startSubchainTNT721LockCmd.PersistentFlags().StringVar(&TNT721Address, "mockContractAddress", "0xA10A3B175F0f2641Cf41912b887F77D8ef34FAe8", "subchainTNT721TokenAddress")
 
 	// TNT1155 0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af
 }
