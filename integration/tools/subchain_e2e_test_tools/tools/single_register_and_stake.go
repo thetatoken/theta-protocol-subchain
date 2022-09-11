@@ -397,7 +397,10 @@ func StakeToValidatorFromAccount(id int, validatorAddrStr string) {
 	time.Sleep(12 * time.Second)
 
 	staker = mainchainSelectAccount(client, id)
+	minInitFeeRequired := new(big.Int).Mul(dec18, big.NewInt(100000)) // 100,000 TFuel
+	staker.Value.Set(minInitFeeRequired)
 	tx, err = instanceChainRegistrar.DepositStake(staker, subchainID, validator, validatorStakingAmount)
+	staker.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}

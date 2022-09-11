@@ -197,7 +197,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	mainchainTNT721Name, _ := mainchainTNT721Contract.Name(nil)
 	mainchainTNT721Symbol, _ := mainchainTNT721Contract.Symbol(nil)
 	mainchainTNT721TokenURI, _ := mainchainTNT721Contract.TokenURI(nil, tokenID)
-	fmt.Printf("Mainchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", mainchainTNT721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
+	fmt.Printf("Mainchain TNT721 token contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", mainchainTNT721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
 	fmt.Printf("Mainchain NFT owner: %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
 }
 
