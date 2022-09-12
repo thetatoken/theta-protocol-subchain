@@ -26,36 +26,36 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	sender := accountList[1].fromAddress
 	receiver := accountList[1].fromAddress
 
-	tnt721ContractAddress := common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
-	tnt721VoucherContract, err := ct.NewTNT721VoucherContract(tnt721ContractAddress, mainchainClient)
+	mainchainTNT721ContractAddress := common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
+	mainchainTNT721Contract, err := ct.NewMockTNT721(mainchainTNT721ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
-	mainchainTNT721Name, _ := tnt721VoucherContract.Name(nil)
-	mainchainTNT721Symbol, _ := tnt721VoucherContract.Symbol(nil)
-	mainchainTNT721TokenURI, _ := tnt721VoucherContract.TokenURI(nil, tokenID)
+	mainchainTNT721Name, _ := mainchainTNT721Contract.Name(nil)
+	mainchainTNT721Symbol, _ := mainchainTNT721Contract.Symbol(nil)
+	mainchainTNT721TokenURI, _ := mainchainTNT721Contract.TokenURI(nil, tokenID)
 	tnt721TokenBankContract, err := ct.NewTNT721TokenBank(mainchainTNT721TokenBankAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
 	authAccount0 := mainchainSelectAccount(mainchainClient, 0)
-	_, err = tnt721VoucherContract.Mint(authAccount0, sender, tokenID, tokenID.String())
+	_, err = mainchainTNT721Contract.Mint(authAccount0, sender, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Mainchain TNT721 contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", tnt721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
+	fmt.Printf("Mainchain TNT721 contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", mainchainTNT721ContractAddress, mainchainTNT721Name, mainchainTNT721Symbol, mainchainTNT721TokenURI)
 	// fmt.Printf("Mint TNT721 tx hash (Mainchain): %v\n", tx.Hash().Hex())
 	time.Sleep(12 * time.Second) // This is needed otherwise the "Approve tx" below might fail
 	// authUser := mainchainSelectAccount(client, 1)
-	// tx, err = tnt721VoucherContract.SetApprovalForAll(authUser, mainchainTNT721TokenBankAddress, true)
+	// tx, err = mainchainTNT721Contract.SetApprovalForAll(authUser, mainchainTNT721TokenBankAddress, true)
 	authUser := mainchainSelectAccount(mainchainClient, 1)
-	_, err = tnt721VoucherContract.Approve(authUser, mainchainTNT721TokenBankAddress, tokenID)
+	_, err = mainchainTNT721Contract.Approve(authUser, mainchainTNT721TokenBankAddress, tokenID)
 	if err != nil {
 		log.Fatal(err)
 	}
 	// fmt.Printf("Approve TNT721 tx hash (Mainchain): %v\n", tx.Hash().Hex())
 
-	mainchainNFTOwner, _ := tnt721VoucherContract.OwnerOf(nil, tokenID)
+	mainchainNFTOwner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
 	if mainchainNFTOwner != sender {
 		log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", mainchainNFTOwner, sender)
 	}
@@ -64,7 +64,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 
 	authUser = mainchainSelectAccount(mainchainClient, 1)
 	authUser.Value.Set(crossChainFee)
-	lockTx, err := tnt721TokenBankContract.LockTokens(authUser, subchainID, tnt721ContractAddress, receiver, tokenID)
+	lockTx, err := tnt721TokenBankContract.LockTokens(authUser, subchainID, mainchainTNT721ContractAddress, receiver, tokenID)
 	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
@@ -99,7 +99,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	mainchainNFTOwner, _ = tnt721VoucherContract.OwnerOf(nil, tokenID)
+	mainchainNFTOwner, _ = mainchainTNT721Contract.OwnerOf(nil, tokenID)
 	if mainchainNFTOwner != mainchainTNT721TokenBankAddress {
 		log.Fatalf("mainchain token owner should be the TNT721TokenBank contract: %v vs. %v\n", mainchainNFTOwner, mainchainTNT721TokenBankAddress)
 	}
@@ -153,7 +153,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	fmt.Printf("Subchain NFT Voucher sender: %v, tokenID: %v\n", sender, tokenID)
 	fmt.Printf("Mainchain NFT receiver     : %v, tokenID: %v\n\n", receiver, tokenID)
 
-	mainchainTNT721ContractAddress := common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
+	mainchainTNT721ContractAddress := common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
 	mainchainTNT721Contract, _ := ct.NewTNT721VoucherContract(mainchainTNT721ContractAddress, mainchainClient)
 	mainchainTNT721Owner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
 
@@ -241,7 +241,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	subchainTNT721Name, _ := subchainTNT721Instance.Name(nil)
 	subchainTNT721Symbol, _ := subchainTNT721Instance.Symbol(nil)
 	subchainTNT721TokenURI, _ := subchainTNT721Instance.TokenURI(nil, tokenID)
-	fmt.Printf("Subchain TNT721 Voucher contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", subchainTNT721Address, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
+	fmt.Printf("Subchain TNT721 contract address: %v, Name: %v, Symbol: %v, TokenURI: %v\n", subchainTNT721Address, subchainTNT721Name, subchainTNT721Symbol, subchainTNT721TokenURI)
 
 	fmt.Printf("Subchain NFT sender           : %v, tokenID: %v\n", sender, tokenID)
 	fmt.Printf("Mainchain NFT Voucher receiver: %v, tokenID: %v\n\n", receiver, tokenID)
@@ -320,7 +320,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 
 	mainchainTNT721TokenBank, _ := ct.NewTNT721TokenBank(mainchainTNT721TokenBankAddress, mainchainClient)
 
-	mainchainTNT721VoucherAddr := common.HexToAddress("0x20B2897c4f95df71a5a8A62Ae812f5843AA92E25")
+	mainchainTNT721VoucherAddr := common.HexToAddress("0xBcd7d42CA0F1B43355823Cda5328aa8a5BF9038d")
 	mainchainTNT721VoucherContract, _ := ct.NewTNT721VoucherContract(mainchainTNT721VoucherAddr, mainchainClient)
 	auth := mainchainSelectAccount(mainchainClient, 6)
 	_, err = mainchainTNT721VoucherContract.Approve(auth, mainchainTNT721TokenBankAddress, tokenID)
@@ -415,5 +415,4 @@ func QueryTNT721(chainID int64, contractAddress string, tokenID *big.Int) {
 	}
 	owner, _ := instaceTNT721Contract.OwnerOf(nil, tokenID)
 	fmt.Println("TokenID", tokenID, " TNT721 owner in ", contractAddress, " is ", owner)
-
 }
