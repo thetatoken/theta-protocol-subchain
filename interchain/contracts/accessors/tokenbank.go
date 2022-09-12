@@ -30,8 +30,8 @@ var (
 
 // TokenBankMetaData contains all meta data concerning the TokenBank contract.
 var TokenBankMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mainchainID_\",\"type\":\"uint256\"},{\"internalType\":\"contractChainRegistrar\",\"name\":\"chainRegistrar_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"inputs\":[],\"name\":\"mainchainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenLockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tokenLockVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenUnlockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherBurnNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"voucherBurnVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherMintNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
-	Bin: "0x608060405234801561001057600080fd5b5060405161030838038061030883398101604081905261002f9161005e565b6001600081905591909155600280546001600160a01b0319166001600160a01b0390921691909117905561009b565b6000806040838503121561007157600080fd5b825160208401519092506001600160a01b038116811461009057600080fd5b809150509250929050565b61025e806100aa6000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80638883931e116100665780638883931e1461013b578063ca2075691461015b578063ccf187c71461017b578063f95627ac1461019b578063feaff052146101bb57600080fd5b8063073b9502146100985780631eb78737146100b4578063740cb7f8146100fb578063766f8fb01461011b575b600080fd5b6100a160015481565b6040519081526020015b60405180910390f35b6100e66100c2366004610206565b60096020908152600092835260408084209091529082529020805460029091015482565b604080519283526020830191909152016100ab565b6100a16101093660046101ed565b60066020526000908152604090205481565b6100a16101293660046101ed565b60009081526008602052604090205490565b6100a16101493660046101ed565b60036020526000908152604090205481565b6100a16101693660046101ed565b60056020526000908152604090205481565b6100a16101893660046101ed565b60046020526000908152604090205481565b6100a16101a93660046101ed565b60009081526007602052604090205490565b6100e66101c9366004610206565b600a6020908152600092835260408084209091529082529020805460029091015482565b6000602082840312156101ff57600080fd5b5035919050565b6000806040838503121561021957600080fd5b5050803592602090910135915056fea2646970667358221220f600e50c65d5c9a99a0188f055065e302a0137681fe29db32431a887b061e8fc64736f6c63430008070033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"mainchainID_\",\"type\":\"uint256\"},{\"internalType\":\"contractChainRegistrar\",\"name\":\"chainRegistrar_\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"receiver\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"FailedToSendTFuel\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"mainchainID\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenLockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"tokenLockVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"tokenUnlockNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherBurnNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"name\":\"voucherBurnVotingRecords\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"accumlatedShares\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"voucherMintNonceMap\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedTokenLockNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"eventNonce\",\"type\":\"uint256\"}],\"name\":\"getTokenLockEventHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"getMaxProcessedVoucherBurnNonce\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"eventNonce\",\"type\":\"uint256\"}],\"name\":\"getVoucherBurnEventHeight\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"subchainID\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"dynasty\",\"type\":\"uint256\"}],\"name\":\"getAdjustedValidatorSet\",\"outputs\":[{\"internalType\":\"address[]\",\"name\":\"validators\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"shareAmounts\",\"type\":\"uint256[]\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]",
+	Bin: "0x608060405234801561001057600080fd5b5060405161092338038061092383398101604081905261002f9161005e565b6001600081905591909155600280546001600160a01b0319166001600160a01b0390921691909117905561009b565b6000806040838503121561007157600080fd5b825160208401519092506001600160a01b038116811461009057600080fd5b809150509250929050565b610879806100aa6000396000f3fe608060405234801561001057600080fd5b50600436106100b45760003560e01c8063aa861c1511610071578063aa861c15146101a7578063ca207569146101c8578063ccf187c7146101e8578063dd17eb6d14610208578063f95627ac14610233578063feaff0521461025357600080fd5b8063073b9502146100b95780631eb78737146100d55780636ac739b91461011c578063740cb7f814610147578063766f8fb0146101675780638883931e14610187575b600080fd5b6100c260015481565b6040519081526020015b60405180910390f35b6101076100e33660046106f2565b600b6020908152600092835260408084209091529082529020805460029091015482565b604080519283526020830191909152016100cc565b6100c261012a3660046106f2565b600091825260086020908152604080842092845291905290205490565b6100c261015536600461068b565b60066020526000908152604090205481565b6100c261017536600461068b565b6000908152600a602052604090205490565b6100c261019536600461068b565b60036020526000908152604090205481565b6101ba6101b53660046106f2565b610285565b6040516100cc929190610714565b6100c26101d636600461068b565b60056020526000908152604090205481565b6100c26101f636600461068b565b60046020526000908152604090205481565b6100c26102163660046106f2565b600091825260076020908152604080842092845291905290205490565b6100c261024136600461068b565b60009081526009602052604090205490565b6101076102613660046106f2565b600c6020908152600092835260408084209091529082529020805460029091015482565b6060806000600154461490506000600260009054906101000a90046001600160a01b03166001600160a01b031663a7464b126040518163ffffffff1660e01b815260040160206040518083038186803b1580156102e157600080fd5b505afa1580156102f5573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061031991906106a4565b600254604051632f2c13b560e01b81526004810189905291925060009182916001600160a01b031690632f2c13b590602401604080518083038186803b15801561036257600080fd5b505afa158015610376573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061039a91906106bd565b9150915060008180156103b657506103b28885610522565b8310155b80156103d557506103d2846103cc8a6001610535565b90610522565b83105b90508480156103e15750805b1561048a5760006103f3896001610535565b6002546040516343f27e4560e01b8152600481018d9052602481018390529192506001600160a01b0316906343f27e459060440160006040518083038186803b15801561043f57600080fd5b505afa158015610453573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f1916820160405261047b91908101906105b3565b9750975050505050505061051b565b6002546040516343f27e4560e01b8152600481018b9052602481018a90526001600160a01b03909116906343f27e459060440160006040518083038186803b1580156104d557600080fd5b505afa1580156104e9573d6000803e3d6000fd5b505050506040513d6000823e601f3d908101601f1916820160405261051191908101906105b3565b9650965050505050505b9250929050565b600061052e82846107f8565b9392505050565b600061052e82846107e0565b600082601f83011261055257600080fd5b81516020610567610562836107bc565b61078b565b80838252828201915082860187848660051b890101111561058757600080fd5b60005b858110156105a65781518452928401929084019060010161058a565b5090979650505050505050565b600080604083850312156105c657600080fd5b825167ffffffffffffffff808211156105de57600080fd5b818501915085601f8301126105f257600080fd5b81516020610602610562836107bc565b8083825282820191508286018a848660051b890101111561062257600080fd5b600096505b8487101561065a5780516001600160a01b038116811461064657600080fd5b835260019690960195918301918301610627565b509188015191965090935050508082111561067457600080fd5b5061068185828601610541565b9150509250929050565b60006020828403121561069d57600080fd5b5035919050565b6000602082840312156106b657600080fd5b5051919050565b600080604083850312156106d057600080fd5b82519150602083015180151581146106e757600080fd5b809150509250929050565b6000806040838503121561070557600080fd5b50508035926020909101359150565b604080825283519082018190526000906020906060840190828701845b828110156107565781516001600160a01b031684529284019290840190600101610731565b5050508381038285015284518082528583019183019060005b818110156105a65783518352928401929184019160010161076f565b604051601f8201601f1916810167ffffffffffffffff811182821017156107b4576107b461082d565b604052919050565b600067ffffffffffffffff8211156107d6576107d661082d565b5060051b60200190565b600082198211156107f3576107f3610817565b500190565b600081600019048311821515161561081257610812610817565b500290565b634e487b7160e01b600052601160045260246000fd5b634e487b7160e01b600052604160045260246000fdfea26469706673582212201eff43572f1591b857a3394f8603ba407fc415bb3679f334bc0de9e6de3a7a5b64736f6c63430008070033",
 }
 
 // TokenBankABI is the input ABI used to generate the binding from.
@@ -613,4 +613,149 @@ func (_TokenBank *TokenBankSession) VoucherMintNonceMap(arg0 *big.Int) (*big.Int
 // Solidity: function voucherMintNonceMap(uint256 ) view returns(uint256)
 func (_TokenBank *TokenBankCallerSession) VoucherMintNonceMap(arg0 *big.Int) (*big.Int, error) {
 	return _TokenBank.Contract.VoucherMintNonceMap(&_TokenBank.CallOpts, arg0)
+}
+
+// TokenBankFailedToSendTFuelIterator is returned from FilterFailedToSendTFuel and is used to iterate over the raw logs and unpacked data for FailedToSendTFuel events raised by the TokenBank contract.
+type TokenBankFailedToSendTFuelIterator struct {
+	Event *TokenBankFailedToSendTFuel // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *TokenBankFailedToSendTFuelIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(TokenBankFailedToSendTFuel)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(TokenBankFailedToSendTFuel)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *TokenBankFailedToSendTFuelIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *TokenBankFailedToSendTFuelIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// TokenBankFailedToSendTFuel represents a FailedToSendTFuel event raised by the TokenBank contract.
+type TokenBankFailedToSendTFuel struct {
+	Receiver common.Address
+	Amount   *big.Int
+	Raw      types.Log // Blockchain specific contextual infos
+}
+
+// FilterFailedToSendTFuel is a free log retrieval operation binding the contract event 0x562a1007af95860758404d928a251ad8b0062ac50058db9f82dab3fe379f4885.
+//
+// Solidity: event FailedToSendTFuel(address indexed receiver, uint256 amount)
+func (_TokenBank *TokenBankFilterer) FilterFailedToSendTFuel(opts *bind.FilterOpts, receiver []common.Address) (*TokenBankFailedToSendTFuelIterator, error) {
+
+	var receiverRule []interface{}
+	for _, receiverItem := range receiver {
+		receiverRule = append(receiverRule, receiverItem)
+	}
+
+	logs, sub, err := _TokenBank.contract.FilterLogs(opts, "FailedToSendTFuel", receiverRule)
+	if err != nil {
+		return nil, err
+	}
+	return &TokenBankFailedToSendTFuelIterator{contract: _TokenBank.contract, event: "FailedToSendTFuel", logs: logs, sub: sub}, nil
+}
+
+// WatchFailedToSendTFuel is a free log subscription operation binding the contract event 0x562a1007af95860758404d928a251ad8b0062ac50058db9f82dab3fe379f4885.
+//
+// Solidity: event FailedToSendTFuel(address indexed receiver, uint256 amount)
+func (_TokenBank *TokenBankFilterer) WatchFailedToSendTFuel(opts *bind.WatchOpts, sink chan<- *TokenBankFailedToSendTFuel, receiver []common.Address) (event.Subscription, error) {
+
+	var receiverRule []interface{}
+	for _, receiverItem := range receiver {
+		receiverRule = append(receiverRule, receiverItem)
+	}
+
+	logs, sub, err := _TokenBank.contract.WatchLogs(opts, "FailedToSendTFuel", receiverRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(TokenBankFailedToSendTFuel)
+				if err := _TokenBank.contract.UnpackLog(event, "FailedToSendTFuel", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseFailedToSendTFuel is a log parse operation binding the contract event 0x562a1007af95860758404d928a251ad8b0062ac50058db9f82dab3fe379f4885.
+//
+// Solidity: event FailedToSendTFuel(address indexed receiver, uint256 amount)
+func (_TokenBank *TokenBankFilterer) ParseFailedToSendTFuel(log types.Log) (*TokenBankFailedToSendTFuel, error) {
+	event := new(TokenBankFailedToSendTFuel)
+	if err := _TokenBank.contract.UnpackLog(event, "FailedToSendTFuel", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }

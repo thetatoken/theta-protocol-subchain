@@ -26,16 +26,22 @@ type accounts struct {
 	fromAddress common.Address
 }
 
+var accountList []accounts
+
 var wthetaAddress common.Address
 var registrarOnMainchainAddress common.Address
 var governanceTokenAddress common.Address
-var mainchainTNT20TokenBankAddress common.Address
-var subchainTNT20TokenBankAddress common.Address
-var accountList []accounts
-var mainchainTNT721TokenBankAddress common.Address
+
 var mainchainTFuelTokenBankAddress common.Address
+var mainchainTNT20TokenBankAddress common.Address
+var mainchainTNT721TokenBankAddress common.Address
+var mainchainTNT1155TokenBankAddress common.Address
+
 var subchainTFuelTokenBankAddress common.Address
+var subchainTNT20TokenBankAddress common.Address
 var subchainTNT721TokenBankAddress common.Address
+var subchainTNT1155TokenBankAddress common.Address
+
 var subchainID *big.Int
 
 func keccak256(data ...[]byte) []byte {
@@ -153,16 +159,19 @@ func init() {
 
 	wthetaAddress = common.HexToAddress("0x7d73424a8256C0b2BA245e5d5a3De8820E45F390")
 	registrarOnMainchainAddress = common.HexToAddress("0x08425D9Df219f93d5763c3e85204cb5B4cE33aAa")
-	governanceTokenAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
+	governanceTokenAddress = common.HexToAddress("0x59AF421cB35fc23aB6C8ee42743e6176040031f4")
 
-	mainchainTFuelTokenBankAddress = common.HexToAddress("0x7f1C87Bd3a22159b8a2E5D195B1a3283D10ea895")
+	mainchainTFuelTokenBankAddress = common.HexToAddress("0xA10A3B175F0f2641Cf41912b887F77D8ef34FAe8")
 	subchainTFuelTokenBankAddress = common.HexToAddress("0x5a443704dd4B594B382c22a083e2BD3090A6feF3")
 
-	mainchainTNT20TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
+	mainchainTNT20TokenBankAddress = common.HexToAddress("0x6E05f58eEddA592f34DD9105b1827f252c509De0")
 	subchainTNT20TokenBankAddress = common.HexToAddress("0x47e9Fbef8C83A1714F1951F142132E6e90F5fa5D")
 
-	mainchainTNT721TokenBankAddress = common.HexToAddress("0xEd8d61f42dC1E56aE992D333A4992C3796b22A74")
+	mainchainTNT721TokenBankAddress = common.HexToAddress("0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af")
 	subchainTNT721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
+
+	mainchainTNT1155TokenBankAddress = common.HexToAddress("")
+	subchainTNT1155TokenBankAddress = common.HexToAddress("")
 
 	var map1 []string
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")
@@ -175,8 +184,8 @@ func init() {
 	map1 = append(map1, "8888888888888888888888888888888888888888888888888888888888888888")
 	map1 = append(map1, "9999999999999999999999999999999999999999999999999999999999999999")
 	map1 = append(map1, "1000000000000000000000000000000000000000000000000000000000000000")
-	map1 = append(map1, "a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d") //10
-	map1 = append(map1, "d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013") //11
+	map1 = append(map1, "a249a82c42a282e87b2ddef63404d9dfcf6ea501dcaf5d447761765bd74f666d")
+	map1 = append(map1, "d0d53ac0b4cd47d0ce0060dddc179d04145fea2ee2e0b66c3ee1699c6b492013")
 	map1 = append(map1, "83f0bb8655139cef4657f90db64a7bb57847038a9bd0ccd87c9b0828e9cbf76d")
 
 	// fmt.Println("-------------------------------------------------------- List of Accounts -------------------------------------------------------")
@@ -397,7 +406,10 @@ func StakeToValidatorFromAccount(id int, validatorAddrStr string) {
 	time.Sleep(12 * time.Second)
 
 	staker = mainchainSelectAccount(client, id)
+	minInitFeeRequired := new(big.Int).Mul(dec18, big.NewInt(100000)) // 100,000 TFuel
+	staker.Value.Set(minInitFeeRequired)
 	tx, err = instanceChainRegistrar.DepositStake(staker, subchainID, validator, validatorStakingAmount)
+	staker.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}

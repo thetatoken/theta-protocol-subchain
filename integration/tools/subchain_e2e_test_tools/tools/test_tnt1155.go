@@ -1,4 +1,4 @@
-package main
+package tools
 
 import (
 	"context"
@@ -19,7 +19,8 @@ func MainchainTNT1155Lock() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	instanceTNT1155VoucherContract, err := ct.NewTNT1155VoucherContract(mainchainTNT1155VoucherContractAddress, mainchainClient)
+	mainchainTNT1155ContractAddress := common.HexToAddress("")
+	instanceTNT1155VoucherContract, err := ct.NewTNT1155VoucherContract(mainchainTNT1155ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -38,7 +39,7 @@ func MainchainTNT1155Lock() {
 		log.Fatal(err)
 	}
 	authAccount1 = mainchainSelectAccount(mainchainClient, 1)
-	tx, err = instanceTNT1155TokenBank.LockTokens(authAccount1, subchainID, mainchainTNT1155VoucherContractAddress, user, big.NewInt(1), big.NewInt(1), []byte(""))
+	tx, err = instanceTNT1155TokenBank.LockTokens(authAccount1, subchainID, mainchainTNT1155ContractAddress, user, big.NewInt(1), big.NewInt(1), []byte(""), []byte(""))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,6 +70,7 @@ func MainchainTNT1155Lock() {
 	}
 	fmt.Println(mainchainVoucherAddress, "Cross-chain transfer completed.\n\n")
 }
+
 func SubchainTNT1155Lock(tokenID *big.Int) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
@@ -103,7 +105,7 @@ func SubchainTNT1155Lock(tokenID *big.Int) {
 	// fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
 	auth = subchainSelectAccount(subchainClient, 1)
-	lockTx, err := subchainTNT1155TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT1155VoucherAddress, receiver, big.NewInt(1), big.NewInt(1), []byte(""))
+	lockTx, err := subchainTNT1155TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT1155VoucherAddress, receiver, big.NewInt(1), big.NewInt(1), []byte(""), []byte(""))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -222,6 +224,7 @@ func MainchainTNT1155Burn(burnAmount *big.Int) {
 	// fmt.Printf("Mainchain sender : %v, TNT1155 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT1155VoucherBalance)
 	// fmt.Printf("Subchain receiver: %v, TNT1155 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT1155TokenBalance)
 }
+
 func SubchainTNT1155Burn(burnAmount *big.Int) {
 	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
 	if err != nil {
@@ -242,7 +245,7 @@ func SubchainTNT1155Burn(burnAmount *big.Int) {
 	subchainTNT1155VoucherContract, _ := ct.NewTNT1155VoucherContract(subchainTNT1155VoucherAddress, subchainClient)
 	senderSubchainTNT1155VoucherBalance, _ := subchainTNT1155VoucherContract.BalanceOf(nil, sender, big.NewInt(1))
 
-	mainchainTNT1155ContractAddress := mainchainTNT1155VoucherContractAddress // FIXME: should instantiate a mock TNT1155 instead of using the Voucher contract (which causes confusion)
+	mainchainTNT1155ContractAddress := common.HexToAddress("")
 	mainchainTNT1155Contract, _ := ct.NewTNT1155VoucherContract(mainchainTNT1155ContractAddress, mainchainClient)
 	receiverMainchainTNT1155TokenBalance, _ := mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
 
