@@ -170,8 +170,8 @@ func init() {
 	mainchainTNT721TokenBankAddress = common.HexToAddress("0x79EaFd0B5eC8D3f945E6BB2817ed90b046c0d0Af")
 	subchainTNT721TokenBankAddress = common.HexToAddress("0x8Be503bcdEd90ED42Eff31f56199399B2b0154CA")
 
-	mainchainTNT1155TokenBankAddress = common.HexToAddress("")
-	subchainTNT1155TokenBankAddress = common.HexToAddress("")
+	mainchainTNT1155TokenBankAddress = common.HexToAddress("0x2Ce636d6240f8955d085a896e12429f8B3c7db26")
+	subchainTNT1155TokenBankAddress = common.HexToAddress("0x47c5e40890bcE4a473A49D7501808b9633F29782")
 
 	var map1 []string
 	map1 = append(map1, "1111111111111111111111111111111111111111111111111111111111111111")

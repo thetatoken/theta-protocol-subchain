@@ -58,10 +58,10 @@ func main() {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
 
-	logger.Infof("-----------------------------------------------------------------------------")
+	logger.Infof("-------------------------------------------------------------------------------")
 	logger.Infof("Cross-chain fee setter: %v", feeSetter)
 	err = sanityChecks(sv)
-	logger.Infof("-----------------------------------------------------------------------------")
+	logger.Infof("-------------------------------------------------------------------------------")
 
 	if err != nil {
 		panic(fmt.Sprintf("Sanity checks failed: %v", err))
@@ -442,24 +442,23 @@ func sanityChecks(sv *slst.StoreView) error {
 	if tfuelTokenBankContractAddr == nil {
 		panic("TFuel token bank contract is not set")
 	}
-	logger.Infof("TFuel Token Bank Contract Address: %v", tfuelTokenBankContractAddr.Hex())
+	logger.Infof("TFuel   Token Bank Contract Address: %v", tfuelTokenBankContractAddr.Hex())
 	tnt20TokenBankContractAddr := sv.GetTNT20TokenBankContractAddress()
 	if tnt20TokenBankContractAddr == nil {
 		panic("TNT20 token bank contract is not set")
 	}
-	logger.Infof("TNT20 Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
+	logger.Infof("TNT20   Token Bank Contract Address: %v", tnt20TokenBankContractAddr.Hex())
 	tnt721TokenBankContractAddr := sv.GetTNT721TokenBankContractAddress()
 	if tnt721TokenBankContractAddr == nil {
 		panic("TNT721 token bank contract is not set")
 	}
-	logger.Infof("TNT721Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
+	logger.Infof("TNT721  Token Bank Contract Address: %v", tnt721TokenBankContractAddr.Hex())
 
 	tnt1155TokenBankContractAddr := sv.GetTNT1155TokenBankContractAddress()
 	if tnt1155TokenBankContractAddr == nil {
 		panic("TNT1155 token bank contract is not set")
 	}
-	logger.Infof("TNT1155Token Bank Contract Address: %v", tnt1155TokenBankContractAddr.Hex())
-	logger.Infof("-----------------------------------------------------------------------------")
+	logger.Infof("TNT1155 Token Bank Contract Address: %v", tnt1155TokenBankContractAddr.Hex())
 
 	// Sanity checks for the initial validator set
 	vsProof, err := proveValidatorSet(sv)
