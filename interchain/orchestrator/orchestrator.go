@@ -25,6 +25,10 @@ import (
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 
+var (
+	ErrDynastyIsNil = errors.New("Nil dynasty")
+)
+
 type Orchestrator struct {
 	updateInterval        int
 	privateKey            *crypto.PrivateKey
@@ -380,7 +384,7 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return ErrDynastyIsNil
 	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
 	_, err = tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
@@ -397,7 +401,7 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return ErrDynastyIsNil
 	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
 	_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
@@ -414,7 +418,7 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return ErrDynastyIsNil
 	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	_, err = TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
@@ -431,7 +435,7 @@ func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return ErrDynastyIsNil
 	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
 	_, err = tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
@@ -448,7 +452,7 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return ErrDynastyIsNil
 	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
 	_, err = TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
@@ -465,7 +469,7 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return ErrDynastyIsNil
 	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	_, err = TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
