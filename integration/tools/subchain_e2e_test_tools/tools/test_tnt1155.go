@@ -19,8 +19,8 @@ func MainchainTNT1155Lock() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	mainchainTNT1155ContractAddress := common.HexToAddress("")
-	instanceTNT1155VoucherContract, err := ct.NewTNT1155VoucherContract(mainchainTNT1155ContractAddress, mainchainClient)
+	mainchainTNT1155ContractAddress := common.HexToAddress("0x47eb28D8139A188C5686EedE1E9D8EDE3Afdd543")
+	instanceTNT1155VoucherContract, err := ct.NewMockTNT1155(mainchainTNT1155ContractAddress, mainchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -69,6 +69,75 @@ func MainchainTNT1155Lock() {
 		//fmt.Printf("waiting for cross-chain transfer completion (scanning Mainchain from height %v to %v)...\n", fromHeight, toHeight)
 	}
 	fmt.Println(mainchainVoucherAddress, "Cross-chain transfer completed.\n\n")
+}
+
+func SubchainTNT1155Burn(burnAmount *big.Int) {
+	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Preparing for TNT1155 cross-chain transfer...\n")
+
+	sender := accountList[1].fromAddress
+	receiver := accountList[1].fromAddress
+
+	subchainTNT1155TokenBank, _ := ct.NewTNT1155TokenBank(subchainTNT1155TokenBankAddress, subchainClient)
+
+	subchainTNT1155VoucherAddress := common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61")
+	subchainTNT1155VoucherContract, _ := ct.NewTNT1155VoucherContract(subchainTNT1155VoucherAddress, subchainClient)
+	senderSubchainTNT1155VoucherBalance, _ := subchainTNT1155VoucherContract.BalanceOf(nil, sender, big.NewInt(1))
+
+	mainchainTNT1155ContractAddress := common.HexToAddress("")
+	mainchainTNT1155Contract, _ := ct.NewTNT1155VoucherContract(mainchainTNT1155ContractAddress, mainchainClient)
+	receiverMainchainTNT1155TokenBalance, _ := mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
+
+	fmt.Printf("Subchain TNT1155 Voucher address: %v\n", subchainTNT1155VoucherAddress)
+	fmt.Printf("Subchain sender   : %v, TNT1155 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT1155VoucherBalance)
+	fmt.Printf("Mainchain receiver: %v, TNT1155 Token balance on Mainchin  : %v\n\n", receiver, receiverMainchainTNT1155TokenBalance)
+
+	authUser := subchainSelectAccount(subchainClient, 1)
+	subchainTNT1155VoucherContract.SetApprovalForAll(authUser, subchainTNT1155TokenBankAddress, true)
+
+	authUser = subchainSelectAccount(subchainClient, 1)
+	burnTx, err := subchainTNT1155TokenBank.BurnVouchers(authUser, subchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1), []byte(""))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	fmt.Printf("TNT1155 Voucher Burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
+	fmt.Printf("Burn %v TNT1155 Vouchers (Wei) on Subchain %v to recover the authentic tokens on the Mainchain...\n\n", burnAmount, subchainID)
+
+	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
+	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
+	if err != nil {
+		log.Fatal(err)
+	}
+	if receipt.Status != 1 {
+		log.Fatal("lock error")
+	}
+	fmt.Printf("Voucher burn confirmed, timestamp: %v\n", time.Now())
+
+	for {
+		time.Sleep(1 * time.Second)
+		updatedBalance, _ := mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
+		if receiverMainchainTNT1155TokenBalance.Cmp(updatedBalance) != 0 {
+			break
+		}
+		fmt.Printf("waiting for cross-chain transfer completion...\n")
+	}
+	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
+	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	// senderSubchainTNT1155VoucherBalance, _ = subchainTNT1155VoucherContract.BalanceOf(nil, sender, big.NewInt(1))
+	// receiverMainchainTNT1155TokenBalance, _ = mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
+
+	// fmt.Printf("Mainchain TNT1155 token contract address: %v\n", mainchainTNT1155ContractAddress)
+	// fmt.Printf("Subchain sender   : %v, TNT1155 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT1155VoucherBalance)
+	// fmt.Printf("Mainchain receiver: %v, TNT1155 Token balance on Mainchain  : %v\n\n", receiver, receiverMainchainTNT1155TokenBalance)
 }
 
 func SubchainTNT1155Lock(tokenID *big.Int) {
@@ -223,73 +292,4 @@ func MainchainTNT1155Burn(burnAmount *big.Int) {
 	// fmt.Printf("Subchain TNT1155 token contract address: %v\n", subchainTNT1155TokenAddress)
 	// fmt.Printf("Mainchain sender : %v, TNT1155 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT1155VoucherBalance)
 	// fmt.Printf("Subchain receiver: %v, TNT1155 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT1155TokenBalance)
-}
-
-func SubchainTNT1155Burn(burnAmount *big.Int) {
-	mainchainClient, err := ethclient.Dial("http://localhost:18888/rpc")
-	if err != nil {
-		log.Fatal(err)
-	}
-	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("Preparing for TNT1155 cross-chain transfer...\n")
-
-	sender := accountList[1].fromAddress
-	receiver := accountList[1].fromAddress
-
-	subchainTNT1155TokenBank, _ := ct.NewTNT1155TokenBank(subchainTNT1155TokenBankAddress, subchainClient)
-
-	subchainTNT1155VoucherAddress := common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61")
-	subchainTNT1155VoucherContract, _ := ct.NewTNT1155VoucherContract(subchainTNT1155VoucherAddress, subchainClient)
-	senderSubchainTNT1155VoucherBalance, _ := subchainTNT1155VoucherContract.BalanceOf(nil, sender, big.NewInt(1))
-
-	mainchainTNT1155ContractAddress := common.HexToAddress("")
-	mainchainTNT1155Contract, _ := ct.NewTNT1155VoucherContract(mainchainTNT1155ContractAddress, mainchainClient)
-	receiverMainchainTNT1155TokenBalance, _ := mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
-
-	fmt.Printf("Subchain TNT1155 Voucher address: %v\n", subchainTNT1155VoucherAddress)
-	fmt.Printf("Subchain sender   : %v, TNT1155 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT1155VoucherBalance)
-	fmt.Printf("Mainchain receiver: %v, TNT1155 Token balance on Mainchin  : %v\n\n", receiver, receiverMainchainTNT1155TokenBalance)
-
-	authUser := subchainSelectAccount(subchainClient, 1)
-	subchainTNT1155VoucherContract.SetApprovalForAll(authUser, subchainTNT1155TokenBankAddress, true)
-
-	authUser = subchainSelectAccount(subchainClient, 1)
-	burnTx, err := subchainTNT1155TokenBank.BurnVouchers(authUser, subchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1), []byte(""))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	fmt.Printf("TNT1155 Voucher Burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
-	fmt.Printf("Burn %v TNT1155 Vouchers (Wei) on Subchain %v to recover the authentic tokens on the Mainchain...\n\n", burnAmount, subchainID)
-
-	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
-	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
-	if err != nil {
-		log.Fatal(err)
-	}
-	if receipt.Status != 1 {
-		log.Fatal("lock error")
-	}
-	fmt.Printf("Voucher burn confirmed, timestamp: %v\n", time.Now())
-
-	for {
-		time.Sleep(1 * time.Second)
-		updatedBalance, _ := mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
-		if receiverMainchainTNT1155TokenBalance.Cmp(updatedBalance) != 0 {
-			break
-		}
-		fmt.Printf("waiting for cross-chain transfer completion...\n")
-	}
-	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
-	fmt.Printf("Cross-chain transfer completed.\n\n")
-
-	// senderSubchainTNT1155VoucherBalance, _ = subchainTNT1155VoucherContract.BalanceOf(nil, sender, big.NewInt(1))
-	// receiverMainchainTNT1155TokenBalance, _ = mainchainTNT1155Contract.BalanceOf(nil, receiver, big.NewInt(1))
-
-	// fmt.Printf("Mainchain TNT1155 token contract address: %v\n", mainchainTNT1155ContractAddress)
-	// fmt.Printf("Subchain sender   : %v, TNT1155 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT1155VoucherBalance)
-	// fmt.Printf("Mainchain receiver: %v, TNT1155 Token balance on Mainchain  : %v\n\n", receiver, receiverMainchainTNT1155TokenBalance)
 }
