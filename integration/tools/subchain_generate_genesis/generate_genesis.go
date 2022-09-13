@@ -413,8 +413,9 @@ func sanityChecks(sv *slst.StoreView) error {
 				panic(fmt.Sprintf("Failed to decode validator set: %v", err))
 			}
 			for _, validator := range vs.Validators() {
-				validatorInitTFuelVoucherBalance := sv.GetAccount(validator.Address).Balance.TFuelWei
-				logger.Infof("Initial Validator: %v, Stake: %v, TFuel Voucher Balance: %v TFuelWei", validator.Address.Hex(), validator.Stake, validatorInitTFuelVoucherBalance)
+				// validatorInitTFuelVoucherBalance := sv.GetAccount(validator.Address).Balance.TFuelWei
+				// logger.Infof("Initial Validator: %v, Stake: %v, TFuel Voucher Balance: %v TFuelWei", validator.Address.Hex(), validator.Stake, validatorInitTFuelVoucherBalance)
+				logger.Infof("Initial Validator: %v, Stake: %v", validator.Address.Hex(), validator.Stake)
 			}
 			vsAnalyzed = true
 		} else if bytes.Equal(key, slst.ValidatorSetUpdateTxHeightListKey()) {
@@ -437,7 +438,7 @@ func sanityChecks(sv *slst.StoreView) error {
 	if chainRegistrarContractAddr == nil {
 		panic("Chain registrar contract is not set")
 	}
-	logger.Infof("Chain Registrar  Contract Address: %v", chainRegistrarContractAddr.Hex())
+	logger.Infof("Chain Registrar    Contract Address: %v", chainRegistrarContractAddr.Hex())
 	tfuelTokenBankContractAddr := sv.GetTFuelTokenBankContractAddress()
 	if tfuelTokenBankContractAddr == nil {
 		panic("TFuel token bank contract is not set")
