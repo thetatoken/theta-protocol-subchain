@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"sync"
 	"time"
@@ -26,7 +27,7 @@ import (
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 
 var (
-	ErrDynastyIsNil = errors.New("Nil dynasty")
+	ErrDynastyIsNil = errors.New("nil dynasty")
 )
 
 type Orchestrator struct {
