@@ -323,6 +323,9 @@ func isVotingForInterchainEvents(contractAddr common.Address, calldata common.By
 	} else if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT721) {
 		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,string,string,address,uint256,string,uint256,uint256)") // TNT721TokenBank.mintVouchers
 		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "unlockTokens(uint256,string,address,uint256,uint256,uint256)")              // TNT721TokenBank.unlockTokens
+	} else if contractAddr == *ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155) {
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "mintVouchers(string,address,uint256,uint256,string,uint256,uint256)")  // TNT1155TokenBank.mintVouchers
+		whitelistedMethodSignatures = append(whitelistedMethodSignatures, "unlockTokens(uint256,string,address,uint256,uint256,uint256,uint256)") // TN1155TokenBank.unlockTokens
 	} else {
 		logger.Debugf("Checking whitelisted operation, contract is not a TokenBank")
 		return false
