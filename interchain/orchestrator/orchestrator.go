@@ -482,7 +482,7 @@ func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChai
 		return nil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.MintVouchers(txOpts, se.Denom, "https://thetatoken.example/api/item/{id}.json", se.TargetChainVoucherReceiver, se.TokenID, se.LockedAmount, dynasty, se.TokenLockNonce, se.MintData)
+	_, err = TNT1155TokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.TokenID, se.LockedAmount, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
 		return err
 	}
@@ -540,7 +540,6 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	return nil
 }
 
-//TNT1155
 func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
 	se, err := score.ParseToCrossChainTNT1155VoucherBurnedEvent(sourceEvent)
 	if err != nil {
@@ -551,7 +550,7 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 		return nil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce, se.TransferData) //calldata?
+	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
 		return err
 	}

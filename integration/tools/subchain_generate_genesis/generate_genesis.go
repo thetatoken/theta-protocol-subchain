@@ -48,18 +48,18 @@ type Validator struct {
 //
 // Example:
 // cd $SUBCHAIN_HOME/integration/privatenet/node
-// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub360777 -initValidatorSet=./data/init_validator_set.json -feeSetter=0x2E833968E5bB786Ae419c4d13189fB081Cc43bab -genesis=./genesis
+// subchain_generate_genesis -mainchainID=privatenet -subchainID=tsub360777 -initValidatorSet=./data/init_validator_set.json -admin=0x2E833968E5bB786Ae419c4d13189fB081Cc43bab -fallbackReceiver=0x2E833968E5bB786Ae419c4d13189fB081Cc43bab -genesis=./genesis
 //
 func main() {
-	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, feeSetter := parseArguments()
+	mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, admin, fallbackReceiver := parseArguments()
 
-	db, sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, feeSetter)
+	db, sv, metadata, err := generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath, admin, fallbackReceiver)
 	if err != nil {
 		panic(fmt.Sprintf("Failed to generate genesis snapshot: %v", err))
 	}
 
 	logger.Infof("-------------------------------------------------------------------------------")
-	logger.Infof("Cross-chain fee setter: %v", feeSetter)
+	logger.Infof("Cross-chain fee setter: %v", admin)
 	err = sanityChecks(sv)
 	logger.Infof("-------------------------------------------------------------------------------")
 
@@ -84,25 +84,29 @@ func main() {
 	fmt.Println("")
 }
 
-func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string, feeSetter common.Address) {
+func parseArguments() (mainchainID, subchainID, initValidatorSetPath, genesisSnapshotFilePath string, admin common.Address, fallbackReceiver common.Address) {
 	mainchainIDPtr := flag.String("mainchainID", "privatenet", "the ID of the mainchain")
 	subchainIDPtr := flag.String("subchainID", "tsub360777", "the ID of the subchain")
 	initValidatorSetPathPtr := flag.String("initValidatorSet", "./init_validator_set.json", "the initial validator set")
 	genesisSnapshotFilePathPtr := flag.String("genesis", "./genesis", "the genesis snapshot")
-	feeSetterPtr := flag.String("feeSetter", "", "the wallet address of the fee setter")
+	adminPtr := flag.String("admin", "", "the wallet address of the admin")
+	fallbackReceiverPtr := flag.String("fallbackReceiver", "", "fallback receiver of the cross-chain transferred tokens if the tranfer fails")
 	flag.Parse()
 
 	mainchainID = *mainchainIDPtr
 	subchainID = *subchainIDPtr
 	initValidatorSetPath = *initValidatorSetPathPtr
 	genesisSnapshotFilePath = *genesisSnapshotFilePathPtr
-	feeSetter = common.HexToAddress(*feeSetterPtr)
+	admin = common.HexToAddress(*adminPtr)
+	fallbackReceiver = common.HexToAddress(*fallbackReceiverPtr)
 
 	return
 }
 
 // generateGenesisSnapshot generates the genesis snapshot.
-func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string, feeSetter common.Address) (database.Database, *slst.StoreView, *score.SnapshotMetadata, error) {
+func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, genesisSnapshotFilePath string,
+	admin common.Address, fallbackReceiver common.Address) (database.Database, *slst.StoreView, *score.SnapshotMetadata, error) {
+
 	metadata := &score.SnapshotMetadata{}
 	genesisHeight := score.GenesisBlockHeight
 
@@ -110,7 +114,7 @@ func generateGenesisSnapshot(mainchainID, subchainID, initValidatorSetFilePath, 
 	sv := slst.NewStoreView(0, common.Hash{}, db)
 
 	setInitialValidatorSet(subchainID, initValidatorSetFilePath, genesisHeight, sv)
-	deployInitialSmartContracts(mainchainID, subchainID, feeSetter, sv)
+	deployInitialSmartContracts(mainchainID, subchainID, admin, fallbackReceiver, sv)
 
 	stateHash := sv.Hash()
 
@@ -194,7 +198,7 @@ func proveValidatorSet(sv *slst.StoreView) (*score.ValidatorSetProof, error) {
 	return vp, err
 }
 
-func deployInitialSmartContracts(mainchainID, subchainID string, feeSetter common.Address, sv *slst.StoreView) {
+func deployInitialSmartContracts(mainchainID, subchainID string, admin common.Address, fallbackReceiver common.Address, sv *slst.StoreView) {
 	mainchainIDInt := scom.MapChainID(mainchainID)
 	deployer := common.Address{}
 
@@ -206,7 +210,7 @@ func deployInitialSmartContracts(mainchainID, subchainID string, feeSetter commo
 	numMainchainBlockPerDynastyBigInt := big.NewInt(scom.NumMainchainBlocksPerDynasty)
 	dec18, _ := big.NewInt(0).SetString("1000000000000000000", 10)
 	initialCrossChainFee := big.NewInt(0).Mul(big.NewInt(10), dec18)
-	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, addConstructorArgumentForChainRegistrarBytecode(predeployed.ChainRegistrarContractBytecode, numMainchainBlockPerDynastyBigInt, initialCrossChainFee, feeSetter),
+	chainRegistrarContractAddr, err := deploySmartContract(subchainID, sv, addConstructorArgumentForChainRegistrarBytecode(predeployed.ChainRegistrarContractBytecode, numMainchainBlockPerDynastyBigInt, initialCrossChainFee, admin, fallbackReceiver),
 		deployer, sequence, slst.ChainRegistrarContractAddressKey())
 	if err != nil {
 		logger.Panicf("Failed to deploy the chain registrar smart contract (sequence = %v): %v", sequence, err)
@@ -238,7 +242,7 @@ func deployInitialSmartContracts(mainchainID, subchainID string, feeSetter commo
 }
 
 // Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
-func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, numBlocksPerDynasty, crossChainFee *big.Int, feeSetter common.Address) string {
+func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, numBlocksPerDynasty, crossChainFee *big.Int, admin common.Address, fallbackReceiver common.Address) string {
 	rawABI := `[
 		{
 		"inputs": [
@@ -254,7 +258,12 @@ func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, nu
 			},
 			{
 				"internalType": "uint256",
-				"name": "feeSetter_",
+				"name": "admin_",
+				"type": "address"
+			},
+			{
+				"internalType": "uint256",
+				"name": "fallbackReceiver_",
 				"type": "address"
 			}
 		],
@@ -266,7 +275,7 @@ func addConstructorArgumentForChainRegistrarBytecode(contractBytecode string, nu
 	if err != nil {
 		panic(err)
 	}
-	encodedConstructorArgument, err := parsed.Pack("", numBlocksPerDynasty, crossChainFee, feeSetter)
+	encodedConstructorArgument, err := parsed.Pack("", numBlocksPerDynasty, crossChainFee, admin, fallbackReceiver)
 	if err != nil {
 		panic(err)
 	}

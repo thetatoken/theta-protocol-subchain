@@ -323,7 +323,7 @@ func ParseToCrossChainTNT721TokenLockedEvent(icme *InterChainMessageEvent) (*Cro
 
 // Cross-Chain TNT1155 Lock
 
-type CrossChainTNT1155TokenLockedEvent struct { // corresponding to the "TNT721TokenLocked" event
+type CrossChainTNT1155TokenLockedEvent struct { // corresponding to the "TNT1155TokenLocked" event
 	Denom                      string
 	SourceChainTokenSender     common.Address
 	TargetChainID              *big.Int // targetChain: the chain to send the token to (i.e. on which vouchers will be minted)
@@ -332,7 +332,6 @@ type CrossChainTNT1155TokenLockedEvent struct { // corresponding to the "TNT721T
 	LockedAmount               *big.Int
 	TokenURI                   string
 	TokenLockNonce             *big.Int
-	MintData                   []byte
 }
 
 func ParseToCrossChainTNT1155TokenLockedEvent(icme *InterChainMessageEvent) (*CrossChainTNT1155TokenLockedEvent, error) {
@@ -467,8 +466,7 @@ func ParseToCrossChainTNT721VoucherMintedEvent(icme *InterChainMessageEvent) (*C
 	return &event, nil
 }
 
-//TNT1155
-type CrossChainTNT1155VoucherMintedEvent struct { // corresponding to the "TNT1155TokenLocked" event
+type CrossChainTNT1155VoucherMintedEvent struct { // corresponding to the "TNT1155VoucherMinted" event
 	Denom                      string
 	TargetChainVoucherReceiver common.Address
 	VoucherContract            common.Address
@@ -628,7 +626,6 @@ type CrossChainTNT1155VoucherBurnedEvent struct { // corresponding to the "TNT11
 	TokenID                  *big.Int
 	BurnedAmount             *big.Int
 	VoucherBurnNonce         *big.Int
-	TransferData             []byte
 }
 
 func ParseToCrossChainTNT1155VoucherBurnedEvent(icme *InterChainMessageEvent) (*CrossChainTNT1155VoucherBurnedEvent, error) {
@@ -824,6 +821,10 @@ func TNT20Denom(originatedChainID *big.Int, contractAddress common.Address) stri
 
 func TNT721Denom(originatedChainID *big.Int, contractAddress common.Address) string {
 	return strings.ToLower(fmt.Sprintf("%v/%v/%v", originatedChainID.String(), CrossChainTokenTypeTNT721, contractAddress.Hex())) // normalize to lower case to prevent duplication
+}
+
+func TNT1155Denom(originatedChainID *big.Int, contractAddress common.Address) string {
+	return strings.ToLower(fmt.Sprintf("%v/%v/%v", originatedChainID.String(), CrossChainTokenTypeTNT1155, contractAddress.Hex())) // normalize to lower case to prevent duplication
 }
 
 func ValidateDenom(denom string) error {

@@ -39,7 +39,9 @@ func MainchainTNT1155Lock() {
 		log.Fatal(err)
 	}
 	authAccount1 = mainchainSelectAccount(mainchainClient, 1)
-	tx, err = instanceTNT1155TokenBank.LockTokens(authAccount1, subchainID, mainchainTNT1155ContractAddress, user, big.NewInt(1), big.NewInt(1), []byte(""), []byte(""))
+	authAccount1.Value.Set(crossChainFee)
+	tx, err = instanceTNT1155TokenBank.LockTokens(authAccount1, subchainID, mainchainTNT1155ContractAddress, user, big.NewInt(1), big.NewInt(1))
+	authAccount1.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -103,7 +105,9 @@ func SubchainTNT1155Burn(burnAmount *big.Int) {
 	subchainTNT1155VoucherContract.SetApprovalForAll(authUser, subchainTNT1155TokenBankAddress, true)
 
 	authUser = subchainSelectAccount(subchainClient, 1)
-	burnTx, err := subchainTNT1155TokenBank.BurnVouchers(authUser, subchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1), []byte(""))
+	authUser.Value.Set(crossChainFee)
+	burnTx, err := subchainTNT1155TokenBank.BurnVouchers(authUser, subchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1))
+	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -174,7 +178,9 @@ func SubchainTNT1155Lock(tokenID *big.Int) {
 	// fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
 	auth = subchainSelectAccount(subchainClient, 1)
-	lockTx, err := subchainTNT1155TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT1155VoucherAddress, receiver, big.NewInt(1), big.NewInt(1), []byte(""), []byte(""))
+	auth.Value.Set(crossChainFee)
+	lockTx, err := subchainTNT1155TokenBankinstance.LockTokens(auth, big.NewInt(366), subchainTNT1155VoucherAddress, receiver, big.NewInt(1), big.NewInt(1))
+	auth.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -256,7 +262,9 @@ func MainchainTNT1155Burn(burnAmount *big.Int) {
 	mainchainTNT1155VoucherContract.SetApprovalForAll(authUser, mainchainTNT1155TokenBankAddress, true)
 
 	authUser = mainchainSelectAccount(mainchainClient, 6)
-	burnTx, err := mainchainTNT1155TokenBankInstance.BurnVouchers(authUser, mainchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1), []byte(""))
+	authUser.Value.Set(crossChainFee)
+	burnTx, err := mainchainTNT1155TokenBankInstance.BurnVouchers(authUser, mainchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1))
+	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
