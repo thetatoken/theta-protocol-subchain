@@ -36,26 +36,36 @@ func MainchainTNT1155Lock(tokenID *big.Int, lockAmount *big.Int) {
 		log.Fatal(err)
 	}
 	authAccount0 := mainchainSelectAccount(mainchainClient, 0)
-	tx, err := mainchainTNT1155Contract.Mint(authAccount0, sender, tokenID, lockAmount, []byte(""))
+	_, err = mainchainTNT1155Contract.Mint(authAccount0, sender, tokenID, lockAmount, []byte(""))
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Printf("Mainchain TNT1155 contract address: %v\n", mainchainTNT1155ContractAddress)
-	time.Sleep(6 * time.Second)
-
-	authAccount1 := mainchainSelectAccount(mainchainClient, 1)
-	tx, err = mainchainTNT1155Contract.SetApprovalForAll(authAccount1, mainchainTNT1155TokenBankAddress, true)
-	if err != nil {
-		log.Fatal(err)
-	}
-	time.Sleep(6 * time.Second)
 
 	tokenURI, _ := mainchainTNT1155Contract.Uri(nil, tokenID)
-	fmt.Printf("Mainchain TNT1155 NFT sender         : %v, tokenID: %v, amount: %v, tokenURI: %v\n", sender, tokenID, lockAmount, tokenURI)
-	fmt.Printf("Subchain TNT1155 NFT Voucher receiver: %v, tokenID: %v, amount: %v\n\n", receiver, tokenID, lockAmount)
+	fmt.Printf("Mainchain TNT1155 contract address: %v, tokenID: %v, amount to be sent: %v, tokenURI: %v\n",
+		mainchainTNT1155ContractAddress, tokenID, lockAmount, tokenURI)
+	time.Sleep(6 * time.Second)
 
-	tokenBankTNT1155BalanceBefore, _ := mainchainTNT1155Contract.BalanceOf(nil, mainchainTNT1155TokenBankAddress, tokenID)
-	fmt.Printf("Mainchain TNT1155TokenBank balance for NFT %v before tranfer: %v\n", tokenID, tokenBankTNT1155BalanceBefore)
+	expectedSubchainVoucherContractAddress := common.HexToAddress("0x0ede92cAc9161F6C397A604DE508Dcd1e6f43E61")
+	subchainTNT1155VoucherContract, err := ct.NewTNT1155VoucherContract(expectedSubchainVoucherContractAddress, subchainClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	senderMainchainTNT1155TokenBalance, _ := mainchainTNT1155Contract.BalanceOf(nil, sender, tokenID)
+	receiverSubchainTNT1155VoucherBalance, _ := subchainTNT1155VoucherContract.BalanceOf(nil, receiver, tokenID)
+	fmt.Printf("Mainchain TNT1155 NFT sender         : %v, token balance on Mainchain : %v\n", sender, senderMainchainTNT1155TokenBalance)
+	fmt.Printf("Subchain TNT1155 NFT Voucher receiver: %v, voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTNT1155VoucherBalance)
+
+	authAccount1 := mainchainSelectAccount(mainchainClient, 1)
+	_, err = mainchainTNT1155Contract.SetApprovalForAll(authAccount1, mainchainTNT1155TokenBankAddress, true)
+	if err != nil {
+		log.Fatal(err)
+	}
+	time.Sleep(6 * time.Second)
+
+	// tokenBankTNT1155BalanceBefore, _ := mainchainTNT1155Contract.BalanceOf(nil, mainchainTNT1155TokenBankAddress, tokenID)
+	// fmt.Printf("Mainchain TNT1155TokenBank balance for NFT %v before tranfer: %v\n", tokenID, tokenBankTNT1155BalanceBefore)
 
 	authAccount1 = mainchainSelectAccount(mainchainClient, 1)
 	authAccount1.Value.Set(crossChainFee)
@@ -68,7 +78,7 @@ func MainchainTNT1155Lock(tokenID *big.Int, lockAmount *big.Int) {
 	fmt.Printf("Transfering TNT1155 NFT (tokenID: %v, amount: %v) from the Mainchain to Subchain %v...\n\n", tokenID, lockAmount, subchainID)
 
 	fmt.Printf("Start transfer, timestamp      : %v\n", time.Now())
-	receipt, err := mainchainClient.TransactionReceipt(context.Background(), tx.Hash())
+	receipt, err := mainchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -77,9 +87,6 @@ func MainchainTNT1155Lock(tokenID *big.Int, lockAmount *big.Int) {
 		return
 	}
 	fmt.Printf("Token lock confirmed, timestamp: %v\n", time.Now())
-
-	// secondOnwer, _ := subchainTNT1155VoucherInstance.OwnerOf(nil, tokenID)
-	// fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
 
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	var subchainVoucherAddress common.Address
@@ -96,15 +103,17 @@ func MainchainTNT1155Lock(tokenID *big.Int, lockAmount *big.Int) {
 	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	tokenBankTNT1155BalanceAfter, _ := mainchainTNT1155Contract.BalanceOf(nil, mainchainTNT1155TokenBankAddress, tokenID)
-
+	// tokenBankTNT1155BalanceAfter, _ := mainchainTNT1155Contract.BalanceOf(nil, mainchainTNT1155TokenBankAddress, tokenID)
 	subchainVoucherContract, _ := ct.NewTNT1155VoucherContract(subchainVoucherAddress, subchainClient)
-	subchainReceiverBalance, _ := subchainVoucherContract.BalanceOf(nil, receiver, tokenID)
 	subchainTokenURI, _ := subchainVoucherContract.Uri(nil, tokenID)
 
-	fmt.Printf("Mainchain TNT1155TokenBank balance for NFT %v after tranfer: %v\n", tokenID, tokenBankTNT1155BalanceAfter)
+	// fmt.Printf("Mainchain TNT1155TokenBank balance for NFT %v after tranfer: %v\n", tokenID, tokenBankTNT1155BalanceAfter)
 	fmt.Printf("Subchain TNT1155 Voucher contract address: %v, tokenID: %v, TokenURI: %v\n", subchainVoucherAddress, tokenID, subchainTokenURI)
-	fmt.Printf("Subchain NFT Voucher owner %v balance: %v\n\n", receiver, subchainReceiverBalance)
+
+	senderMainchainTNT1155TokenBalance, _ = mainchainTNT1155Contract.BalanceOf(nil, sender, tokenID)
+	receiverSubchainTNT1155VoucherBalance, _ = subchainTNT1155VoucherContract.BalanceOf(nil, receiver, tokenID)
+	fmt.Printf("Mainchain TNT1155 NFT sender         : %v, token balance on Mainchain: %v\n", sender, senderMainchainTNT1155TokenBalance)
+	fmt.Printf("Subchain TNT1155 NFT Voucher receiver: %v, voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTNT1155VoucherBalance)
 }
 
 func SubchainTNT1155Burn(tokenID *big.Int, burnAmount *big.Int) {
@@ -194,79 +203,101 @@ func SubchainTNT1155Lock(tokenID *big.Int, lockAmount *big.Int) {
 	}
 	fmt.Printf("Preparing for TNT1155 cross-chain transfer...\n")
 
-	//sender := accountList[1].fromAddress
+	sender := accountList[1].fromAddress
 	receiver := accountList[6].fromAddress
 
-	subchainTNT1155ContractAddress := common.HexToAddress("0xFfF2bb6198F181C412bb250825a5b3AfF1bB2d3a") // FIXME: should instantiate a mock TNT1155 instead of using the Voucher contract (which causes confusion)
+	subchainTNT1155ContractAddress := common.HexToAddress("0xFfF2bb6198F181C412bb250825a5b3AfF1bB2d3a")
 	subchainTNT1155Contract, _ := ct.NewMockTNT1155(subchainTNT1155ContractAddress, subchainClient)
+	if err != nil {
+		log.Fatal(err)
+	}
 	subchainTNT1155TokenBank, err := ct.NewTNT1155TokenBank(subchainTNT1155TokenBankAddress, subchainClient)
 	if err != nil {
 		log.Fatal(err)
 	}
+
 	auth := subchainSelectAccount(subchainClient, 1)
+	_, err = subchainTNT1155Contract.Mint(auth, sender, tokenID, lockAmount, []byte(""))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	tokenURI, _ := subchainTNT1155Contract.Uri(nil, tokenID)
+	fmt.Printf("Subchain TNT1155 contract address: %v, tokenID: %v, amount to be sent: %v, tokenURI: %v\n",
+		subchainTNT1155ContractAddress, tokenID, lockAmount, tokenURI)
+	time.Sleep(6 * time.Second)
+
+	expectedMainchainVoucherContractAddress := common.HexToAddress("0xb0DBBcba1Be5B71Dcb42aB1935773B3675e645e8")
+	mainchainTNT1155VoucherContract, err := ct.NewTNT1155VoucherContract(expectedMainchainVoucherContractAddress, mainchainClient)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	senderSubchainTNT1155TokenBalance, _ := subchainTNT1155Contract.BalanceOf(nil, sender, tokenID)
+	receiverMainchainTNT1155VoucherBalance, _ := mainchainTNT1155VoucherContract.BalanceOf(nil, receiver, tokenID)
+	fmt.Printf("Subchain TNT1155 NFT sender           : %v, token balance on Subchain   : %v\n", sender, senderSubchainTNT1155TokenBalance)
+	fmt.Printf("Mainchain TNT1155 NFT Voucher receiver: %v, voucher balance on Mainchain: %v\n\n", receiver, receiverMainchainTNT1155VoucherBalance)
+
+	auth = subchainSelectAccount(subchainClient, 1)
 	_, err = subchainTNT1155Contract.SetApprovalForAll(auth, subchainTNT1155TokenBankAddress, true)
 	if err != nil {
 		log.Fatal(err)
 	}
+	time.Sleep(6 * time.Second)
 
-	// subchainNFTOwner, _ := subchainTNT1155VoucherInstance.BalanceOf(nil, accountList[1].fromAddress, big.NewInt(1))
-	// if subchainNFTOwner.Cmp(big.NewInt(1)) != 0 {
-	// 	log.Fatalf("mainchain token owner and sender mismatch: %v vs. %v\n", subchainNFTOwner, sender)
-	// }
-	// fmt.Printf("Subchain NFT sender   : %v, tokenID: %v\n", sender, tokenID)
-	// fmt.Printf("Mainchain NFT receiver: %v, tokenID: %v\n\n", receiver, tokenID)
+	// tokenBankTNT1155BalanceBefore, _ := subchainTNT1155Contract.BalanceOf(nil, subchainTNT1155TokenBankAddress, tokenID)
+	// fmt.Printf("Subchain TNT1155TokenBank balance for NFT %v before tranfer (locked amount): %v\n\n", tokenID, tokenBankTNT1155BalanceBefore)
 
 	auth = subchainSelectAccount(subchainClient, 1)
 	auth.Value.Set(crossChainFee)
-	lockTx, err := subchainTNT1155TokenBank.LockTokens(auth, big.NewInt(366), subchainTNT1155ContractAddress, receiver, tokenID, lockAmount)
+	lockTx, err := subchainTNT1155TokenBank.LockTokens(auth, subchainID, subchainTNT1155ContractAddress, receiver, tokenID, lockAmount)
 	auth.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	tx1, _ := subchainTNT1155TokenBank.TotalLockedAmounts(nil, big.NewInt(366), subchainTNT1155ContractAddress, tokenID)
-	fmt.Println(tx1)
+
+	// totalLockAmount, _ := subchainTNT1155TokenBank.TotalLockedAmounts(nil, subchainID, subchainTNT1155ContractAddress, tokenID)
+	// fmt.Printf("Total amount locked for tokenID %v: %v\n", tokenID, totalLockAmount)
 	fmt.Printf("TNT1155 Token Lock tx hash (Subchain): %v\n", lockTx.Hash().Hex())
-	fmt.Printf("Transfering TNT1155 NFT (tokenID: %v) from Subchain %v to the Mainchain...\n\n", tokenID, subchainID)
-	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
+	fmt.Printf("Transfering TNT1155 NFT (tokenID: %v, amount: %v) from Subchain %v to the Mainchain...\n\n", tokenID, lockAmount, subchainID)
+
+	fmt.Printf("Start transfer, timestamp      : %v\n", time.Now())
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
 		log.Fatal(err)
 	}
 	if receipt.Status != 1 {
-		fmt.Println("burn error")
+		fmt.Println("lock error")
 		return
 	}
+	fmt.Printf("Token lock confirmed, timestamp: %v\n", time.Now())
 
-	// secondOnwer, _ := subchainTNT1155VoucherInstance.OwnerOf(nil, tokenID)
-	// fmt.Println("The subchain owner of ", tokenID, "is", secondOnwer)
-
+	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	var mainchainVoucherAddress common.Address
 	for {
 		time.Sleep(1 * time.Second)
 		toHeight, _ := mainchainClient.BlockNumber(context.Background())
-		result := getMainchainTNT1155VoucherMintLogs(int(fromHeight), int(toHeight), mainchainTNT1155TokenBankAddress, accountList[6].fromAddress)
+		result := getMainchainTNT1155VoucherMintLogs(int(fromHeight), int(toHeight), mainchainTNT1155TokenBankAddress, receiver)
 		if result != nil {
 			mainchainVoucherAddress = *result
 			break
 		}
 		fmt.Printf("waiting for cross-chain transfer completion (scanning Mainchain from height %v to %v)...\n", fromHeight, toHeight)
 	}
-	fmt.Println(mainchainVoucherAddress, "Cross-chain transfer completed.\n\n")
+	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
+	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	// subchainNFTOwner, _ = subchainTNT1155VoucherInstance.OwnerOf(nil, tokenID)
-	// if subchainNFTOwner != subchainTNT1155TokenBankAddress {
-	// 	log.Fatalf("subchain token owner should be the TNT1155TokenBank contract: %v vs. %v\n", subchainNFTOwner, subchainTNT1155TokenBankAddress)
-	// }
+	// tokenBankTNT1155BalanceAfter, _ := subchainTNT1155Contract.BalanceOf(nil, subchainTNT1155TokenBankAddress, tokenID)
+	mainchainTNT1155VoucherContract, _ = ct.NewTNT1155VoucherContract(mainchainVoucherAddress, mainchainClient)
+	mainchainTokenURI, _ := mainchainTNT1155VoucherContract.Uri(nil, tokenID)
 
-	// mainchainVoucherContract, _ := ct.NewTNT1155VoucherContract(mainchainVoucherAddress, mainchainClient)
-	// mainchainNFTOwner, _ := mainchainVoucherContract.OwnerOf(nil, tokenID)
-	// if mainchainNFTOwner != receiver {
-	// 	log.Fatalf("mainchain token owner and receiver mismatch: %v vs. %v\n", mainchainNFTOwner, receiver)
-	// }
+	// fmt.Printf("Subchain TNT1155TokenBank balance for NFT %v after tranfer (locked amount): %v\n\n", tokenID, tokenBankTNT1155BalanceAfter)
+	fmt.Printf("Mainchain TNT1155 Voucher contract address: %v, tokenID: %v, TokenURI: %v\n", mainchainVoucherAddress, tokenID, mainchainTokenURI)
 
-	// fmt.Printf("Mainchain TNT1155 Voucher contract address: %v\n", mainchainVoucherAddress)
-	// fmt.Printf("Subchain NFT owner : %v, tokenID: %v (Note: the subchain NFT owner is the TNT1155TokenBank contract since the NFT has been locked)\n", subchainNFTOwner, tokenID)
-	// fmt.Printf("Mainchain NFT owner: %v, tokenID: %v\n\n", mainchainNFTOwner, tokenID)
+	senderSubchainTNT1155TokenBalance, _ = subchainTNT1155Contract.BalanceOf(nil, sender, tokenID)
+	receiverMainchainTNT1155VoucherBalance, _ = mainchainTNT1155VoucherContract.BalanceOf(nil, receiver, tokenID)
+	fmt.Printf("Subchain TNT1155 NFT sender           : %v, token balance on Subchain   : %v\n", sender, senderSubchainTNT1155TokenBalance)
+	fmt.Printf("Mainchain TNT1155 NFT Voucher receiver: %v, voucher balance on Mainchain: %v\n\n", receiver, receiverMainchainTNT1155VoucherBalance)
 }
 
 func MainchainTNT1155Burn(tokenID *big.Int, burnAmount *big.Int) {
@@ -285,15 +316,16 @@ func MainchainTNT1155Burn(tokenID *big.Int, burnAmount *big.Int) {
 
 	mainchainTNT1155TokenBankInstance, _ := ct.NewTNT1155TokenBank(mainchainTNT1155TokenBankAddress, mainchainClient)
 
-	mainchainTNT1155VoucherAddress := common.HexToAddress("0xCFbb5680AAbcaA297bC1b9233677098308BadB82")
+	mainchainTNT1155VoucherAddress := common.HexToAddress("0xb0DBBcba1Be5B71Dcb42aB1935773B3675e645e8")
 	mainchainTNT1155VoucherContract, _ := ct.NewTNT1155VoucherContract(mainchainTNT1155VoucherAddress, mainchainClient)
 	senderMainchainTNT1155VoucherBalance, _ := mainchainTNT1155VoucherContract.BalanceOf(nil, sender, tokenID)
 
-	subchainTNT1155TokenAddress := common.HexToAddress("0x0ede92cac9161f6c397a604de508dcd1e6f43e61") // FIXME: should instantiate a mock TNT1155 instead of using the Voucher contract (which causes confusion)
+	subchainTNT1155TokenAddress := common.HexToAddress("0xFfF2bb6198F181C412bb250825a5b3AfF1bB2d3a")
 	subchainTNT1155TokenContract, _ := ct.NewTNT1155VoucherContract(subchainTNT1155TokenAddress, subchainClient)
 	receiverSubchainTNT1155TokenBalance, _ := subchainTNT1155TokenContract.BalanceOf(nil, receiver, tokenID)
+	mainchainTokenURI, _ := mainchainTNT1155VoucherContract.Uri(nil, tokenID)
 
-	fmt.Printf("Mainchain TNT1155 Voucher address: %v\n", mainchainTNT1155VoucherAddress)
+	fmt.Printf("Mainchain TNT1155 Voucher address: %v, tokenID: %v, tokenURI: %v\n", mainchainTNT1155VoucherAddress, tokenID, mainchainTokenURI)
 	fmt.Printf("Mainchain sender : %v, TNT1155 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT1155VoucherBalance)
 	fmt.Printf("Subchain receiver: %v, TNT1155 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT1155TokenBalance)
 
@@ -302,14 +334,14 @@ func MainchainTNT1155Burn(tokenID *big.Int, burnAmount *big.Int) {
 
 	authUser = mainchainSelectAccount(mainchainClient, 6)
 	authUser.Value.Set(crossChainFee)
-	burnTx, err := mainchainTNT1155TokenBankInstance.BurnVouchers(authUser, mainchainTNT1155VoucherAddress, accountList[1].fromAddress, big.NewInt(1), big.NewInt(1))
+	burnTx, err := mainchainTNT1155TokenBankInstance.BurnVouchers(authUser, mainchainTNT1155VoucherAddress, accountList[1].fromAddress, tokenID, burnAmount)
 	authUser.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	fmt.Printf("TNT1155 Voucher Burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
-	fmt.Printf("Burn %v TNT1155 Vouchers (Wei) on the Mainchain to recover the authentic tokens on Subchain %v...\n\n", burnAmount, subchainID)
+	fmt.Printf("Burn %v TNT1155 Vouchers on the Mainchain to recover the authentic tokens on Subchain %v...\n\n", burnAmount, subchainID)
 
 	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
 	receipt, err := mainchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
@@ -317,14 +349,14 @@ func MainchainTNT1155Burn(tokenID *big.Int, burnAmount *big.Int) {
 		log.Fatal(err)
 	}
 	if receipt.Status != 1 {
-		log.Fatal("lock error")
+		log.Fatal("burn error")
 		return
 	}
 	fmt.Printf("Voucher burn confirmed, timestamp: %v\n", time.Now())
 
 	for {
 		time.Sleep(1 * time.Second)
-		updatedBalance, _ := subchainTNT1155TokenContract.BalanceOf(nil, receiver, big.NewInt(1))
+		updatedBalance, _ := subchainTNT1155TokenContract.BalanceOf(nil, receiver, tokenID)
 		if receiverSubchainTNT1155TokenBalance.Cmp(updatedBalance) != 0 {
 			break
 		}
@@ -333,10 +365,11 @@ func MainchainTNT1155Burn(tokenID *big.Int, burnAmount *big.Int) {
 	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	// senderMainchainTNT1155VoucherBalance, _ = mainchainTNT1155VoucherContract.BalanceOf(nil, sender)
-	// receiverSubchainTNT1155TokenBalance, _ = subchainTNT1155TokenContract.BalanceOf(nil, receiver)
+	senderMainchainTNT1155VoucherBalance, _ = mainchainTNT1155VoucherContract.BalanceOf(nil, sender, tokenID)
+	receiverSubchainTNT1155TokenBalance, _ = subchainTNT1155TokenContract.BalanceOf(nil, receiver, tokenID)
+	subchainTokenURI, _ := subchainTNT1155TokenContract.Uri(nil, tokenID)
 
-	// fmt.Printf("Subchain TNT1155 token contract address: %v\n", subchainTNT1155TokenAddress)
-	// fmt.Printf("Mainchain sender : %v, TNT1155 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT1155VoucherBalance)
-	// fmt.Printf("Subchain receiver: %v, TNT1155 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT1155TokenBalance)
+	fmt.Printf("Subchain TNT1155 token contract address: %v, tokenID: %v, tokenURI: %v\n", subchainTNT1155TokenAddress, tokenID, subchainTokenURI)
+	fmt.Printf("Mainchain sender : %v, TNT1155 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT1155VoucherBalance)
+	fmt.Printf("Subchain receiver: %v, TNT1155 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT1155TokenBalance)
 }
