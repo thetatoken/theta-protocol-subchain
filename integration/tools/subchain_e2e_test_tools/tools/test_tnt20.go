@@ -62,6 +62,7 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	receiverTNT20VoucherBalance, _ := instaceSubchainTNT20VoucherContract.BalanceOf(nil, receiver)
 	fmt.Printf("Mainchain sender : %v, TNT20 balance on Mainchain       : %v\n", sender.From, senderTNT20Balance)
 	fmt.Printf("Subchain receiver: %v, TNT20 voucher balance on Subchain: %v\n\n", receiver, receiverTNT20VoucherBalance)
+	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
 
 	sender = mainchainSelectAccount(mainchainClient, 1)
 	sender.Value.Set(crossChainFee)
@@ -73,8 +74,6 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 
 	fmt.Printf("TNT20 Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering %v TNT20 tokens (Wei) from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
-
-	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
 
 	fmt.Printf("Start transfer, timestamp      : %v\n", time.Now())
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
@@ -146,6 +145,7 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	fmt.Printf("Subchain TNT20 Voucher address: %v, Name: %v, Symbol: %v, Decimals: %v\n", subchainTNT20VoucherAddress, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
 	fmt.Printf("Subchain sender   : %v, TNT20 Voucher balance on Subchain: %v\n", sender, senderSubchainTNT20VoucherBalance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 Token balance on Mainchin  : %v\n\n", receiver, receiverMainchainTNT20TokenBalance)
+	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
 
 	authUser := subchainSelectAccount(subchainClient, 1)
 	subchainTNT20VoucherContract.Approve(authUser, subchainTNT20TokenBankAddress, burnAmount)
@@ -160,8 +160,6 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 
 	fmt.Printf("TNT20 Voucher Burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
 	fmt.Printf("Burn %v TNT20 Vouchers (Wei) on Subchain %v to recover the authentic tokens on the Mainchain...\n\n", burnAmount, subchainID)
-
-	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
 
 	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
@@ -233,6 +231,8 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	fmt.Printf("Subchain TNT20 contract address: %v, Name: %v, Symbol: %v, Decimals: %v\n", subchainTNT20Address, subchainTNT20Name, subchainTNT20Symbol, subchainTNT20Decimals)
 	fmt.Printf("Subchain sender   : %v, TNT20 balance on Subchain         : %v\n", sender, senderTNT20Balance)
 	fmt.Printf("Mainchain receiver: %v, TNT20 voucher balance on Mainchain: %v\n\n", receiver, receiverMainchainTNT20VoucherBalance)
+	mainchainID, _ := mainchainClient.ChainID(context.Background())
+	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20Address, mainchainID, subchainClient)
 
 	authUser = subchainSelectAccount(subchainClient, 1)
 	subchainTNT20Instance.Approve(authUser, subchainTNT20TokenBankAddress, lockAmount)
@@ -247,9 +247,6 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 
 	fmt.Printf("TNT20 Token Lock tx hash (Subchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering %v TNT20 tokens (Wei) from to Subchain %v to the Mainchain...\n\n", lockAmount, subchainID)
-
-	mainchainID, _ := mainchainClient.ChainID(context.Background())
-	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20Address, mainchainID, subchainClient)
 
 	fmt.Printf("Start transfer, timestamp      : %v\n", time.Now())
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
@@ -320,6 +317,8 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	fmt.Printf("Mainchain TNT20 Voucher address: %v, Name: %v, Symbol: %v, Decimals: %v\n", mainchainTNT20VoucherAddress, mainchainTNT20Name, mainchainTNT20Symbol, mainchainTNT20Decimals)
 	fmt.Printf("Mainchain sender : %v, TNT20 Voucher balance on Mainchain: %v\n", sender, senderMainchainTNT20VoucherBalance)
 	fmt.Printf("Subchain receiver: %v, TNT20 Token balance on Subchain   : %v\n\n", receiver, receiverSubchainTNT20TokenBalance)
+	mainchainID, _ := mainchainClient.ChainID(context.Background())
+	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20TokenAddress, mainchainID, subchainClient)
 
 	authUser := mainchainSelectAccount(mainchainClient, 6)
 	mainchainTNT20VoucherContract.Approve(authUser, mainchainTNT20TokenBankAddress, burnAmount)
@@ -334,9 +333,6 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 
 	fmt.Printf("TNT20 Voucher Burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
 	fmt.Printf("Burn %v TNT20 Vouchers (Wei) on the Mainchain to recover the authentic tokens on Subchain %v...\n\n", burnAmount, subchainID)
-
-	mainchainID, _ := mainchainClient.ChainID(context.Background())
-	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20TokenAddress, mainchainID, subchainClient)
 
 	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
 	receipt, err := mainchainClient.TransactionReceipt(context.Background(), burnTx.Hash())

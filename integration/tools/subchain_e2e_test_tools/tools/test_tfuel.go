@@ -38,6 +38,8 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 
 	fmt.Printf("Mainchain sender : %v, TFuel balance on Mainchain       : %v\n", sender.From, senderMainchainTFuelBalance)
 	fmt.Printf("Subchain receiver: %v, TFuel voucher balance on Subchain: %v\n\n", receiver, receiverSubchainTFuelBalance)
+	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
+
 	sender.Value = big.NewInt(0).Add(lockAmount, crossChainFee)
 	tx, err := tfuelTokenBankInstance.LockTokens(sender, subchainID, receiver)
 	sender.Value = big.NewInt(0)
@@ -47,8 +49,6 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 
 	fmt.Printf("TFuel Token Lock tx hash (Mainchain): %v\n", tx.Hash().Hex())
 	fmt.Printf("Transfering %v TFuelWei from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
-
-	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
 
 	fmt.Printf("Start transfer, timestamp: %v\n", time.Now())
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
@@ -102,6 +102,7 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 
 	fmt.Printf("Subchain sender   : %v, TFuel voucher balance on Subchain : %v\n", sender.From, senderSubchainTFuelBalance)
 	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v\n\n", receiver, receiverMainchainTFuelBalance)
+	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
 
 	sender.Value = big.NewInt(0).Add(burnAmount, crossChainFee)
 	tx, err := TFuelTokenBankInstance.BurnVouchers(sender, receiver)
@@ -112,8 +113,6 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 
 	fmt.Printf("TFuel Voucher Burn tx hash (Subchain): %v\n", tx.Hash().Hex())
 	fmt.Printf("Burn %v TFuelWei on Subchain %v to recover authentic TFuel on the Mainchain...\n\n", burnAmount, subchainID)
-
-	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
 
 	fmt.Printf("Start transfer, timestamp: %v\n", time.Now())
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
