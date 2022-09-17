@@ -2,6 +2,7 @@ package orchestrator
 
 import (
 	"context"
+	"errors"
 	"math/big"
 	"sync"
 	"time"
@@ -24,6 +25,11 @@ import (
 )
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
+
+var (
+	ErrDynastyIsNil        = errors.New("nil dynasty")
+	ErrTargetChainMismatch = errors.New("target chain mismatch")
+)
 
 type Orchestrator struct {
 	updateInterval        int
@@ -372,6 +378,7 @@ func (oc *Orchestrator) updateEventProcessedTime(event *score.InterChainMessageE
 // For Voucher Burn events on the source chain, call the Unlock Token method  of the corresponding TokenBank contract on the target chain
 func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventType score.InterChainMessageEventType, sourceEvent *score.InterChainMessageEvent) error {
 	var err error
+	var txHash common.Hash
 
 	dynasty := oc.getDynasty()
 	if dynasty != nil {
@@ -391,171 +398,211 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 	switch targetEventType {
 	// Voucher Mint events
 	case score.IMCEventTypeCrossChainVoucherMintTFuel:
-		err = oc.mintTFuelVouchers(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.mintTFuelVouchers(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainVoucherMintTNT20:
-		err = oc.mintTNT20Vouchers(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.mintTNT20Vouchers(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainVoucherMintTNT721:
-		err = oc.mintTN721Vouchers(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.mintTN721Vouchers(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainVoucherMintTNT1155:
-		err = oc.mintTN1155Vouchers(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.mintTN1155Vouchers(txOpts, targetChainID, sourceEvent)
 
 	// Token Unlock events
 	case score.IMCEventTypeCrossChainTokenUnlockTFuel:
-		err = oc.unlockTFuelTokens(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.unlockTFuelTokens(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainTokenUnlockTNT20:
-		err = oc.unlockTNT20Tokens(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.unlockTNT20Tokens(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainTokenUnlockTNT721:
-		err = oc.unlockTNT721Tokens(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.unlockTNT721Tokens(txOpts, targetChainID, sourceEvent)
 	case score.IMCEventTypeCrossChainTokenUnlockTNT1155:
-		err = oc.unlockTNT1155Tokens(txOpts, targetChainID, sourceEvent)
+		txHash, err = oc.unlockTNT1155Tokens(txOpts, targetChainID, sourceEvent)
 	default:
 		return nil
 	}
 
+	if err == ErrTargetChainMismatch {
+		// this may happen when a user sends tokens from a subchain to another subchain, which is not supported yet
+		// the current orchestrator only supports transfers between the mainchain and a subchain
+		logger.Warnf("Sending tokens between two subchains is not supported yet: %v", err)
+		return nil // ignore
+	}
+
 	if err != nil {
-		logger.Warnf("Failed to call the target contract: ", err)
+		logger.Warnf("Failed to call the target contract: %v", err)
 		return err
 	}
+
+	logger.Infof("contract call tx hash: %v, chain: %v", txHash.Hex(), targetChainID)
 
 	return nil
 }
 
-func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTFuelTokenLockedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-
+	if targetChainID.Cmp(se.TargetChainID) != 0 {
+		logger.Warnf("mintTFuelVouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		return common.Hash{}, ErrTargetChainMismatch
+	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	tx, err := tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("mintTFuelVouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
+	return txHash, nil
 }
 
-func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTNT20TokenLockedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
+	}
+	if targetChainID.Cmp(se.TargetChainID) != 0 {
+		logger.Warnf("mintTNT20Vouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
+	tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("mintTNT20Vouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
+	return txHash, nil
 }
 
-func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTNT721TokenLockedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
+	}
+	if targetChainID.Cmp(se.TargetChainID) != 0 {
+		logger.Warnf("mintTN721Vouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
-	_, err = TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
+	tx, err := TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("mintTN721Vouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
+	return txHash, nil
 }
 
-func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTNT1155TokenLockedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
+	}
+	if targetChainID.Cmp(se.TargetChainID) != 0 {
+		logger.Warnf("mintTN1155Vouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.MintVouchers(txOpts, se.Denom, "https://thetatoken.example/api/item/{id}.json", se.TargetChainVoucherReceiver, se.TokenID, se.LockedAmount, dynasty, se.TokenLockNonce, se.MintData)
+	tx, err := TNT1155TokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.TokenID, se.LockedAmount, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("se.TargetChainID: %v", se.TargetChainID)
+	logger.Debugf("mintTN1155Vouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
+	return txHash, nil
 }
 
-func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTFuelVoucherBurnedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
-	_, err = tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	tx, err := tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("unlockTFuelTokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
+	return txHash, nil
 }
 
-func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTNT20VoucherBurnedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
-	_, err = TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
+	tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("unlockTNT20Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
+	return txHash, nil
 }
 
-func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTNT721VoucherBurnedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
-	_, err = TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
+	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("unlockTNT721Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
+	return txHash, nil
 }
 
-//TNT1155
-func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) error {
+func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetChainID *big.Int, sourceEvent *score.InterChainMessageEvent) (common.Hash, error) {
 	se, err := score.ParseToCrossChainTNT1155VoucherBurnedEvent(sourceEvent)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
-		return nil
+		return common.Hash{}, ErrDynastyIsNil
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
-	_, err = TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce, se.TransferData) //calldata?
+	tx, err := TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
-		return err
+		return common.Hash{}, err
 	}
-	return nil
+	txHash := tx.Hash()
+	logger.Debugf("unlockTNT1155Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
+	return txHash, nil
 }
 
 func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bind.TransactOpts, error) {
