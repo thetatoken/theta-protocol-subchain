@@ -260,6 +260,7 @@ func SubchainTNT1155Lock(tokenID *big.Int, lockAmount *big.Int) {
 	auth = subchainSelectAccount(subchainClient, 1)
 	auth.Value.Set(crossChainFee)
 	lockTx, err := subchainTNT1155TokenBank.LockTokens(auth, mainchainID, subchainTNT1155ContractAddress, receiver, tokenID, lockAmount)
+	// lockTx, err := subchainTNT1155TokenBank.LockTokens(auth, subchainID, subchainTNT1155ContractAddress, receiver, tokenID, lockAmount) // for testing a corner case: sending to the same chain
 	auth.Value.Set(common.Big0)
 	if err != nil {
 		log.Fatal(err)
