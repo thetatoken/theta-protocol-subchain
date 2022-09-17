@@ -74,6 +74,8 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	fmt.Printf("TNT20 Token Lock tx hash (Mainchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering %v TNT20 tokens (Wei) from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
 
+	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
+
 	fmt.Printf("Start transfer, timestamp      : %v\n", time.Now())
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	receipt, err := mainchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
@@ -98,6 +100,8 @@ func MainchainTNT20Lock(lockAmount *big.Int) {
 	}
 	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
 
 	senderTNT20Balance, _ = mainchainTNT20Contract.BalanceOf(nil, sender.From)
 	instanceSubchainTNT20VoucherContract, _ := ct.NewTNT20VoucherContract(subchainVoucherAddress, subchainClient)
@@ -157,6 +161,8 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	fmt.Printf("TNT20 Voucher Burn tx hash (Subchain): %v\n", burnTx.Hash().Hex())
 	fmt.Printf("Burn %v TNT20 Vouchers (Wei) on Subchain %v to recover the authentic tokens on the Mainchain...\n\n", burnAmount, subchainID)
 
+	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
+
 	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
@@ -177,6 +183,8 @@ func SubchainTNT20Burn(burnAmount *big.Int) {
 	}
 	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	printTNT20TokenBankLockedAmount(mainchainTNT20TokenBankAddress, mainchainTNT20ContractAddress, subchainID, mainchainClient)
 
 	senderSubchainTNT20VoucherBalance, _ = subchainTNT20VoucherContract.BalanceOf(nil, sender)
 	receiverMainchainTNT20TokenBalance, _ = mainchainTNT20Contract.BalanceOf(nil, receiver)
@@ -240,6 +248,9 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	fmt.Printf("TNT20 Token Lock tx hash (Subchain): %v\n", lockTx.Hash().Hex())
 	fmt.Printf("Transfering %v TNT20 tokens (Wei) from to Subchain %v to the Mainchain...\n\n", lockAmount, subchainID)
 
+	mainchainID, _ := mainchainClient.ChainID(context.Background())
+	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20Address, mainchainID, subchainClient)
+
 	fmt.Printf("Start transfer, timestamp      : %v\n", time.Now())
 	receipt, err := subchainClient.TransactionReceipt(context.Background(), lockTx.Hash())
 	if err != nil {
@@ -264,6 +275,8 @@ func SubchainTNT20Lock(lockAmount *big.Int) {
 	}
 	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20Address, mainchainID, subchainClient)
 
 	senderTNT20Balance, _ = subchainTNT20Instance.BalanceOf(nil, sender)
 	instanceMainchainTNT20VoucherContract, _ := ct.NewTNT20VoucherContract(mainchainVoucherAddress, mainchainClient)
@@ -322,6 +335,9 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	fmt.Printf("TNT20 Voucher Burn tx hash (Mainchain): %v\n", burnTx.Hash().Hex())
 	fmt.Printf("Burn %v TNT20 Vouchers (Wei) on the Mainchain to recover the authentic tokens on Subchain %v...\n\n", burnAmount, subchainID)
 
+	mainchainID, _ := mainchainClient.ChainID(context.Background())
+	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20TokenAddress, mainchainID, subchainClient)
+
 	fmt.Printf("Start transfer, timestamp        : %v\n", time.Now())
 	receipt, err := mainchainClient.TransactionReceipt(context.Background(), burnTx.Hash())
 	if err != nil {
@@ -342,6 +358,8 @@ func MainchainTNT20Burn(burnAmount *big.Int) {
 	}
 	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	printTNT20TokenBankLockedAmount(subchainTNT20TokenBankAddress, subchainTNT20TokenAddress, mainchainID, subchainClient)
 
 	senderMainchainTNT20VoucherBalance, _ = mainchainTNT20VoucherContract.BalanceOf(nil, sender)
 	receiverSubchainTNT20TokenBalance, _ = subchainTNT20TokenContract.BalanceOf(nil, receiver)
@@ -381,4 +399,10 @@ func QueryTNT20(chainID int64, contractAddress, accountAddress string) {
 	balance, _ := tnt20Contract.BalanceOf(nil, common.HexToAddress(accountAddress))
 	fmt.Println("Account ", accountAddress, " TNT20 balance in ", contractAddress, " is ", balance)
 
+}
+
+func printTNT20TokenBankLockedAmount(tokenBankAddr common.Address, tokenAddr common.Address, chainID *big.Int, ethclient *ethclient.Client) {
+	tnt20TokenBank, _ := ct.NewTNT20TokenBank(tokenBankAddr, ethclient)
+	tokenBankLockedAmount, _ := tnt20TokenBank.TotalLockedAmounts(nil, chainID, tokenAddr)
+	fmt.Printf("TNT20TokenBank locked amount: %v\n\n", tokenBankLockedAmount)
 }

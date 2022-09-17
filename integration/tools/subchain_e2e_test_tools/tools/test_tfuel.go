@@ -7,6 +7,7 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/thetasubchain/eth/ethclient"
 	ct "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
@@ -47,6 +48,8 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 	fmt.Printf("TFuel Token Lock tx hash (Mainchain): %v\n", tx.Hash().Hex())
 	fmt.Printf("Transfering %v TFuelWei from the Mainchain to Subchain %v...\n\n", lockAmount, subchainID)
 
+	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
+
 	fmt.Printf("Start transfer, timestamp: %v\n", time.Now())
 	fromHeight, _ := subchainClient.BlockNumber(context.Background())
 	for {
@@ -60,6 +63,8 @@ func MainchainTFuelLock(lockAmount *big.Int) {
 	}
 	fmt.Printf("End transfer, timestamp  : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
+
+	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
 
 	mainchainHeight, _ = mainchainClient.BlockNumber(context.Background())
 	senderMainchainTFuelBalance, _ = mainchainClient.BalanceAt(context.Background(), sender.From, big.NewInt(int64(mainchainHeight)))
@@ -108,6 +113,8 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	fmt.Printf("TFuel Voucher Burn tx hash (Subchain): %v\n", tx.Hash().Hex())
 	fmt.Printf("Burn %v TFuelWei on Subchain %v to recover authentic TFuel on the Mainchain...\n\n", burnAmount, subchainID)
 
+	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
+
 	fmt.Printf("Start transfer, timestamp: %v\n", time.Now())
 	fromHeight, _ := mainchainClient.BlockNumber(context.Background())
 	for {
@@ -122,6 +129,8 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 	fmt.Printf("End transfer, timestamp  : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
+	printTFuelTokenBankLockedAmount(mainchainTFuelTokenBankAddress, subchainID, mainchainClient)
+
 	subchainHeight, _ = subchainClient.BlockNumber(context.Background())
 	senderSubchainTFuelBalance, _ = subchainClient.BalanceAt(context.Background(), sender.From, big.NewInt(int64(subchainHeight)))
 
@@ -130,4 +139,10 @@ func SubchainTFuelBurn(burnAmount *big.Int) {
 
 	fmt.Printf("Subchain sender   : %v, TFuel voucher balance on Subchain : %v\n", sender.From, senderSubchainTFuelBalance)
 	fmt.Printf("Mainchain receiver: %v, TFuel balance on Mainchain        : %v\n\n", receiver, receiverMainchainTFuelBalance)
+}
+
+func printTFuelTokenBankLockedAmount(tokenBankAddr common.Address, chainID *big.Int, ethclient *ethclient.Client) {
+	tfuelTokenBank, _ := ct.NewTFuelTokenBank(tokenBankAddr, ethclient)
+	tokenBankLockedAmount, _ := tfuelTokenBank.TotalLockedAmounts(nil, chainID)
+	fmt.Printf("TFuelTokenBank locked amount: %v\n\n", tokenBankLockedAmount)
 }
