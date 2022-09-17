@@ -340,6 +340,7 @@ func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) 
 		score.IMCEventTypeCrossChainVoucherBurnTFuel,
 		score.IMCEventTypeCrossChainVoucherBurnTNT20,
 		score.IMCEventTypeCrossChainVoucherBurnTNT721,
+		score.IMCEventTypeCrossChainVoucherBurnTNT1155,
 	}
 
 	for _, eventType := range eventTypes {
@@ -398,6 +399,13 @@ func (mw *MetachainWitness) getMainchainMaxProcessedNonceEventHeight(icmeType sc
 			break
 		}
 		eventHeight, err = mw.mainchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainTokenLockTNT1155:
+		maxProcessedNonce, err = mw.subchainTNT1155TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT1155TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
+
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
 		// Note: TFuelVoucherBurn is not allowed on the Mainchain so it is safe to return the latest block height
 		maxProcessedNonce = common.Big0
@@ -415,6 +423,13 @@ func (mw *MetachainWitness) getMainchainMaxProcessedNonceEventHeight(icmeType sc
 			break
 		}
 		eventHeight, err = mw.mainchainTNT721TokenBank.GetVoucherBurnEventHeight(nil, mw.subchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainVoucherBurnTNT1155:
+		maxProcessedNonce, err = mw.subchainTNT1155TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.mainchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.mainchainTNT1155TokenBank.GetVoucherBurnEventHeight(nil, mw.subchainID, maxProcessedNonce)
+
 	default:
 		logger.Panicf("invalid event type: %v", icmeType) // should not happen
 	}
@@ -462,6 +477,12 @@ func (mw *MetachainWitness) getSubchainMaxProcessedNonceEventHeight(icmeType sco
 			break
 		}
 		eventHeight, err = mw.subchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainTokenLockTNT1155:
+		maxProcessedNonce, err = mw.mainchainTNT1155TokenBank.GetMaxProcessedTokenLockNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT1155TokenBank.GetTokenLockEventHeight(nil, mw.mainchainID, maxProcessedNonce)
 
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
 		maxProcessedNonce, err = mw.mainchainTFuelTokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
@@ -481,6 +502,13 @@ func (mw *MetachainWitness) getSubchainMaxProcessedNonceEventHeight(icmeType sco
 			break
 		}
 		eventHeight, err = mw.subchainTNT721TokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+	case score.IMCEventTypeCrossChainVoucherBurnTNT1155:
+		maxProcessedNonce, err = mw.mainchainTNT1155TokenBank.GetMaxProcessedVoucherBurnNonce(nil, mw.subchainID)
+		if err != nil {
+			break
+		}
+		eventHeight, err = mw.subchainTNT1155TokenBank.GetVoucherBurnEventHeight(nil, mw.mainchainID, maxProcessedNonce)
+
 	default:
 		logger.Panicf("invalid event type: %v", icmeType) // should not happen
 	}
