@@ -315,8 +315,22 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 
 	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID)
 	if err == store.ErrKeyNotFound {
-		fromBlock = mw.getBlockScanStartingHeight(queriedChainID) // set the proper fromBlock for the code-start scenario, i.e, bootstrapping a new validator
+		logger.Infof("Seting the initial block scanning height for chain %v", queriedChainID.String())
+		if queriedChainID.Cmp(mw.mainchainID) == 0 && viper.GetInt(scom.CfgSubchainMainchainWitenessStartScanHeight) >= 0 {
+			// if the start scanning height is specified in the config, use the config value
+			fromBlock = big.NewInt(int64(viper.GetInt(scom.CfgSubchainMainchainWitenessStartScanHeight)))
+			logger.Infof("Reading the initial scanning height for chain %v from configs: %v", queriedChainID.String(), fromBlock.String())
+		} else if queriedChainID.Cmp(mw.subchainID) == 0 && viper.GetInt(scom.CfgSubchainSubchainWitenessStartScanHeight) >= 0 {
+			// if the start scanning height is specified in the config, use the config value
+			fromBlock = big.NewInt(int64(viper.GetInt(scom.CfgSubchainSubchainWitenessStartScanHeight)))
+			logger.Infof("Reading the initial scanning height for chain %v from configs: %v", queriedChainID.String(), fromBlock.String())
+		} else {
+			// Otherwise, figure out the starting height from the TokenBanks
+			fromBlock = mw.getBlockScanStartingHeight(queriedChainID) // set the proper fromBlock for the code-start scenario, i.e, bootstrapping a new validator
+		}
+
 		mw.witnessState.setLastQueryedHeightForType(queriedChainID, fromBlock)
+		logger.Infof("Initial block scanning height for chain %v set to: %v", queriedChainID.String(), fromBlock.String())
 	} else if err != nil {
 		logger.Warnf("failed to get the last queryed height %v\n", err)
 	}
