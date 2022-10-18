@@ -622,7 +622,7 @@ func (e *ConsensusEngine) handleNormalBlock(eb *score.ExtendedBlock) {
 			"parent":          block.Parent.Hex(),
 			"block":           block.Hash().Hex(),
 			"block.StateHash": block.StateHash.Hex(),
-		}).Warn("Failed to apply block Txs")
+		}).Warn("Not ready to apply block Txs")
 		return // If the mainchain node falls out-of-sync, the subchain node might not have evidence to
 		// either confirm or reject the ValidatorSetUpdateTx. In such a case, the the processing result of
 		// a normal block could be undecided. Hence, we should NOT mark the block as invalid. Instead, we
