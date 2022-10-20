@@ -63,7 +63,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	fmt.Printf("Mainchain NFT sender         : %v, tokenID: %v\n", sender, tokenID)
 	fmt.Printf("Subchain NFT Voucher receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
-	printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
+	// printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
 
 	authUser = mainchainSelectAccount(mainchainClient, 1)
 	authUser.Value.Set(crossChainFee)
@@ -102,7 +102,7 @@ func MainchainTNT721Lock(tokenID *big.Int) {
 	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
+	// printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
 
 	mainchainNFTOwner, _ = mainchainTNT721Contract.OwnerOf(nil, tokenID)
 	if mainchainNFTOwner != mainchainTNT721TokenBankAddress {
@@ -162,7 +162,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	mainchainTNT721Contract, _ := ct.NewTNT721VoucherContract(mainchainTNT721ContractAddress, mainchainClient)
 	mainchainTNT721Owner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
 
-	printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
+	// printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
 
 	authUser = subchainSelectAccount(subchainClient, 1)
 	authUser.Value.Set(crossChainFee)
@@ -197,7 +197,7 @@ func SubchainTNT721Burn(tokenID *big.Int) {
 	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
+	// printTNT721TokenBankLockedAmount(mainchainTNT721TokenBankAddress, mainchainTNT721ContractAddress, subchainID, tokenID, mainchainClient)
 
 	mainchainNFTOwner, _ := mainchainTNT721Contract.OwnerOf(nil, tokenID)
 	if mainchainNFTOwner != receiver {
@@ -255,8 +255,8 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	fmt.Printf("Subchain NFT sender           : %v, tokenID: %v\n", sender, tokenID)
 	fmt.Printf("Mainchain NFT Voucher receiver: %v, tokenID: %v\n\n", receiver, tokenID)
 
-	mainchainID, _ := mainchainClient.ChainID(context.Background())
-	printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721Address, mainchainID, tokenID, subchainClient)
+	// mainchainID, _ := mainchainClient.ChainID(context.Background())
+	// printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721Address, mainchainID, tokenID, subchainClient)
 
 	auth = subchainSelectAccount(subchainClient, 1)
 	auth.Value.Set(crossChainFee)
@@ -298,7 +298,7 @@ func SubchainTNT721Lock(tokenID *big.Int) {
 	fmt.Printf("End transfer, timestamp        : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721Address, mainchainID, tokenID, subchainClient)
+	// printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721Address, mainchainID, tokenID, subchainClient)
 
 	subchainNFTOwner, _ = subchainTNT721Instance.OwnerOf(nil, tokenID)
 	if subchainNFTOwner != subchainTNT721TokenBankAddress {
@@ -358,8 +358,8 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	subchainTNT721Contract, _ := ct.NewTNT721VoucherContract(subchainTNT721ContractAddress, subchainClient)
 	subchainTNT721Owner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
 
-	mainchainID, _ := mainchainClient.ChainID(context.Background())
-	printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721ContractAddress, mainchainID, tokenID, subchainClient)
+	// mainchainID, _ := mainchainClient.ChainID(context.Background())
+	// printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721ContractAddress, mainchainID, tokenID, subchainClient)
 
 	auth = mainchainSelectAccount(mainchainClient, 6)
 	auth.Value.Set(crossChainFee)
@@ -394,7 +394,7 @@ func MainchainTNT721Burn(tokenID *big.Int) {
 	fmt.Printf("End transfer, timestamp          : %v\n", time.Now())
 	fmt.Printf("Cross-chain transfer completed.\n\n")
 
-	printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721ContractAddress, mainchainID, tokenID, subchainClient)
+	// printTNT721TokenBankLockedAmount(subchainTNT721TokenBankAddress, subchainTNT721ContractAddress, mainchainID, tokenID, subchainClient)
 
 	subchainNFTOwner, _ := subchainTNT721Contract.OwnerOf(nil, tokenID)
 	if subchainNFTOwner != receiver {
@@ -436,8 +436,8 @@ func QueryTNT721(chainID int64, contractAddress string, tokenID *big.Int) {
 	fmt.Println("TokenID", tokenID, " TNT721 owner in ", contractAddress, " is ", owner)
 }
 
-func printTNT721TokenBankLockedAmount(tokenBankAddr common.Address, tokenAddr common.Address, chainID *big.Int, tokenID *big.Int, ethclient *ethclient.Client) {
-	tnt721TokenBank, _ := ct.NewTNT721TokenBank(tokenBankAddr, ethclient)
-	tokenBankLockedAmount, _ := tnt721TokenBank.TotalLockedAmounts(nil, chainID, tokenAddr, tokenID)
-	fmt.Printf("TNT721TokenBank locked amount for tokenID %v: %v\n\n", tokenID, tokenBankLockedAmount)
-}
+// func printTNT721TokenBankLockedAmount(tokenBankAddr common.Address, tokenAddr common.Address, chainID *big.Int, tokenID *big.Int, ethclient *ethclient.Client) {
+// 	tnt721TokenBank, _ := ct.NewTNT721TokenBank(tokenBankAddr, ethclient)
+// 	tokenBankLockedAmount, _ := tnt721TokenBank.TotalLockedAmounts(nil, chainID, tokenAddr, tokenID)
+// 	fmt.Printf("TNT721TokenBank locked amount for tokenID %v: %v\n\n", tokenID, tokenBankLockedAmount)
+// }
