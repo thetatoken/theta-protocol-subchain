@@ -283,13 +283,13 @@ func (sv *StoreView) GetChainRegistrarContractAddress() *common.Address {
 	if len(data) == 0 {
 		return nil
 	}
-	tbca := &common.Address{}
-	err := types.FromBytes(data, tbca)
+	crca := &common.Address{}
+	err := types.FromBytes(data, crca)
 	if err != nil {
 		log.Panicf("Error reading chain registrar contract address %X, error: %v",
 			data, err.Error())
 	}
-	return tbca
+	return crca
 }
 
 // GetTFuelTokenBankContractAddress gets the TFuel token bank contract address.
@@ -350,6 +350,21 @@ func (sv *StoreView) GetTNT1155TokenBankContractAddress() *common.Address {
 			data, err.Error())
 	}
 	return tbca
+}
+
+// GetBalanceCheckerContractAddress gets the TNT1155 token bank contract address.
+func (sv *StoreView) GetBalanceCheckerContractAddress() *common.Address {
+	data := sv.Get(BalanceCheckerContractAddressKey())
+	if len(data) == 0 {
+		return nil
+	}
+	bbca := &common.Address{}
+	err := types.FromBytes(data, bbca)
+	if err != nil {
+		log.Panicf("Error reading balance checker contract address %X, error: %v",
+			data, err.Error())
+	}
+	return bbca
 }
 
 // GetValidatorSetUpdateTxHeightList gets the heights of blocks that contain stake related transactions

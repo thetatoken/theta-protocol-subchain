@@ -95,3 +95,9 @@ func TNT721TokenBankContractAddressKey() common.Bytes {
 func TNT1155TokenBankContractAddressKey() common.Bytes {
 	return common.Bytes("ls/tbca/tnt1155")
 }
+
+// BalanceCheckerContractAddressKey returns the key for looking up the address of the
+// BalanceChecker contract deployed in the genesis block
+func BalanceCheckerContractAddressKey() common.Bytes {
+	return common.Bytes("ls/bcca")
+}

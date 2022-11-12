@@ -239,6 +239,12 @@ func deployInitialSmartContracts(mainchainID, subchainID string, admin common.Ad
 	if err != nil {
 		logger.Panicf("Failed to deploy TokenBank smart contract (sequence = %v): %v", sequence, err)
 	}
+
+	sequence += 1
+	_, err = deploySmartContract(subchainID, sv, predeployed.BalanceChekerBytecode, deployer, sequence, slst.BalanceCheckerContractAddressKey())
+	if err != nil {
+		logger.Panicf("Failed to deploy BalanceChecker smart contract (sequence = %v): %v", sequence, err)
+	}
 }
 
 // Reference: https://docs.blockscout.com/for-users/abi-encoded-constructor-arguments
@@ -469,6 +475,12 @@ func sanityChecks(sv *slst.StoreView) error {
 		panic("TNT1155 token bank contract is not set")
 	}
 	logger.Infof("TNT1155 Token Bank Contract Address: %v", tnt1155TokenBankContractAddr.Hex())
+
+	balanceCheckerContractAddr := sv.GetBalanceCheckerContractAddress()
+	if balanceCheckerContractAddr == nil {
+		panic("Balance checker contract is not set")
+	}
+	logger.Infof("Balance Checker    Contract Address: %v", balanceCheckerContractAddr.Hex())
 
 	// Sanity checks for the initial validator set
 	vsProof, err := proveValidatorSet(sv)
