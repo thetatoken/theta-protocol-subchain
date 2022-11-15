@@ -780,7 +780,7 @@ func StakeSpecialCases(validatorAddrStr string) {
 	fmt.Println("vsm allowance from staker ", al)
 
 	// 1 - deposit Stake for many times
-	fmt.Println("------------------------------1 - deposit Stake for many times--------------------------------")
+	fmt.Println("------------------------------ 1 - deposit Stake for many times --------------------------------")
 	for i := 0; i < 3; i++ {
 		minInitFeeRequired := new(big.Int).Mul(dec18, big.NewInt(100000)) // 100,000 TFuel
 		staker.Value.Set(minInitFeeRequired)
@@ -794,20 +794,19 @@ func StakeSpecialCases(validatorAddrStr string) {
 		// if err != nil {
 		// 	log.Fatal(err)
 		// }
-		// fmt.Printf("After depoit %v the balance is : %v\n", i+1, stakeBalance)
+		// fmt.Printf("After depoit %v the share amount is : %v\n", i+1, stakeBalance)
 		staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
-
 	}
 	time.Sleep(6 * time.Second)
 	stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("After Many Deposit Stakes the balance is : ", stakeBalance)
+	fmt.Println("After Many Deposit Stakes the share amount is : ", stakeBalance)
 
 	// 2 - withdraw Stake for many times
 	staker = mainchainSelectAccount(client, id)
-	fmt.Println("------------------------------2 - withdraw Stake for many times--------------------------------")
+	fmt.Println("------------------------------ 2 - withdraw Stake for many times --------------------------------")
 	for i := 0; i < 3; i++ {
 		staker.Value.Set(common.Big0)
 		tx, err = instanceChainRegistrar.WithdrawStake(staker, selected_subchainID, validator, new(big.Int).Mul(dec18, big.NewInt(2000)))
@@ -819,7 +818,7 @@ func StakeSpecialCases(validatorAddrStr string) {
 		// if err != nil {
 		// 	log.Fatal(err)
 		// }
-		// fmt.Printf("After Withdraw %v the balance is : %v\n", i+1, stakeBalance)
+		// fmt.Printf("After Withdraw %v the share amount is : %v\n", i+1, stakeBalance)
 		staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
 	}
 
@@ -828,10 +827,10 @@ func StakeSpecialCases(validatorAddrStr string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("After Many Withdraw Stakes the balance is : ", stakeBalance)
+	fmt.Println("After Many Withdraw Stakes the share amount is : ", stakeBalance)
 
 	// 3 - deposit withdraw deposit
-	fmt.Println("------------------------------3 - deposit withdraw deposit--------------------------------")
+	fmt.Println("------------------------------ 3 - deposit withdraw deposit --------------------------------")
 	minInitFeeRequired := new(big.Int).Mul(dec18, big.NewInt(100000)) // 100,000 TFuel
 	staker.Value.Set(minInitFeeRequired)
 	tx, err = instanceChainRegistrar.DepositStake(staker, selected_subchainID, validator, validatorStakingAmount)
@@ -844,7 +843,9 @@ func StakeSpecialCases(validatorAddrStr string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("After Deposit Stake 1 the balance is : ", stakeBalance)
+	fmt.Println("After Deposit Stake 1 the share amount is : ", stakeBalance)
+	vsmGovTokenBalance, _ := instanceGovernanceToken.BalanceOf(nil, validatorStakeManagerAddr)
+	fmt.Printf("vsmGovTokenBalance: %v\n\n", vsmGovTokenBalance)
 
 	staker.Value.Set(common.Big0)
 	staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
@@ -858,7 +859,7 @@ func StakeSpecialCases(validatorAddrStr string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("After Withdraw Stake 2 the balance is : ", stakeBalance)
+	fmt.Println("After Withdraw Stake 2 the share amount is : ", stakeBalance)
 
 	staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
 	staker.Value.Set(minInitFeeRequired)
@@ -874,5 +875,5 @@ func StakeSpecialCases(validatorAddrStr string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("After Many Withdraw Stakes the balance is : ", stakeBalance)
+	fmt.Println("After Many Withdraw Stakes the share amount is : ", stakeBalance)
 }
