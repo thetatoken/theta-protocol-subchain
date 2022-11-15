@@ -127,7 +127,8 @@ func deployGovernanceToken(ethClient *ethclient.Client, vsmAddress common.Addres
 	admin := mainchainSelectAccount(ethClient, 8)
 	admin1 := admin.From
 	auth := mainchainSelectAccount(ethClient, 1)
-	address, _, _, err := ct.DeploySubchainGovernanceToken(auth, ethClient, "Stake", "SS", 18, new(big.Int).Mul(dec18, big.NewInt(1000000000)), vsmAddress, big.NewInt(1), authGovTokenInitDistrWallet1, new(big.Int).Mul(dec18, big.NewInt(10000000)), admin1)
+	stakerRewardPerBlock, _ := new(big.Int).SetString("38927238472234982389", 10)
+	address, _, _, err := ct.DeploySubchainGovernanceToken(auth, ethClient, "Stake", "SS", 18, new(big.Int).Mul(dec18, big.NewInt(1000000000)), vsmAddress, stakerRewardPerBlock, authGovTokenInitDistrWallet1, new(big.Int).Mul(dec18, big.NewInt(10000000)), admin1)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -838,6 +839,13 @@ func StakeSpecialCases(validatorAddrStr string) {
 		log.Fatal(err)
 	}
 	fmt.Printf("Deposit Stake 1 %v\n", tx.Hash().Hex())
+	time.Sleep(6 * time.Second)
+	stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("After Deposit Stake 1 the balance is : ", stakeBalance)
+
 	staker.Value.Set(common.Big0)
 	staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
 	tx, err = instanceChainRegistrar.WithdrawStake(staker, selected_subchainID, validator, new(big.Int).Mul(dec18, big.NewInt(2000)))
@@ -845,6 +853,13 @@ func StakeSpecialCases(validatorAddrStr string) {
 		log.Fatal(err)
 	}
 	fmt.Printf("Withdraw Stake 2 %v\n", tx.Hash().Hex())
+	time.Sleep(6 * time.Second)
+	stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("After Withdraw Stake 2 the balance is : ", stakeBalance)
+
 	staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
 	staker.Value.Set(minInitFeeRequired)
 	tx, err = instanceChainRegistrar.DepositStake(staker, selected_subchainID, validator, validatorStakingAmount)
