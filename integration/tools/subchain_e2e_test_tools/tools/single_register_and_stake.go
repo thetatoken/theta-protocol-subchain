@@ -120,6 +120,24 @@ func deployMockTNT1155(ethClient *ethclient.Client) common.Address {
 	return address
 }
 
+func deployGovernanceToken(ethClient *ethclient.Client, vsmAddress common.Address) common.Address {
+	fmt.Printf("Deploying governance token...\n")
+	authGovTokenInitDistrWallet := mainchainSelectAccount(ethClient, 6)
+	authGovTokenInitDistrWallet1 := authGovTokenInitDistrWallet.From
+	admin := mainchainSelectAccount(ethClient, 8)
+	admin1 := admin.From
+	auth := mainchainSelectAccount(ethClient, 1)
+	address, _, _, err := ct.DeploySubchainGovernanceToken(auth, ethClient, "Stake", "SS", 18, new(big.Int).Mul(dec18, big.NewInt(1000000000)), vsmAddress, big.NewInt(1), authGovTokenInitDistrWallet1, new(big.Int).Mul(dec18, big.NewInt(10000000)), admin1)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("governance token deployed, Address:", address)
+	// fmt.Println("Deployment tx:", tx.Hash().Hex())
+	fmt.Println("")
+	time.Sleep(6 * time.Second)
+	return address
+}
+
 // func deploy_contracts() {
 // 	subchainClient, err := ethclient.Dial("http://localhost:19888/rpc")
 // 	if err != nil {
@@ -499,4 +517,347 @@ func claimStake() {
 	// if receipt.Status != 1 {
 	// 	fmt.Println("error")
 	// }
+}
+
+func CollateralSpecialCases(id int, validatorAddrStr string, selected_subchainID *big.Int) {
+	fmt.Println("validator is " + validatorAddrStr)
+	validator := common.HexToAddress(validatorAddrStr)
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	instanceWrappedTheta, err := ct.NewMockWrappedTheta(wthetaAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(governanceTokenAddress, client)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(registrarOnMainchainAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	validatorCollateralManagerAddr, _ := instanceChainRegistrar.Vcm(nil)
+	vcmct, err := ct.NewValidatorCollateralManager(validatorCollateralManagerAddr, client)
+	// validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
+	// vsmct, err := ct.NewValidatorStakeManager(validatorCollateralManagerAddr, client)
+
+	//
+	// The guarantor deposits wTHETA collateral for the validator
+	//
+
+	fmt.Println("Prepare for validator collateral deposit...")
+
+	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
+	MintAmount := new(big.Int).Mul(dec18, big.NewInt(200000))
+	guarantor := mainchainSelectAccount(client, id)
+	tx, err := instanceWrappedTheta.Mint(guarantor, guarantor.From, MintAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	guarantor = mainchainSelectAccount(client, id)
+	tx, err = instanceWrappedTheta.Approve(guarantor, validatorCollateralManagerAddr, MintAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	guarantor = mainchainSelectAccount(client, id)
+
+	colleralBalance, err := vcmct.GetCollateralAmount(nil, subchainID, validator)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("At start! ", colleralBalance)
+	// 1 - deposit Collateral for many times
+	fmt.Println("------------------------------1 - deposit Collateral for many times--------------------------------")
+	for i := 0; i < 3; i++ {
+		tx, err = instanceChainRegistrar.DepositCollateral(guarantor, selected_subchainID, validator, validatorCollateral)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Deposit Collateral ", i+1, tx.Hash().Hex())
+		guarantor.Nonce = big.NewInt(0).Add(guarantor.Nonce, common.Big1)
+	}
+	time.Sleep(6 * time.Second)
+	colleralBalance, err = vcmct.GetCollateralAmount(nil, subchainID, validator)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("after many deposit operations! ", colleralBalance)
+	if colleralBalance.Cmp(big.NewInt(1).Mul(validatorCollateral, big.NewInt(3))) != 0 {
+		log.Fatal("Incorrect collateral balance after many deposit operations!")
+	}
+
+	// 2 - withdraw Collateral for many times
+	guarantor = mainchainSelectAccount(client, id)
+	fmt.Println("------------------------------2 - withdraw Collateral for many times--------------------------------")
+	for i := 0; i < 3; i++ {
+		tx, err = instanceChainRegistrar.WithdrawCollateral(guarantor, selected_subchainID, validator, validatorCollateral)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Println("Withdraw Collateral ", i+1, tx.Hash().Hex())
+		guarantor.Nonce = big.NewInt(0).Add(guarantor.Nonce, common.Big1)
+	}
+	time.Sleep(6 * time.Second)
+	colleralBalance, err = vcmct.GetCollateralAmount(nil, subchainID, validator)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("after many withdraw operations! ", colleralBalance)
+	if colleralBalance.Cmp(common.Big0) != 0 {
+		log.Fatal("Incorrect collateral balance after many withdraw operations!")
+	}
+
+	// 3 - deposit withdraw deposit
+	fmt.Println("------------------------------3 - deposit withdraw deposit--------------------------------")
+	tx, err = instanceChainRegistrar.DepositCollateral(guarantor, selected_subchainID, validator, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Deposit Collateral ", 1, tx.Hash().Hex())
+	guarantor.Nonce = big.NewInt(0).Add(guarantor.Nonce, common.Big1)
+	tx, err = instanceChainRegistrar.WithdrawCollateral(guarantor, selected_subchainID, validator, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Withdraw Collateral ", 2, tx.Hash().Hex())
+	guarantor.Nonce = big.NewInt(0).Add(guarantor.Nonce, common.Big1)
+	tx, err = instanceChainRegistrar.DepositCollateral(guarantor, selected_subchainID, validator, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Deposit Collateral ", 3, tx.Hash().Hex())
+
+	time.Sleep(6 * time.Second)
+	colleralBalance, err = vcmct.GetCollateralAmount(nil, subchainID, validator)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("after deposit withdraw deposit operations! ", colleralBalance)
+	if colleralBalance.Cmp(validatorCollateral) != 0 {
+		log.Fatal("Incorrect collateral balance after deposit withdraw deposit operations!")
+	}
+}
+
+func StakeSpecialCases(validatorAddrStr string) {
+	selected_subchainID := big.NewInt(360999)
+	fmt.Println(validatorAddrStr)
+	validator := common.HexToAddress(validatorAddrStr)
+
+	client, err := ethclient.Dial("http://localhost:18888/rpc")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	var dec18 = new(big.Int)
+	dec18.SetString("1000000000000000000", 10)
+	instanceWrappedTheta, err := ct.NewMockWrappedTheta(wthetaAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	instanceChainRegistrar, err := ct.NewChainRegistrarOnMainchain(registrarOnMainchainAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	validatorCollateralManagerAddr, _ := instanceChainRegistrar.Vcm(nil)
+	validatorStakeManagerAddr, _ := instanceChainRegistrar.Vsm(nil)
+	vsmct, err := ct.NewValidatorStakeManager(validatorStakeManagerAddr, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	//
+	// The guarantor deposits wTHETA collateral for the validator
+	//
+
+	fmt.Println("Prepare for validator collateral deposit...")
+
+	id := 1
+
+	validatorCollateral := new(big.Int).Mul(dec18, big.NewInt(2000))
+	guarantor := mainchainSelectAccount(client, id)
+	tx, err := instanceWrappedTheta.Mint(guarantor, guarantor.From, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Mint tx hash (Mainchain):", tx.Hash().Hex())
+	guarantor = mainchainSelectAccount(client, id)
+	tx, err = instanceWrappedTheta.Approve(guarantor, validatorCollateralManagerAddr, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Approve :", tx.Hash().Hex())
+
+	newGovernanceTokenAddress := deployGovernanceToken(client, validatorStakeManagerAddr)
+	instanceGovernanceToken, err := ct.NewSubchainGovernanceToken(newGovernanceTokenAddress, client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	// register 360999
+	chainGuarantor := accountList[7].fromAddress
+	amount := new(big.Int).Mul(dec18, big.NewInt(200000))
+	auth := mainchainSelectAccount(client, 7) //chainGuarantor
+	tx, err = instanceWrappedTheta.Mint(auth, chainGuarantor, amount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Mint wTHETA tx hash (Mainchain):", tx.Hash().Hex())
+	approveAmount := new(big.Int).Mul(dec18, big.NewInt(50000))
+	authchainGuarantor := mainchainSelectAccount(client, 7)
+	wThetaBalanceOfGuarantor, err := instanceWrappedTheta.BalanceOf(nil, chainGuarantor)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("wTheta balance of %v: %v\n", chainGuarantor.Hex(), wThetaBalanceOfGuarantor)
+
+	tx, err = instanceWrappedTheta.Approve(authchainGuarantor, registrarOnMainchainAddress, approveAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Approve wTHETA tx hash (Mainchain):", tx.Hash().Hex())
+
+	authchainGuarantor = mainchainSelectAccount(client, 7)
+	collateralAmount := new(big.Int).Mul(dec18, big.NewInt(40000))
+	tx, err = instanceChainRegistrar.RegisterSubchain(authchainGuarantor, selected_subchainID, newGovernanceTokenAddress, collateralAmount, "0x012345679abcdef")
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Register Subchain tx hash (Mainchain):", tx.Hash().Hex())
+
+	time.Sleep(3 * time.Second)
+	allChainIDs, _ := instanceChainRegistrar.GetAllSubchainIDs(nil)
+	fmt.Println(allChainIDs)
+
+	guarantor = mainchainSelectAccount(client, id)
+	tx, err = instanceChainRegistrar.DepositCollateral(guarantor, selected_subchainID, validator, validatorCollateral)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Deposit Collateral Hash ", tx.Hash().Hex())
+	fmt.Println("Prepare for validator stake deposit...")
+
+	//
+	// The staker deposits Gov token stakes for the validator
+	//
+
+	id = 1
+	staker := mainchainSelectAccount(client, id)
+	stakeBalance, err := vsmct.ShareOf(nil, selected_subchainID, staker.From)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("At start ! ", stakeBalance)
+	validatorStakingAmount := new(big.Int).Mul(dec18, big.NewInt(100000))
+	validatorStakingAmountMint := new(big.Int)
+	validatorStakingAmountMint.Mul(validatorStakingAmount, big.NewInt(100))
+
+	authGovTokenInitDistrWallet := mainchainSelectAccount(client, 6)
+	tx, err = instanceGovernanceToken.Transfer(authGovTokenInitDistrWallet, staker.From, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Mint governance token ", tx.Hash().Hex())
+	time.Sleep(6 * time.Second)
+	staker = mainchainSelectAccount(client, id)
+	tx, err = instanceGovernanceToken.Approve(staker, validatorStakeManagerAddr, validatorStakingAmountMint)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Approve  governance token ", tx.Hash().Hex())
+	time.Sleep(3 * time.Second)
+
+	staker = mainchainSelectAccount(client, id)
+	name, _ := instanceGovernanceToken.Name(nil)
+	fmt.Println("governance token name is ", name)
+	balancee, _ := instanceGovernanceToken.BalanceOf(nil, staker.From)
+	fmt.Println("staker balance :", balancee)
+	al, _ := instanceGovernanceToken.Allowance(nil, staker.From, validatorStakeManagerAddr)
+	fmt.Println("vsm allowance from staker ", al)
+
+	// 1 - deposit Stake for many times
+	fmt.Println("------------------------------1 - deposit Stake for many times--------------------------------")
+	for i := 0; i < 3; i++ {
+		minInitFeeRequired := new(big.Int).Mul(dec18, big.NewInt(100000)) // 100,000 TFuel
+		staker.Value.Set(minInitFeeRequired)
+		tx, err = instanceChainRegistrar.DepositStake(staker, selected_subchainID, validator, validatorStakingAmount)
+		staker.Value.Set(common.Big0)
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Deposit Stake %v %v\n", i+1, tx.Hash().Hex())
+		// stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// fmt.Printf("After depoit %v the balance is : %v\n", i+1, stakeBalance)
+		staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
+
+	}
+	time.Sleep(6 * time.Second)
+	stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("After Many Deposit Stakes the balance is : ", stakeBalance)
+
+	// 2 - withdraw Stake for many times
+	staker = mainchainSelectAccount(client, id)
+	fmt.Println("------------------------------2 - withdraw Stake for many times--------------------------------")
+	for i := 0; i < 3; i++ {
+		staker.Value.Set(common.Big0)
+		tx, err = instanceChainRegistrar.WithdrawStake(staker, selected_subchainID, validator, new(big.Int).Mul(dec18, big.NewInt(2000)))
+		if err != nil {
+			log.Fatal(err)
+		}
+		fmt.Printf("Withdraw Stake %v %v\n", i+1, tx.Hash().Hex())
+		// stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+		// if err != nil {
+		// 	log.Fatal(err)
+		// }
+		// fmt.Printf("After Withdraw %v the balance is : %v\n", i+1, stakeBalance)
+		staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
+	}
+
+	time.Sleep(6 * time.Second)
+	stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("After Many Withdraw Stakes the balance is : ", stakeBalance)
+
+	// 3 - deposit withdraw deposit
+	fmt.Println("------------------------------3 - deposit withdraw deposit--------------------------------")
+	minInitFeeRequired := new(big.Int).Mul(dec18, big.NewInt(100000)) // 100,000 TFuel
+	staker.Value.Set(minInitFeeRequired)
+	tx, err = instanceChainRegistrar.DepositStake(staker, selected_subchainID, validator, validatorStakingAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Deposit Stake 1 %v\n", tx.Hash().Hex())
+	staker.Value.Set(common.Big0)
+	staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
+	tx, err = instanceChainRegistrar.WithdrawStake(staker, selected_subchainID, validator, new(big.Int).Mul(dec18, big.NewInt(2000)))
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Withdraw Stake 2 %v\n", tx.Hash().Hex())
+	staker.Nonce = big.NewInt(0).Add(staker.Nonce, common.Big1)
+	staker.Value.Set(minInitFeeRequired)
+	tx, err = instanceChainRegistrar.DepositStake(staker, selected_subchainID, validator, validatorStakingAmount)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Printf("Deposit Stake 3 %v\n", tx.Hash().Hex())
+	staker.Value.Set(common.Big0)
+
+	time.Sleep(6 * time.Second)
+	stakeBalance, err = vsmct.ShareOf(nil, selected_subchainID, staker.From)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("After Many Withdraw Stakes the balance is : ", stakeBalance)
 }

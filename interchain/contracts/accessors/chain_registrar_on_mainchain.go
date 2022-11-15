@@ -38,17 +38,17 @@ type ChainRegistrarOnMainchainSubchainMetadata struct {
 	Exists             bool
 }
 
-// ValidatorStakeManagerStake is an auto generated low-level Go binding around an user-defined struct.
-type ValidatorStakeManagerStake struct {
-	Validator   common.Address
-	ShareAmount *big.Int
-}
+// // ValidatorStakeManagerStake is an auto generated low-level Go binding around an user-defined struct.
+// type ValidatorStakeManagerStake struct {
+// 	Validator   common.Address
+// 	ShareAmount *big.Int
+// }
 
-// ValidatorStakeManagerStakeSnapshot is an auto generated low-level Go binding around an user-defined struct.
-type ValidatorStakeManagerStakeSnapshot struct {
-	Height *big.Int
-	Stakes []ValidatorStakeManagerStake
-}
+// // ValidatorStakeManagerStakeSnapshot is an auto generated low-level Go binding around an user-defined struct.
+// type ValidatorStakeManagerStakeSnapshot struct {
+// 	Height *big.Int
+// 	Stakes []ValidatorStakeManagerStake
+// }
 
 // WithdrawalQueueWithdrawalRequest is an auto generated low-level Go binding around an user-defined struct.
 type WithdrawalQueueWithdrawalRequest struct {
