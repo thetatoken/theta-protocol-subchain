@@ -113,6 +113,10 @@ func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountRes
 
 	}
 
+	if result.Account == nil {
+		return fmt.Errorf("Account with address %v at height %v is not found", address.Hex(), height)
+	}
+
 	return nil
 }
 
