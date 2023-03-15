@@ -40,6 +40,7 @@ func (v Validator) ID() common.Address {
 
 // Equals checks whether the validator is the same as another validator
 func (v Validator) Equals(x Validator) bool {
+	logger.Debugf("v.Equals(x) check, v.Addr: %v, x.Addr: %v, v.Stake: %v, x.Stake: %v\n", v.Address.Hex(), x.Address.Hex(), v.Stake, x.Stake)
 	if v.Address != x.Address {
 		return false
 	}
