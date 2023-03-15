@@ -114,6 +114,10 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 		return common.Hash{}, result.UndecidedWith(result.Info{"newDynasty": newDynasty, "err": err})
 	}
 
+	logger.Debugf("newDynasty: %v", newDynasty)
+	logger.Debugf("newValidatorSet      : %v", newValidatorSet.String())
+	logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet.String())
+
 	if !newValidatorSet.Equals(witnessedValidatorSet) {
 		return common.Hash{}, result.Error("validator set mismatch: %v vs %v", *newValidatorSet, *witnessedValidatorSet)
 	}

@@ -570,9 +570,10 @@ func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	mw.cacheMutex.Lock()
 	defer mw.cacheMutex.Unlock()
 
-	queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
-	queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
-	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
+	// queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
+	// queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
+	// vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
+	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, dynasty)
 	validatorAddrs := vs.Validators
 	validatorStakes := vs.ShareAmounts
 
@@ -591,6 +592,8 @@ func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	}
 
 	mw.validatorSetCache[dynasty.String()] = validatorSet
+
+	logger.Debugf("updateValidatorSetCache, dynasty = %v, validatorSet = %v", dynasty.String(), validatorSet.String())
 
 	return validatorSet, nil
 }
