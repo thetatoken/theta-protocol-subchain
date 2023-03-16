@@ -238,7 +238,7 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
-		logger.Warnf("Failed to query the max processed TFuel token lock nonce for chain: %v", targetChainID.String())
+		logger.Warnf("Failed to query the max processed TFuel token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
 	}
 
@@ -249,7 +249,7 @@ func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, t
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
-		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v", targetChainID.String())
+		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
 	}
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT20, maxProcessedTokenLockNonce)
@@ -259,7 +259,7 @@ func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, 
 	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
-		logger.Warnf("Failed to query the max processed TNT721 token lock nonce for chain: %v", targetChainID.String())
+		logger.Warnf("Failed to query the max processed TNT721 token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
 	}
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT721, maxProcessedTokenLockNonce)
@@ -269,7 +269,7 @@ func (oc *Orchestrator) processNextTNT1155TokenLockEvent(sourceChainID *big.Int,
 	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
 	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
 	if err != nil {
-		logger.Warnf("Failed to query the max processed TNT1155 token lock nonce for chain: %v", targetChainID.String())
+		logger.Warnf("Failed to query the max processed TNT1155 token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
 	}
 	oc.processNextEvent(sourceChainID, targetChainID, score.IMCEventTypeCrossChainTokenLockTNT1155, maxProcessedTokenLockNonce)
