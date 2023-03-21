@@ -680,7 +680,11 @@ func (ledger *Ledger) getNewDynastyAndValidatorSet(view *slst.StoreView) (enteri
 	if witnessedDynasty.Cmp(registrationDynasty) == 0 {
 		// For the initial dynasty, i.e. the dynasty during which the subchain was registered, instead of querying
 		// the validator set from the main chain, we trust the validator set in the snapshot
-		return false, nil, nil
+		if currentDynasty.Cmp(common.Big0) == 0 { // the first validator set update
+			return true, witnessedDynasty, view.GetValidatorSet() // the validator set specified in the snapshot
+		} else {
+			return false, nil, nil
+		}
 	}
 
 	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
