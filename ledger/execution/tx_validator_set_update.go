@@ -109,8 +109,17 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 		return common.Hash{}, result.Error(fmt.Sprintf("new dynasty needs to be strictly larger than the current dynasty (new: %v, current: %v)", newDynasty, currentDynasty))
 	}
 
-	if currentDynasty.Cmp(common.Big0) == 0 {
-		// special handling: currentDynasty is 0 means the node just loaded the genesis snapshot, we should trust the initial ValidatorSet specified by the snapshot
+	registrationMainchainHeight, err := exec.metachainWitness.GetSubchainRegistrationHeight()
+	if err != nil {
+		logger.Warnf("Failed to get subchain registration height: %v", err)
+		return common.Hash{}, result.UndecidedWith(result.Info{"newDynasty": newDynasty, "err": err})
+	}
+	registrationDynasty := scom.CalculateDynasty(registrationMainchainHeight)
+
+	if currentDynasty.Cmp(common.Big0) == 0 && newDynasty.Cmp(registrationDynasty) == 0 {
+		// special handling: currentDynasty == 0 and newDynasty == registrationDynasty means the node just loaded the genesis snapshot,
+		// and the only purpose of the validatorSetUpdateTx is to update the dynasty in the StoreView. In this case,
+		// We should trust the initial ValidatorSet specified by the snapshot
 		validatorSetSpecifiedInTheSnapshot := view.GetValidatorSet()
 
 		logger.Debugf("currentDynasty: %v", currentDynasty)
