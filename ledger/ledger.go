@@ -678,11 +678,15 @@ func (ledger *Ledger) getNewDynastyAndValidatorSet(view *slst.StoreView) (enteri
 	logger.Debugf("currentDynasty: %v, witnessedDynasty: %v, egistrationDynasty: %v, registrationMainchainHeight: %v", currentDynasty, witnessedDynasty, registrationDynasty, registrationMainchainHeight)
 
 	if witnessedDynasty.Cmp(registrationDynasty) == 0 {
-		// For the initial dynasty, i.e. the dynasty during which the subchain was registered, instead of querying
-		// the validator set from the main chain, we trust the validator set in the snapshot
-		if currentDynasty.Cmp(common.Big0) == 0 { // the first validator set update
-			return true, witnessedDynasty, view.GetValidatorSet() // the validator set specified in the snapshot
+		// Specicial case: When the node is in the dynasty where the subchain was registered. The subchain should use the ValidatorSet
+		//                 specified in the snapshot (in stead of querying the main chain). Yet, the node needs to update the dynasty
+		//                 in the ViewStore to witnessedDynasty if witnessedDynasty is not 0
+
+		if witnessedDynasty.Cmp(common.Big0) != 0 && currentDynasty.Cmp(common.Big0) == 0 { // the first validator set update
+			// update the dynast to witnessedDynasty, and continue to use the validator set specified in the snapshot
+			return true, witnessedDynasty, view.GetValidatorSet()
 		} else {
+			// witnessedDynasty is 0, so no update is needed, continue to use the ValidatorSet loaded from the snapshot
 			return false, nil, nil
 		}
 	}

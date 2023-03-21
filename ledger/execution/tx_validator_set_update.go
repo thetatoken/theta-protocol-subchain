@@ -110,7 +110,7 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 	}
 
 	if currentDynasty.Cmp(common.Big0) == 0 {
-		// special handling: the node just loaded the genesis snapshot, we should trust the initial ValidatorSet specified by the snapshot
+		// special handling: currentDynasty is 0 means the node just loaded the genesis snapshot, we should trust the initial ValidatorSet specified by the snapshot
 		validatorSetSpecifiedInTheSnapshot := view.GetValidatorSet()
 
 		logger.Debugf("currentDynasty: %v", currentDynasty)
