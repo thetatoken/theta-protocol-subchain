@@ -666,6 +666,19 @@ func (ledger *Ledger) getNewDynastyAndValidatorSet(view *slst.StoreView) (enteri
 		return false, nil, nil
 	}
 
+	registrationMainchainHeight, err := ledger.metachainWitness.GetSubchainRegistrationHeight()
+	if err != nil {
+		logger.Warnf("Failed to get subchain registration height: %v", err)
+		return false, nil, nil
+	}
+
+	registrationDynasty := scom.CalculateDynasty(registrationMainchainHeight)
+	if currentDynasty.Cmp(registrationDynasty) == 0 {
+		// For the initial dynasty, i.e. the dynasty during which the subchain was registered, instead of querying
+		// the validator set from the main chain, we trust the validator set in the snapshot
+		return false, nil, nil
+	}
+
 	witnessedDynasty := scom.CalculateDynasty(mainchainBlockHeight)
 	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
 	if err != nil {
