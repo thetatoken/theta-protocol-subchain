@@ -109,17 +109,30 @@ func (exec *SubchainValidatorSetUpdateTxExecutor) process(chainID string, view *
 		return common.Hash{}, result.Error(fmt.Sprintf("new dynasty needs to be strictly larger than the current dynasty (new: %v, current: %v)", newDynasty, currentDynasty))
 	}
 
-	witnessedValidatorSet, err := exec.metachainWitness.GetValidatorSetByDynasty(newDynasty)
-	if err != nil {
-		return common.Hash{}, result.UndecidedWith(result.Info{"newDynasty": newDynasty, "err": err})
-	}
+	if currentDynasty.Cmp(common.Big0) == 0 {
+		// special handling: the node just loaded the genesis snapshot, we should trust the initial ValidatorSet specified by the snapshot
+		validatorSetSpecifiedInTheSnapshot := view.GetValidatorSet()
 
-	logger.Debugf("newDynasty: %v", newDynasty)
-	logger.Debugf("newValidatorSet      : %v", newValidatorSet.String())
-	logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet.String())
+		logger.Debugf("currentDynasty: %v", currentDynasty)
+		logger.Debugf("newValidatorSet      : %v", newValidatorSet.String())
+		logger.Debugf("validatorSetSpecifiedInTheSnapshot: %v", validatorSetSpecifiedInTheSnapshot.String())
 
-	if !newValidatorSet.Equals(witnessedValidatorSet) {
-		return common.Hash{}, result.Error("validator set mismatch: %v vs %v", *newValidatorSet, *witnessedValidatorSet)
+		if !newValidatorSet.EqualsDisregardingDynasty(validatorSetSpecifiedInTheSnapshot) { // the first ever ValidatorSet update essentially only updates the dynasty
+			return common.Hash{}, result.Error("validator set mismatch: %v vs %v", *newValidatorSet, *validatorSetSpecifiedInTheSnapshot)
+		}
+	} else {
+		witnessedValidatorSet, err := exec.metachainWitness.GetValidatorSetByDynasty(newDynasty)
+		if err != nil {
+			return common.Hash{}, result.UndecidedWith(result.Info{"newDynasty": newDynasty, "err": err})
+		}
+
+		logger.Debugf("newDynasty: %v", newDynasty)
+		logger.Debugf("newValidatorSet      : %v", newValidatorSet.String())
+		logger.Debugf("witnessedValidatorSet: %v", witnessedValidatorSet.String())
+
+		if !newValidatorSet.Equals(witnessedValidatorSet) {
+			return common.Hash{}, result.Error("validator set mismatch: %v vs %v", *newValidatorSet, *witnessedValidatorSet)
+		}
 	}
 
 	// update the dynasty and the subchain validator set

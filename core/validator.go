@@ -111,6 +111,20 @@ func (s *ValidatorSet) Equals(t *ValidatorSet) bool {
 	return true
 }
 
+// EqualsDisregardingDynasty checks whether the validator set is the same as another validator set disregarding the dynasty
+func (s *ValidatorSet) EqualsDisregardingDynasty(t *ValidatorSet) bool {
+	numVals := len(s.validators)
+	if numVals != len(t.validators) {
+		return false
+	}
+	for i := 0; i < numVals; i++ {
+		if !s.validators[i].Equals(t.validators[i]) {
+			return false
+		}
+	}
+	return true
+}
+
 // String represents the string representation of the validator set
 func (s *ValidatorSet) String() string {
 	return fmt.Sprintf("{Dynasty: %v, Validators: %v}", s.dynasty, s.validators)
