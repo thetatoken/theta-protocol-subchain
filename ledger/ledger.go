@@ -673,13 +673,16 @@ func (ledger *Ledger) getNewDynastyAndValidatorSet(view *slst.StoreView) (enteri
 	}
 
 	registrationDynasty := scom.CalculateDynasty(registrationMainchainHeight)
-	if currentDynasty.Cmp(registrationDynasty) == 0 {
+	witnessedDynasty := scom.CalculateDynasty(mainchainBlockHeight)
+
+	logger.Debugf("currentDynasty: %v, witnessedDynasty: %v, egistrationDynasty: %v, registrationMainchainHeight: %v", currentDynasty, witnessedDynasty, registrationDynasty, registrationMainchainHeight)
+
+	if witnessedDynasty.Cmp(registrationDynasty) == 0 {
 		// For the initial dynasty, i.e. the dynasty during which the subchain was registered, instead of querying
 		// the validator set from the main chain, we trust the validator set in the snapshot
 		return false, nil, nil
 	}
 
-	witnessedDynasty := scom.CalculateDynasty(mainchainBlockHeight)
 	witnessedValidatorSet, err := ledger.metachainWitness.GetValidatorSetByDynasty(witnessedDynasty)
 	if err != nil {
 		logger.Warnf("Failed to get validator set by dynasty %v when checking validator set updates, err: %v", witnessedDynasty, err)
