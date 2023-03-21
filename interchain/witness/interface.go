@@ -14,5 +14,6 @@ type ChainWitness interface {
 	Wait()
 	GetMainchainBlockHeight() (*big.Int, error)
 	GetValidatorSetByDynasty(dynasty *big.Int) (*score.ValidatorSet, error)
+	GetSubchainRegistrationHeight() (*big.Int, error)
 	GetInterChainEventCache() *siu.InterChainEventCache
 }
