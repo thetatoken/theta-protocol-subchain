@@ -573,7 +573,37 @@ func (mw *MetachainWitness) updateValidatorSetCache(dynasty *big.Int) (*score.Va
 	// queryBlockHeight := big.NewInt(1).Mul(dynasty, big.NewInt(1).SetInt64(scom.NumMainchainBlocksPerDynasty))
 	// queryBlockHeight = big.NewInt(0).Add(queryBlockHeight, big.NewInt(1)) // increment by one to make sure the query block height falls into the dynasty
 	// vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, queryBlockHeight)
-	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, dynasty)
+
+	adjustedDynasty := dynasty
+	registrationMainchainHeight, ok, err := mw.chainRegistrarOnMainchain.GetSubchainRegistrationHeight(nil, mw.subchainID)
+	if !ok {
+		errMsg := fmt.Sprintf("subchain with ID %v does not exist", mw.subchainID)
+		logger.Warnf("updateValidatorSetCache: %v", errMsg)
+		return nil, fmt.Errorf(errMsg)
+	}
+
+	if err != nil {
+		logger.Warnf("updateValidatorSetCache: %v", err)
+		return nil, err
+	}
+
+	registrationDynasty := scom.CalculateDynasty(registrationMainchainHeight)
+	if adjustedDynasty.Cmp(registrationDynasty) == 0 {
+		// Special handling for the initial dynasty query on the **Mainchain**:
+		// The initial set of validators hardcoded in the genesis snapshot should be
+		// in charge during the initial dyansty. However, if we directly query the
+		// initial dynasty, we would obtain an empty set since the validators registered
+		// on the mainchain takes charge only when the next dynasty begins. Hence, for
+		// the initial dyansty, we query the next dynasty instead, which should return
+		// a validator set that matches with the validator set hardcoded in the
+		// genesis snapshot.
+		adjustedDynasty = big.NewInt(0).Add(adjustedDynasty, big.NewInt(1))
+
+		logger.Debugf("Subchain %v registration main chain height: %v, registration dynasty: %v, dynasty: %v, adjustedDynasty: %v",
+			mw.subchainID, registrationMainchainHeight, registrationDynasty, dynasty, adjustedDynasty)
+	}
+
+	vs, err := mw.chainRegistrarOnMainchain.GetValidatorSet(nil, mw.subchainID, adjustedDynasty)
 	validatorAddrs := vs.Validators
 	validatorStakes := vs.ShareAmounts
 
