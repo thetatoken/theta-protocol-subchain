@@ -139,7 +139,8 @@ type BroadcastRawTransactionResult struct {
 func (t *ThetaRPCService) BroadcastRawTransaction(
 	args *BroadcastRawTransactionArgs, result *BroadcastRawTransactionResult) (err error) {
 	startTimestamp := time.Now()
-	logger.Debugf("RPC.BroadcastRawTransaction, start timestamp: %v", startTimestamp)
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.BroadcastRawTransaction, callID: %v, start timestamp: %v", callID, startTimestamp)
 
 	txBytes, err := decodeTxHexBytes(args.TxBytes)
 	if err != nil {
@@ -177,7 +178,7 @@ func (t *ThetaRPCService) BroadcastRawTransaction(
 
 			callProcessingTime := time.Since(startTimestamp)
 			finishTimestamp := time.Now()
-			logger.Debugf("RPC.BroadcastRawTransaction failed, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+			logger.Debugf("RPC.BroadcastRawTransaction failed, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 			logger.Infof("Tx callback returns nil, txHash=%v", result.TxHash)
 			return errors.New("Internal server error")
@@ -186,14 +187,14 @@ func (t *ThetaRPCService) BroadcastRawTransaction(
 
 		callProcessingTime := time.Since(startTimestamp)
 		finishTimestamp := time.Now()
-		logger.Debugf("RPC.BroadcastRawTransaction returned, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+		logger.Debugf("RPC.BroadcastRawTransaction returned, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 		return nil
 	case <-timeout.C:
 
 		callProcessingTime := time.Since(startTimestamp)
 		finishTimestamp := time.Now()
-		logger.Debugf("RPC.BroadcastRawTransaction timed out, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+		logger.Debugf("RPC.BroadcastRawTransaction timed out, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 		return errors.New("Timed out waiting for transaction to be included")
 	}

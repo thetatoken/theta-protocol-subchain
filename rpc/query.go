@@ -59,7 +59,8 @@ type GetAccountResult struct {
 
 func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountResult) (err error) {
 	startTimestamp := time.Now()
-	logger.Debugf("RPC.GetAccount, start timestamp: %v", startTimestamp)
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.GetAccount, callID: %v, start timestamp: %v", callID, startTimestamp)
 
 	if args.Address == "" {
 		return errors.New("Address must be specified")
@@ -123,7 +124,7 @@ func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountRes
 
 	callProcessingTime := time.Since(startTimestamp)
 	finishTimestamp := time.Now()
-	logger.Debugf("RPC.GetAccount, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+	logger.Debugf("RPC.GetAccount, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 	return nil
 }
@@ -525,7 +526,8 @@ type GetStatusResult struct {
 
 func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult) (err error) {
 	startTimestamp := time.Now()
-	logger.Debugf("RPC.GetStatus, start timestamp: %v", startTimestamp)
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.GetStatus, callID: %v, start timestamp: %v", callID, startTimestamp)
 
 	s := t.consensus.GetSummary()
 	result.Address = t.consensus.ID()
@@ -575,7 +577,7 @@ func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult
 
 	callProcessingTime := time.Since(startTimestamp)
 	finishTimestamp := time.Now()
-	logger.Debugf("RPC.GetStatus, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+	logger.Debugf("RPC.GetStatus, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 	return
 }
