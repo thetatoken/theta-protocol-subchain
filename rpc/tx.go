@@ -140,7 +140,7 @@ func (t *ThetaRPCService) BroadcastRawTransaction(
 	args *BroadcastRawTransactionArgs, result *BroadcastRawTransactionResult) (err error) {
 	startTimestamp := time.Now()
 	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
-	logger.Debugf("RPC.BroadcastRawTransaction, callID: %v, start timestamp: %v", callID, startTimestamp)
+	logger.Debugf("RPC.BroadcastRawTransaction, callID: %v, start  timestamp: %v", callID, startTimestamp)
 
 	txBytes, err := decodeTxHexBytes(args.TxBytes)
 	if err != nil {
