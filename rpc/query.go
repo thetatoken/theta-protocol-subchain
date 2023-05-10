@@ -156,6 +156,10 @@ const (
 )
 
 func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTransactionResult) (err error) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.GetTransaction, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	if args.Hash == "" {
 		return errors.New("Transanction hash must be specified")
 	}
@@ -173,6 +177,11 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 		} else {
 			result.Status = TxStatusNotFound
 		}
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 		return nil
 	}
 	result.BlockHash = block.Hash()
@@ -208,6 +217,10 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 	if found {
 		result.BalanceChanges = balanceChanges
 	}
+
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 	return nil
 }
