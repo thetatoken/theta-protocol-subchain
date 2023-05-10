@@ -138,6 +138,9 @@ type BroadcastRawTransactionResult struct {
 
 func (t *ThetaRPCService) BroadcastRawTransaction(
 	args *BroadcastRawTransactionArgs, result *BroadcastRawTransactionResult) (err error) {
+	startTimestamp := time.Now()
+	logger.Debugf("RPC.BroadcastRawTransaction, start timestamp: %v", startTimestamp)
+
 	txBytes, err := decodeTxHexBytes(args.TxBytes)
 	if err != nil {
 		return err
@@ -171,14 +174,30 @@ func (t *ThetaRPCService) BroadcastRawTransaction(
 	select {
 	case block := <-finalized:
 		if block == nil {
+
+			callProcessingTime := time.Since(startTimestamp)
+			finishTimestamp := time.Now()
+			logger.Debugf("RPC.BroadcastRawTransaction failed, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+
 			logger.Infof("Tx callback returns nil, txHash=%v", result.TxHash)
 			return errors.New("Internal server error")
 		}
 		result.Block = block.BlockHeader
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.BroadcastRawTransaction returned, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+
 		return nil
 	case <-timeout.C:
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.BroadcastRawTransaction timed out, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
+
 		return errors.New("Timed out waiting for transaction to be included")
 	}
+
 }
 
 // ------------------------------- BroadcastRawTransactionAsync -----------------------------------

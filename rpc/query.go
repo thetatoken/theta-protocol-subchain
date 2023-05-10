@@ -58,6 +58,9 @@ type GetAccountResult struct {
 }
 
 func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountResult) (err error) {
+	startTimestamp := time.Now()
+	logger.Debugf("RPC.GetAccount, start timestamp: %v", startTimestamp)
+
 	if args.Address == "" {
 		return errors.New("Address must be specified")
 	}
@@ -117,6 +120,10 @@ func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountRes
 	if result.Account == nil {
 		return fmt.Errorf("Account with address %v at height %v is not found", address.Hex(), height)
 	}
+
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("RPC.GetAccount, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
 
 	return nil
 }
@@ -517,6 +524,9 @@ type GetStatusResult struct {
 }
 
 func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult) (err error) {
+	startTimestamp := time.Now()
+	logger.Debugf("RPC.GetStatus, start timestamp: %v", startTimestamp)
+
 	s := t.consensus.GetSummary()
 	result.Address = t.consensus.ID()
 	//result.PeerID = t.dispatcher.ID()
@@ -562,6 +572,10 @@ func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult
 	result.GenesisBlockHash = genesisHash
 	result.SnapshotBlockHeight = common.JSONUint64(t.chain.Root().Block.BlockHeader.Height)
 	result.SnapshotBlockHash = t.chain.Root().Block.BlockHeader.Hash()
+
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("RPC.GetStatus, finish timestamp: %v, call processing time (ms): %v", finishTimestamp, callProcessingTime.Milliseconds())
 
 	return
 }
