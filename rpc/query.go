@@ -58,6 +58,10 @@ type GetAccountResult struct {
 }
 
 func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountResult) (err error) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.GetAccount, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	if args.Address == "" {
 		return errors.New("Address must be specified")
 	}
@@ -118,6 +122,10 @@ func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountRes
 		return fmt.Errorf("Account with address %v at height %v is not found", address.Hex(), height)
 	}
 
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("RPC.GetAccount, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 	return nil
 }
 
@@ -148,6 +156,10 @@ const (
 )
 
 func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTransactionResult) (err error) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.GetTransaction, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	if args.Hash == "" {
 		return errors.New("Transanction hash must be specified")
 	}
@@ -165,6 +177,11 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 		} else {
 			result.Status = TxStatusNotFound
 		}
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 		return nil
 	}
 	result.BlockHash = block.Hash()
@@ -200,6 +217,10 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 	if found {
 		result.BalanceChanges = balanceChanges
 	}
+
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 	return nil
 }
@@ -517,6 +538,10 @@ type GetStatusResult struct {
 }
 
 func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult) (err error) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.GetStatus, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	s := t.consensus.GetSummary()
 	result.Address = t.consensus.ID()
 	//result.PeerID = t.dispatcher.ID()
@@ -562,6 +587,10 @@ func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult
 	result.GenesisBlockHash = genesisHash
 	result.SnapshotBlockHeight = common.JSONUint64(t.chain.Root().Block.BlockHeader.Height)
 	result.SnapshotBlockHash = t.chain.Root().Block.BlockHeader.Hash()
+
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("RPC.GetStatus, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 
 	return
 }

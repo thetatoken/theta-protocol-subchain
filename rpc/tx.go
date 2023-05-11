@@ -138,6 +138,10 @@ type BroadcastRawTransactionResult struct {
 
 func (t *ThetaRPCService) BroadcastRawTransaction(
 	args *BroadcastRawTransactionArgs, result *BroadcastRawTransactionResult) (err error) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.BroadcastRawTransaction, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	txBytes, err := decodeTxHexBytes(args.TxBytes)
 	if err != nil {
 		return err
@@ -171,14 +175,30 @@ func (t *ThetaRPCService) BroadcastRawTransaction(
 	select {
 	case block := <-finalized:
 		if block == nil {
+
+			callProcessingTime := time.Since(startTimestamp)
+			finishTimestamp := time.Now()
+			logger.Debugf("RPC.BroadcastRawTransaction failed, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 			logger.Infof("Tx callback returns nil, txHash=%v", result.TxHash)
 			return errors.New("Internal server error")
 		}
 		result.Block = block.BlockHeader
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.BroadcastRawTransaction returned, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 		return nil
 	case <-timeout.C:
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.BroadcastRawTransaction timed out, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 		return errors.New("Timed out waiting for transaction to be included")
 	}
+
 }
 
 // ------------------------------- BroadcastRawTransactionAsync -----------------------------------
@@ -193,6 +213,10 @@ type BroadcastRawTransactionAsyncResult struct {
 
 func (t *ThetaRPCService) BroadcastRawTransactionAsync(
 	args *BroadcastRawTransactionAsyncArgs, result *BroadcastRawTransactionAsyncResult) (err error) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	logger.Debugf("RPC.BroadcastRawTransactionAsync, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	txBytes, err := decodeTxHexBytes(args.TxBytes)
 	if err != nil {
 		return err
@@ -207,6 +231,11 @@ func (t *ThetaRPCService) BroadcastRawTransactionAsync(
 	if err == nil || err == smp.FastsyncSkipTxError {
 		t.mempool.BroadcastTx(txBytes) // still broadcast the transactions received locally during the fastsync mode
 		logger.Infof("Broadcasted raw transaction (async): %v, hash: %v", hex.EncodeToString(txBytes), hash.Hex())
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("RPC.BroadcastRawTransactionAsync timed out, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 		return nil
 	}
 
