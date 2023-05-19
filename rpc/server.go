@@ -180,7 +180,9 @@ func corsMiddleware(handler http.Handler) http.Handler {
 
 		callProcessingTime := time.Since(startTimestamp)
 		finishTimestamp := time.Now()
-		logger.Debugf("corsMiddleware, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+		if callProcessingTime.Milliseconds() > 10 {
+			logger.Debugf("corsMiddleware, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+		}
 
 	})
 }
