@@ -14,6 +14,7 @@ import (
 	"net/rpc"
 
 	"github.com/gorilla/mux"
+	"github.com/thetatoken/theta/crypto"
 
 	log "github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
@@ -166,6 +167,9 @@ func corsMiddleware(handler http.Handler) http.Handler {
 		//Allow CORS here By * or specific origin
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Headers", "*")
+		startTimestamp := time.Now()
+		callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+		logger.Debugf("corsMiddleware, callID: %v, start  timestamp: %v", callID, startTimestamp)
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
@@ -173,6 +177,11 @@ func corsMiddleware(handler http.Handler) http.Handler {
 		}
 
 		handler.ServeHTTP(w, r)
+
+		callProcessingTime := time.Since(startTimestamp)
+		finishTimestamp := time.Now()
+		logger.Debugf("corsMiddleware, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+
 	})
 }
 
