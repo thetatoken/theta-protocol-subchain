@@ -169,7 +169,7 @@ func corsMiddleware(handler http.Handler) http.Handler {
 		w.Header().Set("Access-Control-Allow-Headers", "*")
 		startTimestamp := time.Now()
 		callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
-		logger.Debugf("corsMiddleware, callID: %v, start  timestamp: %v", callID, startTimestamp)
+		// logger.Debugf("corsMiddleware, callID: %v, start  timestamp: %v", callID, startTimestamp)
 
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
