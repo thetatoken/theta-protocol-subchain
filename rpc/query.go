@@ -60,7 +60,7 @@ type GetAccountResult struct {
 func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountResult) (err error) {
 	startTimestamp := time.Now()
 	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
-	logger.Debugf("RPC.GetAccount, callID: %v, start  timestamp: %v", callID, startTimestamp)
+	// logger.Debugf("RPC.GetAccount, callID: %v, start  timestamp: %v", callID, startTimestamp)
 
 	if args.Address == "" {
 		return errors.New("Address must be specified")
@@ -160,7 +160,7 @@ const (
 func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTransactionResult) (err error) {
 	startTimestamp := time.Now()
 	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
-	logger.Debugf("RPC.GetTransaction, callID: %v, start  timestamp: %v", callID, startTimestamp)
+	// logger.Debugf("RPC.GetTransaction, callID: %v, start  timestamp: %v", callID, startTimestamp)
 
 	if args.Hash == "" {
 		return errors.New("Transanction hash must be specified")
@@ -546,7 +546,7 @@ type GetStatusResult struct {
 func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult) (err error) {
 	startTimestamp := time.Now()
 	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
-	logger.Debugf("RPC.GetStatus, callID: %v, start  timestamp: %v", callID, startTimestamp)
+	// logger.Debugf("RPC.GetStatus, callID: %v, start  timestamp: %v", callID, startTimestamp)
 
 	s := t.consensus.GetSummary()
 	result.Address = t.consensus.ID()
