@@ -31,7 +31,7 @@ import (
 	sld "github.com/thetatoken/thetasubchain/ledger"
 	smp "github.com/thetatoken/thetasubchain/mempool"
 
-	_ "net/http/pprof"
+	// _ "net/http/pprof"
 )
 
 var logger *log.Entry
@@ -95,7 +95,7 @@ func NewThetaRPCServer(mempool *smp.Mempool, ledger *sld.Ledger, dispatcher *dis
 	t.router.Handle("/ws", websocket.Handler(func(ws *websocket.Conn) {
 		s.ServeCodec(jsonrpc2.NewServerCodec(ws, s))
 	}))
-	t.router.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
+	// t.router.PathPrefix("/debug/pprof/").Handler(http.DefaultServeMux)
 
 	t.server = &http.Server{
 		Handler: t.router,
