@@ -201,7 +201,15 @@ type defaultHTTPHandler struct {
 }
 
 func (dh *defaultHTTPHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	startTimestamp := time.Now()
+	callID := crypto.Keccak256Hash([]byte(startTimestamp.String())).Hex()[:10]
+	// logger.Debugf("ServeHTTP, callID: %v, start  timestamp: %v", callID, startTimestamp)
+
 	fmt.Fprintf(w, "Theta Node is up and running!")
+
+	callProcessingTime := time.Since(startTimestamp)
+	finishTimestamp := time.Now()
+	logger.Debugf("ServeHTTP, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
 }
 
 //
