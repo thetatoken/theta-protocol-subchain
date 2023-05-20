@@ -161,7 +161,7 @@ func (t *ThetaRPCServer) serve() {
 	defer l.Close()
 
 	// ll := netutil.LimitListener(l, viper.GetInt(scom.CfgRPCMaxConnections))
-	ll := netutil.LimitListener(l, 1000))
+	ll := netutil.LimitListener(l, 1000)
 	t.listener = ll
 
 	logger.Info(t.server.Serve(ll))
