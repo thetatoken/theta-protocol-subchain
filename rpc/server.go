@@ -30,6 +30,8 @@ import (
 	sconsensus "github.com/thetatoken/thetasubchain/consensus"
 	sld "github.com/thetatoken/thetasubchain/ledger"
 	smp "github.com/thetatoken/thetasubchain/mempool"
+
+	_ "net/http/pprof"
 )
 
 var logger *log.Entry
