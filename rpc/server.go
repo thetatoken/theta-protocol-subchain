@@ -99,8 +99,8 @@ func NewThetaRPCServer(mempool *smp.Mempool, ledger *sld.Ledger, dispatcher *dis
 
 	t.server = &http.Server{
 		Handler: t.router,
+		IdleTimeout: 600 * time.Second,
 	}
-	t.server.SetKeepAliveEnabled(false)
 
 	logger = util.GetLoggerForModule("rpc")
 
