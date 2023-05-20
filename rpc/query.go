@@ -124,7 +124,9 @@ func (t *ThetaRPCService) GetAccount(args *GetAccountArgs, result *GetAccountRes
 
 	callProcessingTime := time.Since(startTimestamp)
 	finishTimestamp := time.Now()
-	logger.Debugf("RPC.GetAccount, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+	if callProcessingTime.Milliseconds() > 10 {
+		logger.Debugf("RPC.GetAccount, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+	}
 
 	return nil
 }
@@ -180,7 +182,9 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 
 		callProcessingTime := time.Since(startTimestamp)
 		finishTimestamp := time.Now()
-		logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+		if callProcessingTime.Milliseconds() > 10 {
+			logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+		}
 
 		return nil
 	}
@@ -220,7 +224,9 @@ func (t *ThetaRPCService) GetTransaction(args *GetTransactionArgs, result *GetTr
 
 	callProcessingTime := time.Since(startTimestamp)
 	finishTimestamp := time.Now()
-	logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+	if callProcessingTime.Milliseconds() > 10 {
+		logger.Debugf("RPC.GetTransaction, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+	}
 
 	return nil
 }
@@ -590,7 +596,9 @@ func (t *ThetaRPCService) GetStatus(args *GetStatusArgs, result *GetStatusResult
 
 	callProcessingTime := time.Since(startTimestamp)
 	finishTimestamp := time.Now()
-	logger.Debugf("RPC.GetStatus, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+	if callProcessingTime.Milliseconds() > 10 {
+		logger.Debugf("RPC.GetStatus, callID: %v, finish timestamp: %v, call processing time (ms): %v", callID, finishTimestamp, callProcessingTime.Milliseconds())
+	}
 
 	return
 }
