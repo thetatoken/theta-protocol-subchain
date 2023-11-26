@@ -422,7 +422,7 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 	if err == ErrTargetChainMismatch {
 		// this may happen when a user sends tokens from a subchain to another subchain, which is not supported yet
 		// the current orchestrator only supports transfers between the mainchain and a subchain
-		logger.Warnf("Sending tokens between two subchains is not supported yet: %v", err)
+		logger.Debugf("Sending tokens between two subchains is not supported yet: %v", err)
 		return nil // ignore
 	}
 
@@ -442,7 +442,7 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 		return common.Hash{}, err
 	}
 	if targetChainID.Cmp(se.TargetChainID) != 0 {
-		logger.Warnf("mintTFuelVouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		logger.Debugf("mintTFuelVouchers, skip minting since target chain ID is neither the current chain nor the mainchain: %v vs %v", targetChainID, se.TargetChainID)
 		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
@@ -465,7 +465,7 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 		return common.Hash{}, err
 	}
 	if targetChainID.Cmp(se.TargetChainID) != 0 {
-		logger.Warnf("mintTNT20Vouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		logger.Debugf("mintTNT20Vouchers, skip minting since target chain ID is neither the current chain nor the mainchain: %v vs %v", targetChainID, se.TargetChainID)
 		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
@@ -488,7 +488,7 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 		return common.Hash{}, err
 	}
 	if targetChainID.Cmp(se.TargetChainID) != 0 {
-		logger.Warnf("mintTN721Vouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		logger.Debugf("mintTN721Vouchers, skip minting since target chain ID is neither the current chain nor the mainchain: %v vs %v", targetChainID, se.TargetChainID)
 		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
@@ -511,7 +511,7 @@ func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChai
 		return common.Hash{}, err
 	}
 	if targetChainID.Cmp(se.TargetChainID) != 0 {
-		logger.Warnf("mintTN1155Vouchers, target chain ID mismatch: %v vs %v", targetChainID, se.TargetChainID)
+		logger.Debugf("mintTN1155Vouchers, skip minting since target chain ID is neither the current chain nor the mainchain: %v vs %v", targetChainID, se.TargetChainID)
 		return common.Hash{}, ErrTargetChainMismatch
 	}
 	dynasty := oc.getDynasty()
