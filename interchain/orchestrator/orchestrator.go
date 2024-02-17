@@ -3,6 +3,7 @@ package orchestrator
 import (
 	"context"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -449,6 +450,9 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
 	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
 	tx, err := tfuelTokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
 	if err != nil {
@@ -471,6 +475,9 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
+	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
 	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
 	tx, err := TNT20TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.Decimals, se.TargetChainVoucherReceiver, se.LockedAmount, dynasty, se.TokenLockNonce)
@@ -495,6 +502,9 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
 	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	tx, err := TNT721TokenBank.MintVouchers(txOpts, se.Denom, se.Name, se.Symbol, se.TargetChainVoucherReceiver, se.TokenID, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
@@ -518,6 +528,9 @@ func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChai
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
 	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
 	tx, err := TNT1155TokenBank.MintVouchers(txOpts, se.Denom, se.TargetChainVoucherReceiver, se.TokenID, se.LockedAmount, se.TokenURI, dynasty, se.TokenLockNonce)
 	if err != nil {
@@ -538,6 +551,9 @@ func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChain
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
 	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
 	tfuelTokenBank := oc.getTFuelTokenBank(targetChainID)
 	tx, err := tfuelTokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
@@ -556,6 +572,9 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 	dynasty := oc.getDynasty()
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
+	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
 	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
 	tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
@@ -576,6 +595,9 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
 	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
 	if err != nil {
@@ -595,6 +617,9 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 	if dynasty == nil {
 		return common.Hash{}, ErrDynastyIsNil
 	}
+	if !oc.checkChainIDCompatability(se.Denom) {
+		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
 	tx, err := TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
@@ -603,6 +628,19 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 	txHash := tx.Hash()
 	logger.Debugf("unlockTNT1155Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
 	return txHash, nil
+}
+
+func (oc *Orchestrator) checkChainIDCompatability(denom string) bool {
+	originalChainID, err := score.ExtractOriginatedChainIDFromDenom(denom)
+	if err != nil {
+		return false
+	}
+
+	compatible := (oc.mainchainID.Cmp(originalChainID) == 0) || (oc.subchainID.Cmp(originalChainID) == 0)
+
+	logger.Debugf("denom: %v, originalChainID: %v, mainchainID: %v, suchainID: %v, compatible: %v",
+		denom, originalChainID, oc.mainchainID, oc.subchainID, compatible)
+	return compatible
 }
 
 func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bind.TransactOpts, error) {
