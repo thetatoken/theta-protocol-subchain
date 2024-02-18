@@ -418,7 +418,7 @@ func (mw *MetachainWitness) getMainchainMaxProcessedNonceEventHeight(icmeType sc
 		if err != nil {
 			break
 		}
-		eventHeight, err = mw.mainchainTNT721TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
+		eventHeight, err = mw.mainchainTNT1155TokenBank.GetTokenLockEventHeight(nil, mw.subchainID, maxProcessedNonce)
 
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel:
 		// Note: TFuelVoucherBurn is not allowed on the Mainchain so it is safe to return the latest block height
