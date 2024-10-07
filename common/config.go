@@ -160,6 +160,7 @@ const (
 	CfgSubchainMainchainBlockIntervalInSeconds  = "subchain.mainchainBlockIntervalInSeconds"
 	CfgSubchainMainchainWitenessStartScanHeight = "subchain.mainchainWitenessStartScanHeight"
 	CfgSubchainSubchainWitenessStartScanHeight  = "subchain.subchainWitenessStartScanHeight"
+	CfgSubchainForceWitnessStartScanHeight      = "subchain.forceWitenessStartScanHeight"
 
 	// CfgSubchainID defines the subchainID
 	CfgSubchainID = "subchain.chainID"
@@ -240,6 +241,7 @@ func init() {
 	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 	viper.SetDefault(CfgSubchainMainchainWitenessStartScanHeight, -1)
 	viper.SetDefault(CfgSubchainSubchainWitenessStartScanHeight, -1)
+	viper.SetDefault(CfgSubchainForceWitnessStartScanHeight, false)
 
 	viper.SetDefault(CfgSubchainID, 360777)
 }

@@ -314,7 +314,8 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	// mw.getBlockScanStartingHeight(queriedChainID) // testing code
 
 	fromBlock, err := mw.witnessState.getLastQueryedHeightForType(queriedChainID)
-	if err == store.ErrKeyNotFound {
+	forceWitnessStartScanHeight := viper.GetBool(scom.CfgSubchainForceWitnessStartScanHeight)
+	if forceWitnessStartScanHeight || err == store.ErrKeyNotFound {
 		logger.Infof("Seting the initial block scanning height for chain %v", queriedChainID.String())
 		if queriedChainID.Cmp(mw.mainchainID) == 0 && viper.GetInt(scom.CfgSubchainMainchainWitenessStartScanHeight) >= 0 {
 			// if the start scanning height is specified in the config, use the config value
