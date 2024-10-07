@@ -332,6 +332,10 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 
 	nextNonce := big.NewInt(0).Add(maxProcessedNonce, big.NewInt(1))
 	sourceEvent, err := oc.interChainEventCache.Get(sourceChainID, sourceChainEventType, nextNonce)
+
+	logger.Debugf("Query next event, sourceChainID: %v, targetChainID: %v, sourceChainEventType: %v, nextNonce: %v, err: %v",
+		sourceChainID, targetChainID, sourceChainEventType, nextNonce, err)
+
 	if err == ts.ErrKeyNotFound {
 		return // the next event (e.g. Token Lock, or Voucher Burn) has not occurred yet
 	}
