@@ -22,6 +22,8 @@ import (
 	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 
 	"github.com/thetatoken/theta/common"
+	ethereum "github.com/thetatoken/thetasubchain/eth"
+	"github.com/thetatoken/thetasubchain/eth/core/types"
 	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
 )
 
@@ -30,6 +32,7 @@ var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 var (
 	ErrDynastyIsNil        = errors.New("nil dynasty")
 	ErrTargetChainMismatch = errors.New("target chain mismatch")
+	ErrTxWouldRevert       = errors.New("the relay transaction would revert, not broadcasting it")
 )
 
 type Orchestrator struct {
@@ -217,6 +220,13 @@ func (oc *Orchestrator) mainloop(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case <-oc.eventProcessingTicker.C:
+			if !viper.GetBool(scom.CfgSubchainRelayEnabled) {
+				// Relaying is suspended by configuration. The witness keeps
+				// collecting events, so the pipeline resumes where it left off
+				// once relaying is re-enabled.
+				continue
+			}
+
 			// Handle token lock events
 			oc.processNextTokenLockEvent(oc.mainchainID, oc.subchainID) // send token from the mainchain to the subchain
 			oc.processNextTokenLockEvent(oc.subchainID, oc.mainchainID) // send token from the subchain to the mainchain
@@ -346,13 +356,65 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 	targetEventType := oc.getTargetChainCorrespondingEventType(sourceChainEventType)
 	retryThreshold := oc.getRetryThreshold(targetChainID)
 	if oc.timeElapsedSinceEventProcessed(sourceEvent) > retryThreshold { // retry if the tx has been submitted for a long time
-		err := oc.callTargetContract(targetChainID, targetEventType, sourceEvent)
-		if err == nil {
+		// Never vote on an event that the source chain's own contract state does
+		// not confirm. A log is not sufficient evidence on its own that the
+		// corresponding lock or burn was committed.
+		if err := oc.verifyEventAgainstSourceChain(sourceChainID, sourceEvent); err != nil {
+			if siu.IsEventNotCorroborated(err) {
+				logger.Errorf("Refusing to relay an inter-chain event that the source chain state does not confirm: %v", err)
+				// Drop it, so that the genuine event carrying this nonce, if any,
+				// can take its place in the cache on a subsequent scan.
+				oc.interChainEventCache.Delete(sourceChainID, sourceChainEventType, nextNonce)
+			} else {
+				logger.Warnf("Skipping the event for now, could not verify it against the source chain: %v", err)
+			}
 			oc.updateEventProcessedTime(sourceEvent)
-		} else {
+			return
+		}
+
+		err := oc.callTargetContract(targetChainID, targetEventType, sourceEvent)
+
+		// Record the attempt whether or not it succeeded. A relay that cannot
+		// currently succeed -- e.g. one whose dry run reverts because the vault
+		// is short of collateral -- must back off to the retry threshold rather
+		// than be re-attempted on every tick.
+		oc.updateEventProcessedTime(sourceEvent)
+
+		if err != nil {
 			logger.Warnf("Failed to call target contract: %v", err)
 		}
 	}
+}
+
+// verifyEventAgainstSourceChain re-derives the event from the emitting TokenBank's
+// storage on the source chain. Returns an ErrEventNotCorroborated error if the
+// contract state contradicts the event, or an ErrEventVerificationUnavailable
+// error if the check could not be carried out, in which case the caller must not
+// relay the event either -- unlike the witness, the orchestrator fails closed,
+// since skipping a round merely delays a genuine transfer.
+func (oc *Orchestrator) verifyEventAgainstSourceChain(sourceChainID *big.Int, event *score.InterChainMessageEvent) error {
+	tokenBank := oc.getTokenBankForEventType(sourceChainID, event.Type)
+	return siu.VerifyEventAgainstTokenBankState(tokenBank, event)
+}
+
+// getTokenBankForEventType returns the TokenBank on the given chain that emits
+// the given event type, or nil if there is no such accessor.
+func (oc *Orchestrator) getTokenBankForEventType(chainID *big.Int, eventType score.InterChainMessageEventType) siu.TokenBankEventHeightReader {
+	switch eventType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherMintTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
+		return oc.getTFuelTokenBank(chainID)
+	case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherMintTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
+		return oc.getTNT20TokenBank(chainID)
+	case score.IMCEventTypeCrossChainTokenLockTNT721, score.IMCEventTypeCrossChainVoucherBurnTNT721,
+		score.IMCEventTypeCrossChainVoucherMintTNT721, score.IMCEventTypeCrossChainTokenUnlockTNT721:
+		return oc.getTNT721TokenBank(chainID)
+	case score.IMCEventTypeCrossChainTokenLockTNT1155, score.IMCEventTypeCrossChainVoucherBurnTNT1155,
+		score.IMCEventTypeCrossChainVoucherMintTNT1155, score.IMCEventTypeCrossChainTokenUnlockTNT1155:
+		return oc.getTNT1155TokenBank(chainID)
+	}
+	return nil
 }
 
 func (oc *Orchestrator) cleanUpInterChainEventCache(sourceChainID *big.Int, eventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
@@ -462,7 +524,10 @@ func (oc *Orchestrator) mintTFuelVouchers(txOpts *bind.TransactOpts, targetChain
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("mintTFuelVouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -488,7 +553,10 @@ func (oc *Orchestrator) mintTNT20Vouchers(txOpts *bind.TransactOpts, targetChain
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("mintTNT20Vouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -514,7 +582,10 @@ func (oc *Orchestrator) mintTN721Vouchers(txOpts *bind.TransactOpts, targetChain
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("mintTN721Vouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -540,7 +611,10 @@ func (oc *Orchestrator) mintTN1155Vouchers(txOpts *bind.TransactOpts, targetChai
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("se.TargetChainID: %v", se.TargetChainID)
 	logger.Debugf("mintTN1155Vouchers, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.TokenLockNonce, txHash.Hex())
 	return txHash, nil
@@ -563,7 +637,10 @@ func (oc *Orchestrator) unlockTFuelTokens(txOpts *bind.TransactOpts, targetChain
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("unlockTFuelTokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -585,7 +662,10 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("unlockTNT20Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -607,7 +687,10 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("unlockTNT721Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -629,7 +712,10 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 	if err != nil {
 		return common.Hash{}, err
 	}
-	txHash := tx.Hash()
+	txHash, err := oc.simulateAndSend(targetChainID, tx)
+	if err != nil {
+		return common.Hash{}, err
+	}
 	logger.Debugf("unlockTNT1155Tokens, dynasty: %v, targetChainID: %v, denom: %v, tokenLockNonce: %v, tx: %v", dynasty, targetChainID, se.Denom, se.VoucherBurnNonce, txHash.Hex())
 	return txHash, nil
 }
@@ -674,6 +760,7 @@ func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bin
 	txOpts.Value = big.NewInt(0)       // in wei
 	txOpts.GasLimit = uint64(10000000) // in units
 	txOpts.GasPrice = gasPrice
+	txOpts.NoSend = true // the tx is dry-run through eth_call by simulateAndSend() before it is broadcast
 	logger.Debugf("building tx opts with address %v", oc.privateKey.PublicKey().Address())
 	return txOpts, nil
 }
@@ -692,6 +779,40 @@ func (oc *Orchestrator) getRetryThreshold(chainID *big.Int) time.Duration {
 	numBlocks := 4 // typically a tx should be finalized within 2 block intervals, here we conservatively use 4
 	retryThreshold := time.Duration(numBlocks*blockIntervalInSeconds) * time.Second
 	return retryThreshold
+}
+
+// simulateAndSend dry-runs a relay transaction with eth_call before broadcasting it.
+//
+// Validator votes are ordinary transactions, so a vote that cannot succeed --
+// because the bank is short of the requested amount, because this validator
+// already voted, or because the dynasty has aged out -- still costs gas and still
+// lands on the target chain. The orchestrator also retries such a transaction
+// indefinitely, since the event nonce it is trying to advance never moves. Dry
+// running first turns that broadcast loop into a cheap local query and surfaces
+// the revert reason in the logs.
+func (oc *Orchestrator) simulateAndSend(chainID *big.Int, tx *types.Transaction) (common.Hash, error) {
+	client := oc.getEthRpcClient(chainID)
+	if client == nil {
+		return common.Hash{}, fmt.Errorf("no ETH RPC client for chain %v", chainID)
+	}
+
+	callMsg := ethereum.CallMsg{
+		From:     oc.privateKey.PublicKey().Address(),
+		To:       tx.To(),
+		Gas:      tx.Gas(),
+		GasPrice: tx.GasPrice(),
+		Value:    tx.Value(),
+		Data:     tx.Data(),
+	}
+	if _, err := client.CallContract(context.Background(), callMsg, nil); err != nil {
+		return common.Hash{}, fmt.Errorf("%w on chain %v: %v", ErrTxWouldRevert, chainID, err)
+	}
+
+	if err := client.SendTransaction(context.Background(), tx); err != nil {
+		return common.Hash{}, err
+	}
+
+	return tx.Hash(), nil
 }
 
 func (oc *Orchestrator) getEthRpcClient(chainID *big.Int) *ec.Client {

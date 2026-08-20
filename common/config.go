@@ -168,6 +168,11 @@ const (
 	CfgSubchainUpdateIntervalInMilliseconds = "subchain.updateInterval"
 	// CfgSubchainTestID defines the ID of this node in a test case
 	CfgSubchainTestID = "subchain.testID"
+	// CfgSubchainRelayEnabled controls whether this node relays inter-chain events
+	// (i.e. votes on voucher mints and token unlocks). Setting it to false leaves
+	// the witness running and the event cache up to date, but suspends all
+	// cross-chain relaying.
+	CfgSubchainRelayEnabled = "subchain.relayEnabled"
 )
 
 // InitialConfig is the default configuration produced by init command.
@@ -237,6 +242,7 @@ func init() {
 
 	viper.SetDefault(CfgSubchainUpdateIntervalInMilliseconds, 1000)
 	viper.SetDefault(CfgSubchainMainchainBlockIntervalInSeconds, 6)
+	viper.SetDefault(CfgSubchainRelayEnabled, true)
 	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
 	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 	viper.SetDefault(CfgSubchainMainchainWitenessStartScanHeight, -1)

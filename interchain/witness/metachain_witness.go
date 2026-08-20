@@ -338,11 +338,83 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	toBlock := mw.calculateToBlock(fromBlock, queriedChainID)
 	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", fromBlock.String(), toBlock.String(), queriedChainID.String())
 	events := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, tnt1155TokenBankAddr, mw.queryTopics, ethRpcUrl)
+	events = mw.discardUncorroboratedEvents(queriedChainID, events)
 	err = mw.interChainEventCache.InsertList(events)
 	if err != nil { // should not happen
 		logger.Panicf("failed to insert events into cache")
 	}
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, toBlock)
+}
+
+// discardUncorroboratedEvents drops events that the emitting TokenBank's own
+// storage contradicts.
+//
+// A log alone does not establish that the state transition it describes was
+// committed. Cross-checking the event against the on-chain event height map
+// keeps unconfirmed events out of the cache entirely (see
+// VerifyEventAgainstTokenBankState).
+//
+// The check deliberately fails open when it cannot be performed (e.g. the RPC
+// node is unreachable), because the scan window advances regardless and dropping
+// an unverifiable event would lose it permanently. The orchestrator repeats the
+// same check before voting and fails closed there, so an event that cannot be
+// corroborated is never relayed.
+func (mw *MetachainWitness) discardUncorroboratedEvents(queriedChainID *big.Int, events []*score.InterChainMessageEvent) []*score.InterChainMessageEvent {
+	if len(events) == 0 {
+		return events
+	}
+
+	corroborated := make([]*score.InterChainMessageEvent, 0, len(events))
+	for _, event := range events {
+		tokenBank := mw.getTokenBankForEventType(queriedChainID, event.Type)
+		err := siu.VerifyEventAgainstTokenBankState(tokenBank, event)
+		if err != nil && siu.IsEventNotCorroborated(err) {
+			logger.Errorf("Discarding an inter-chain event on chain %v that the chain state does not confirm: %v", queriedChainID, err)
+			continue
+		}
+		if err != nil {
+			logger.Warnf("Could not verify inter-chain event (type: %v, nonce: %v) on chain %v, keeping it for the orchestrator to re-check: %v",
+				event.Type, event.Nonce, queriedChainID, err)
+		}
+		corroborated = append(corroborated, event)
+	}
+
+	return corroborated
+}
+
+// getTokenBankForEventType returns the TokenBank on the given chain that emits
+// the given event type, or nil if there is no such accessor.
+func (mw *MetachainWitness) getTokenBankForEventType(chainID *big.Int, eventType score.InterChainMessageEventType) siu.TokenBankEventHeightReader {
+	onMainchain := chainID.Cmp(mw.mainchainID) == 0
+
+	switch eventType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherMintTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
+		if onMainchain {
+			return mw.mainchainTFuelTokenBank
+		}
+		return mw.subchainTFuelTokenBank
+	case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherMintTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
+		if onMainchain {
+			return mw.mainchainTNT20TokenBank
+		}
+		return mw.subchainTNT20TokenBank
+	case score.IMCEventTypeCrossChainTokenLockTNT721, score.IMCEventTypeCrossChainVoucherBurnTNT721,
+		score.IMCEventTypeCrossChainVoucherMintTNT721, score.IMCEventTypeCrossChainTokenUnlockTNT721:
+		if onMainchain {
+			return mw.mainchainTNT721TokenBank
+		}
+		return mw.subchainTNT721TokenBank
+	case score.IMCEventTypeCrossChainTokenLockTNT1155, score.IMCEventTypeCrossChainVoucherBurnTNT1155,
+		score.IMCEventTypeCrossChainVoucherMintTNT1155, score.IMCEventTypeCrossChainTokenUnlockTNT1155:
+		if onMainchain {
+			return mw.mainchainTNT1155TokenBank
+		}
+		return mw.subchainTNT1155TokenBank
+	}
+
+	return nil
 }
 
 func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) *big.Int {

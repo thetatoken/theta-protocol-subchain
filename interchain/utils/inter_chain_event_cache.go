@@ -50,7 +50,9 @@ func (c *InterChainEventCache) Insert(event *score.InterChainMessageEvent) error
 	defer c.mutex.Unlock()
 
 	store := kvstore.NewKVStore(c.db)
-	err := store.Put(InterChainEventIndexKey(event.SourceChainID, event.Type, event.Nonce), event)
+	key := InterChainEventIndexKey(event.SourceChainID, event.Type, event.Nonce)
+	reportNonceCollision(store, key, event)
+	err := store.Put(key, event)
 	return err // the caller should handle the error
 }
 
@@ -60,12 +62,39 @@ func (c *InterChainEventCache) InsertList(events []*score.InterChainMessageEvent
 
 	store := kvstore.NewKVStore(c.db)
 	for _, event := range events {
-		err := store.Put(InterChainEventIndexKey(event.SourceChainID, event.Type, event.Nonce), event)
+		key := InterChainEventIndexKey(event.SourceChainID, event.Type, event.Nonce)
+		reportNonceCollision(store, key, event)
+		err := store.Put(key, event)
 		if err != nil {
 			return err // the caller should handle the error
 		}
 	}
 	return nil
+}
+
+// reportNonceCollision raises an alarm when two materially different events claim
+// the same (source chain, event type, nonce) slot.
+//
+// The TokenBank assigns each nonce exactly once, so this is not expected to
+// happen. If it does, at most one of the two events reflects committed state. The
+// cache is keyed by nonce, so the second event silently displaces the first; make
+// that visible rather than quiet.
+//
+// This is a detection aid only. The authoritative check happens in the witness
+// and the orchestrator, which confirm every event against the emitting
+// TokenBank's own state before relaying it.
+func reportNonceCollision(store ts.Store, key common.Bytes, event *score.InterChainMessageEvent) {
+	existing := score.InterChainMessageEvent{}
+	if err := store.Get(key, &existing); err != nil {
+		return // nothing cached under this key yet, which is the normal case
+	}
+	if existing.Equals(event) {
+		return // the same event seen twice, e.g. after a re-scan
+	}
+
+	logger.Errorf("Two different inter-chain events claim source chain %v, type %v, nonce %v. "+
+		"At most one of them can reflect committed state. Cached: %v. Incoming: %v",
+		event.SourceChainID, event.Type, event.Nonce, existing.String(), event.String())
 }
 
 func (c *InterChainEventCache) Delete(sourceChainID *big.Int, imceType score.InterChainMessageEventType, nonce *big.Int) error {
