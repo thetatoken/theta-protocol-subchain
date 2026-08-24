@@ -190,7 +190,10 @@ func (oc *Orchestrator) Start(ctx context.Context) {
 	oc.cancel = cancel
 
 	oc.wg.Add(1)
-	go oc.mainloop(ctx)
+	// Pass the derived context, not the parent: cancel() cancels c, so a mainloop
+	// selecting on the parent would never see Stop() and Wait() would hang. In
+	// production Node.Stop() happens to cancel the shared parent, which masked this.
+	go oc.mainloop(c)
 	oc.logRelayMatrix()
 	logger.Info("Metachain orchestrator started")
 }
@@ -285,6 +288,7 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 }
 
 func (oc *Orchestrator) mainloop(ctx context.Context) {
+	defer oc.wg.Done() // Start() does wg.Add(1); without this Wait() blocks forever
 	oc.eventProcessingTicker = time.NewTicker(time.Duration(oc.updateInterval) * time.Millisecond)
 	for {
 		select {

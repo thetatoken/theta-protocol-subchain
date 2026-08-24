@@ -175,7 +175,10 @@ func (mw *MetachainWitness) Start(ctx context.Context) {
 	mw.cancel = cancel
 
 	mw.wg.Add(1)
-	go mw.mainloop(ctx)
+	// Pass the derived context, not the parent: cancel() cancels c, so a mainloop
+	// selecting on the parent would never see Stop() and Wait() would hang. In
+	// production Node.Stop() happens to cancel the shared parent, which masked this.
+	go mw.mainloop(c)
 }
 
 func (mw *MetachainWitness) Stop() {
@@ -264,6 +267,7 @@ func (mw *MetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 }
 
 func (mw *MetachainWitness) mainloop(ctx context.Context) {
+	defer mw.wg.Done() // Start() does wg.Add(1); without this Wait() blocks forever
 	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
 	for {
 		select {

@@ -1,11 +1,13 @@
 package witness
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"sync"
 	"testing"
 	"time"
 
@@ -90,4 +92,50 @@ func TestBlockHeightReadIsBounded(t *testing.T) {
 	assert.NotNil(err)
 	assert.Less(elapsed, blockHeightQueryTimeout+10*time.Second,
 		"the head-height read must carry a deadline")
+}
+
+// The test above proves the helper reports failure. It does NOT prove update() acts
+// on that report -- removing the early return would leave it green, which is the same
+// unit-versus-wiring gap that hid S5 and T4. This drives update() itself.
+func TestUpdateSkipsTheTickWhenTheHeightIsUnavailable(t *testing.T) {
+	mw := &MetachainWitness{
+		mainchainEthRpcClient: heightNode(t, "", "connection refused", 0),
+		subchainEthRpcClient:  heightNode(t, "", "connection refused", 0),
+	}
+
+	// With the early return in place, update() bails before CalculateDynasty() and
+	// before any of the collection work, none of which is wired up here. Without it,
+	// CalculateDynasty(nil) panics.
+	assert.NotPanics(t, func() { mw.update() },
+		"update() must skip the tick when the mainchain height could not be read")
+	assert.Nil(t, mw.mainchainBlockHeight)
+}
+
+// Stop() must actually stop the loop. All three components stored a derived context
+// but handed mainloop the parent, so cancel() cancelled a context nothing was
+// selecting on and Wait() would hang. Production masked it: Node.Stop() cancels the
+// shared parent.
+func TestStopCancelsTheDerivedContext(t *testing.T) {
+	mw := &MetachainWitness{
+		wg:                    &sync.WaitGroup{},
+		updateInterval:        1000,
+		mainchainEthRpcClient: heightNode(t, "", "connection refused", 0),
+		subchainEthRpcClient:  heightNode(t, "", "connection refused", 0),
+	}
+
+	// A parent that is never cancelled: only the derived context can end the loop.
+	mw.Start(context.Background())
+
+	done := make(chan struct{})
+	go func() {
+		mw.Stop()
+		mw.Wait()
+		close(done)
+	}()
+
+	select {
+	case <-done:
+	case <-time.After(15 * time.Second):
+		t.Fatal("Stop(); Wait() hung: mainloop is not watching the context Stop() cancels")
+	}
 }
