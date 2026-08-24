@@ -33,6 +33,28 @@ var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 // follows it, in case the configured value is missing or nonsensical.
 const defaultRelayDryRunTimeout = 5 * time.Second
 
+// relayRpcTimeout is the bound applied to every RPC read on the relay hot path.
+//
+// Theta's eth_call retries internally with a one-block sleep between attempts, so an
+// unresponsive node holds an unbounded read open for tens of seconds. The processing
+// tick is strictly sequential across four asset classes in both directions, so a
+// single unbounded read starves every relay behind it. Bounding the dry run alone is
+// not sufficient: the nonce and collateral reads run *before* it, on every tick.
+func relayRpcTimeout() time.Duration {
+	timeout := time.Duration(viper.GetInt(scom.CfgSubchainRelayDryRunTimeoutInSeconds)) * time.Second
+	if timeout <= 0 {
+		timeout = defaultRelayDryRunTimeout
+	}
+	return timeout
+}
+
+// boundedCallOpts returns CallOpts carrying a deadline. The caller must invoke the
+// returned cancel func, conventionally with defer.
+func boundedCallOpts() (*bind.CallOpts, context.CancelFunc) {
+	ctx, cancel := context.WithTimeout(context.Background(), relayRpcTimeout())
+	return &bind.CallOpts{Context: ctx}, cancel
+}
+
 var (
 	ErrDynastyIsNil           = errors.New("nil dynasty")
 	ErrTargetChainMismatch    = errors.New("target chain mismatch")
@@ -253,7 +275,9 @@ func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, target
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
-	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TFuel token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
@@ -264,7 +288,9 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 
 func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
-	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
@@ -274,7 +300,9 @@ func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, t
 
 func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
-	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT721 token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
@@ -284,7 +312,9 @@ func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, 
 
 func (oc *Orchestrator) processNextTNT1155TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
-	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedTokenLockNonce, err := targetChainTokenBank.GetMaxProcessedTokenLockNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT1155 token lock nonce for chain: %v, err: %v", targetChainID.String(), err)
 		return // ignore
@@ -301,7 +331,9 @@ func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targ
 
 func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
-	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TFuel voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -312,7 +344,9 @@ func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int,
 
 func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
-	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT20 voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -323,7 +357,9 @@ func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int,
 
 func (oc *Orchestrator) processNextTNT721VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
-	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT721 voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -334,7 +370,9 @@ func (oc *Orchestrator) processNextTNT721VoucherBurnEvent(sourceChainID *big.Int
 
 func (oc *Orchestrator) processNextTNT1155VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
 	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
-	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(nil, sourceChainID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	maxProcessedVoucherBurnNonce, err := targetChainTokenBank.GetMaxProcessedVoucherBurnNonce(opts, sourceChainID)
 	if err != nil {
 		logger.Warnf("Failed to query the max processed TNT1155 voucher burn nonce for chain: %v", targetChainID.String())
 		return // ignore
@@ -812,7 +850,9 @@ func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bin
 	var gasPrice *big.Int
 	var err error
 	if chainID.Cmp(oc.mainchainID) == 0 {
-		gasPrice, err = ecClient.SuggestGasPrice(context.Background())
+		gasCtx, cancelGas := context.WithTimeout(context.Background(), relayRpcTimeout())
+		defer cancelGas()
+		gasPrice, err = ecClient.SuggestGasPrice(gasCtx)
 		if err != nil {
 			return nil, err
 		}
@@ -823,7 +863,9 @@ func (oc *Orchestrator) buildTxOpts(chainID *big.Int, ecClient *ec.Client) (*bin
 		gasPrice = common.Big0
 	}
 
-	nonce, err := ecClient.PendingNonceAt(context.Background(), oc.privateKey.PublicKey().Address())
+	nonceCtx, cancelNonce := context.WithTimeout(context.Background(), relayRpcTimeout())
+	defer cancelNonce()
+	nonce, err := ecClient.PendingNonceAt(nonceCtx, oc.privateKey.PublicKey().Address())
 	if err != nil {
 		return nil, err
 	}
@@ -885,10 +927,7 @@ func (oc *Orchestrator) simulateAndSend(chainID *big.Int, tx *types.Transaction)
 	// both directions, so an unbounded call here starves every relay behind it. That is
 	// not hypothetical: a voucher burn the target bank can never cover stays in the
 	// failing state permanently.
-	timeout := time.Duration(viper.GetInt(scom.CfgSubchainRelayDryRunTimeoutInSeconds)) * time.Second
-	if timeout <= 0 {
-		timeout = defaultRelayDryRunTimeout
-	}
+	timeout := relayRpcTimeout()
 
 	callCtx, cancelCall := context.WithTimeout(context.Background(), timeout)
 	defer cancelCall()
@@ -965,7 +1004,9 @@ func (oc *Orchestrator) verifyTNT20UnlockCollateral(targetChainID *big.Int, deno
 	}
 
 	bankAddr := oc.getTNT20TokenBankAddr(targetChainID)
-	balance, err := token.BalanceOf(nil, bankAddr)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	balance, err := token.BalanceOf(opts, bankAddr)
 	if err != nil {
 		// Could not check. Fail closed, consistent with the rest of the vote path:
 		// skipping a round merely delays a genuine transfer.
@@ -997,7 +1038,9 @@ func (oc *Orchestrator) verifyTNT721UnlockCollateral(targetChainID *big.Int, den
 	}
 
 	bankAddr := oc.getTNT721TokenBankAddr(targetChainID)
-	owner, err := token.OwnerOf(nil, tokenID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	owner, err := token.OwnerOf(opts, tokenID)
 	if err != nil {
 		return fmt.Errorf("failed to read the owner of TNT721 token %v (%v) on chain %v: %v", tokenID, tokenAddr.Hex(), targetChainID, err)
 	}
@@ -1026,7 +1069,9 @@ func (oc *Orchestrator) verifyTNT1155UnlockCollateral(targetChainID *big.Int, de
 	}
 
 	bankAddr := oc.getTNT1155TokenBankAddr(targetChainID)
-	balance, err := token.BalanceOf(nil, bankAddr, tokenID)
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+	balance, err := token.BalanceOf(opts, bankAddr, tokenID)
 	if err != nil {
 		return fmt.Errorf("failed to read the TNT1155 balance of the TokenBank %v on chain %v: %v", bankAddr.Hex(), targetChainID, err)
 	}

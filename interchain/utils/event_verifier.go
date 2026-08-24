@@ -1,14 +1,37 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"math/big"
+	"time"
 
+	"github.com/spf13/viper"
 	"github.com/thetatoken/thetasubchain/eth/abi/bind"
 
+	scom "github.com/thetatoken/thetasubchain/common"
 	score "github.com/thetatoken/thetasubchain/core"
 )
+
+// defaultVerifierTimeout bounds the corroboration read when no value is configured.
+const defaultVerifierTimeout = 5 * time.Second
+
+// verifierCallOpts bounds the corroboration read.
+//
+// Theta's eth_call retries internally with a one-block sleep between attempts, so an
+// unbounded read against an unresponsive node holds the caller for tens of seconds.
+// Both callers sit on a sequential loop, so that delay is paid by every event behind
+// this one. A read that times out surfaces as ErrEventVerificationUnavailable rather
+// than as a contradiction, which is the distinction the callers act on.
+func verifierCallOpts() (*bind.CallOpts, context.CancelFunc) {
+	timeout := time.Duration(viper.GetInt(scom.CfgSubchainRelayDryRunTimeoutInSeconds)) * time.Second
+	if timeout <= 0 {
+		timeout = defaultVerifierTimeout
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
+	return &bind.CallOpts{Context: ctx}, cancel
+}
 
 var (
 	// ErrEventNotCorroborated indicates that the source chain's TokenBank contract
@@ -58,18 +81,21 @@ func VerifyEventAgainstTokenBankState(bank TokenBankEventHeightReader, event *sc
 	var recordedHeight *big.Int
 	var err error
 
+	opts, cancel := verifierCallOpts()
+	defer cancel()
+
 	switch event.Type {
 	case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainTokenLockTNT20,
 		score.IMCEventTypeCrossChainTokenLockTNT721, score.IMCEventTypeCrossChainTokenLockTNT1155:
 		// tokenLockEventHeightMap is keyed by the target chain, matching the
 		// targetChainID carried by the TokenLocked event.
-		recordedHeight, err = bank.GetTokenLockEventHeight(nil, event.TargetChainID, event.Nonce)
+		recordedHeight, err = bank.GetTokenLockEventHeight(opts, event.TargetChainID, event.Nonce)
 
 	case score.IMCEventTypeCrossChainVoucherBurnTFuel, score.IMCEventTypeCrossChainVoucherBurnTNT20,
 		score.IMCEventTypeCrossChainVoucherBurnTNT721, score.IMCEventTypeCrossChainVoucherBurnTNT1155:
 		// voucherBurnEventHeightMap is keyed by the chain the tokens return to,
 		// which the witness derives from the denom of the VoucherBurned event.
-		recordedHeight, err = bank.GetVoucherBurnEventHeight(nil, event.TargetChainID, event.Nonce)
+		recordedHeight, err = bank.GetVoucherBurnEventHeight(opts, event.TargetChainID, event.Nonce)
 
 	default:
 		// Voucher mint and token unlock events are never relayed onwards, so

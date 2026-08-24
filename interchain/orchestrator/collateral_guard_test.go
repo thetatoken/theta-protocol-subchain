@@ -526,3 +526,61 @@ func TestUnlockTNT20TokensAllowsACollateralizedRelay(t *testing.T) {
 			"a fully collateralized relay must not be refused by the guard")
 	}
 }
+
+//
+// Bounded hot-path reads. The dry run was bounded first, but the collateral and
+// nonce reads run *before* it on every tick, so leaving those unbounded left the
+// starvation they were meant to prevent fully intact.
+//
+
+// The guard must give up on an unresponsive node rather than hold the sequential
+// processing tick open for as long as that node cares to stay silent.
+func TestCollateralGuardIsBoundedAgainstAnUnresponsiveNode(t *testing.T) {
+	assert := assert.New(t)
+
+	fn := newFakeNode(t, func(_ string, _ []json.RawMessage) (string, string) {
+		return word(big.NewInt(10_000)), ""
+	})
+	fn.delay = 30 * time.Second
+	oc := newTestOrchestrator(t, fn)
+
+	viper.Set(scom.CfgSubchainRelayDryRunTimeoutInSeconds, 1)
+	defer viper.Set(scom.CfgSubchainRelayDryRunTimeoutInSeconds, 5)
+
+	start := time.Now()
+	err := oc.verifyTNT20UnlockCollateral(big.NewInt(testMainchainID), testTNT20Denom, big.NewInt(1))
+	elapsed := time.Since(start)
+
+	assert.NotNil(err, "an unreadable balance must fail closed")
+	assert.Less(elapsed, 10*time.Second, "the collateral read must be bounded, not merely the dry run")
+}
+
+// Same for the first RPC call made on every relay path. If this one is unbounded the
+// tick never even reaches the guard or the dry run.
+func TestMaxProcessedNonceReadIsBounded(t *testing.T) {
+	assert := assert.New(t)
+
+	fn := newFakeNode(t, func(_ string, _ []json.RawMessage) (string, string) {
+		return word(big.NewInt(1)), ""
+	})
+	fn.delay = 30 * time.Second
+	oc := newTestOrchestrator(t, fn)
+
+	bank, err := scta.NewTFuelTokenBank(testBankAddr, oc.mainchainEthRpcClient)
+	if err != nil {
+		t.Fatalf("failed to bind the TFuelTokenBank: %v", err)
+	}
+
+	viper.Set(scom.CfgSubchainRelayDryRunTimeoutInSeconds, 1)
+	defer viper.Set(scom.CfgSubchainRelayDryRunTimeoutInSeconds, 5)
+
+	opts, cancel := boundedCallOpts()
+	defer cancel()
+
+	start := time.Now()
+	_, err = bank.GetMaxProcessedVoucherBurnNonce(opts, big.NewInt(testSubchainID))
+	elapsed := time.Since(start)
+
+	assert.NotNil(err)
+	assert.Less(elapsed, 10*time.Second, "boundedCallOpts must carry a deadline into the binding")
+}
