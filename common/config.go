@@ -195,6 +195,11 @@ const (
 	// interchain/orchestrator for the trade-off this makes, and set it to false on a
 	// chain that bridges a token whose supply can shrink out from under the bank.
 	CfgSubchainEnforceUnlockCollateral = "subchain.enforceUnlockCollateral"
+	// CfgSubchainUncorroboratedEventQuarantineInSeconds is how long an inter-chain
+	// event must remain contradicted by source chain state before this node discards
+	// it. A contradiction can come from a lagging RPC backend as easily as from a
+	// forged event, and discarding is irreversible, so the default is generous.
+	CfgSubchainUncorroboratedEventQuarantineInSeconds = "subchain.uncorroboratedEventQuarantine"
 )
 
 // InitialConfig is the default configuration produced by init command.
@@ -267,6 +272,7 @@ func init() {
 	viper.SetDefault(CfgSubchainRelayEnabled, true)
 	viper.SetDefault(CfgSubchainRelayDryRunTimeoutInSeconds, 5)
 	viper.SetDefault(CfgSubchainEnforceUnlockCollateral, true)
+	viper.SetDefault(CfgSubchainUncorroboratedEventQuarantineInSeconds, 1800)
 	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
 	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 	viper.SetDefault(CfgSubchainMainchainWitenessStartScanHeight, -1)

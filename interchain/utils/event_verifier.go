@@ -70,12 +70,27 @@ type TokenBankEventHeightReader interface {
 //
 // The check is nonce-anchored as well: the map is keyed by (targetChainID,
 // nonce), and a nonce is assigned at most once.
-func VerifyEventAgainstTokenBankState(bank TokenBankEventHeightReader, event *score.InterChainMessageEvent) error {
+// The headHeight argument is the source chain's current head as seen by the node
+// being queried, or nil if it could not be determined. It exists because the
+// corroboration read is served from latest state: a node that has not yet reached
+// the event's block will report no record for a nonce that was in fact committed,
+// which is indistinguishable from a genuine contradiction. Classifying that as
+// "contradicted" causes a real transfer to be discarded, so a node behind the
+// event's block yields ErrEventVerificationUnavailable instead.
+//
+// Note this narrows the window rather than closing it: the head read and the state
+// read are separate calls, so a load balancer can still route them to backends at
+// different heights. The quarantine in the orchestrator covers the remainder.
+func VerifyEventAgainstTokenBankState(bank TokenBankEventHeightReader, event *score.InterChainMessageEvent, headHeight *big.Int) error {
 	if bank == nil {
 		return fmt.Errorf("%w: no TokenBank accessor for event type %v", ErrEventVerificationUnavailable, event.Type)
 	}
 	if event.Nonce == nil || event.BlockHeight == nil || event.TargetChainID == nil {
 		return fmt.Errorf("%w: event is missing the nonce, the block height, or the target chain ID", ErrEventNotCorroborated)
+	}
+	if headHeight != nil && headHeight.Cmp(event.BlockHeight) < 0 {
+		return fmt.Errorf("%w: the node is at block %v but the event is from block %v, so its state is not visible yet",
+			ErrEventVerificationUnavailable, headHeight, event.BlockHeight)
 	}
 
 	var recordedHeight *big.Int

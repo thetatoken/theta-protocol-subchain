@@ -33,6 +33,12 @@ var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 // follows it, in case the configured value is missing or nonsensical.
 const defaultRelayDryRunTimeout = 5 * time.Second
 
+// defaultUncorroboratedEventQuarantine is how long an event must stay contradicted by
+// source chain state before it is discarded. It is deliberately generous: discarding
+// is irreversible and jams the nonce sequence, whereas holding a forged event costs
+// only a periodic re-check, and the event is never relayed while it is held.
+const defaultUncorroboratedEventQuarantine = 30 * time.Minute
+
 // relayRpcTimeout is the bound applied to every RPC read on the relay hot path.
 //
 // Theta's eth_call retries internally with a one-block sleep between attempts, so an
@@ -70,6 +76,10 @@ type Orchestrator struct {
 	eventProcessingTicker *time.Ticker
 	metachainWitness      witness.ChainWitness
 	eventProcessedTime    map[string]time.Time
+	// firstContradictedTime records when an event was first found to be contradicted
+	// by source chain state, keyed the same way as eventProcessedTime. See
+	// quarantineExpired().
+	firstContradictedTime map[string]time.Time
 
 	// The mainchain
 	mainchainID                   *big.Int
@@ -409,16 +419,29 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 		// corresponding lock or burn was committed.
 		if err := oc.verifyEventAgainstSourceChain(sourceChainID, sourceEvent); err != nil {
 			if siu.IsEventNotCorroborated(err) {
-				logger.Errorf("Refusing to relay an inter-chain event that the source chain state does not confirm: %v", err)
-				// Drop it, so that the genuine event carrying this nonce, if any,
-				// can take its place in the cache on a subsequent scan.
-				oc.interChainEventCache.Delete(sourceChainID, sourceChainEventType, nextNonce)
+				// Quarantine rather than delete. A contradiction can be produced by a
+				// lagging or load-balanced RPC backend as easily as by a forged event,
+				// and deleting on the first such read discards a genuine transfer
+				// permanently: the scan window has moved on and nothing rescans it.
+				// The event is not relayed either way -- this path never votes -- so
+				// holding it costs nothing but a retry.
+				if oc.quarantineExpired(sourceEvent) {
+					logger.Errorf("Discarding an inter-chain event that source chain state has contradicted "+
+						"for longer than the quarantine period: %v", err)
+					oc.interChainEventCache.Delete(sourceChainID, sourceChainEventType, nextNonce)
+					oc.clearContradicted(sourceEvent)
+				} else {
+					logger.Errorf("Refusing to relay an inter-chain event that the source chain state does not "+
+						"confirm; holding it for re-check: %v", err)
+				}
 			} else {
+				oc.clearContradicted(sourceEvent)
 				logger.Warnf("Skipping the event for now, could not verify it against the source chain: %v", err)
 			}
 			oc.updateEventProcessedTime(sourceEvent)
 			return
 		}
+		oc.clearContradicted(sourceEvent)
 
 		err := oc.callTargetContract(targetChainID, targetEventType, sourceEvent)
 
@@ -440,9 +463,37 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 // error if the check could not be carried out, in which case the caller must not
 // relay the event either -- unlike the witness, the orchestrator fails closed,
 // since skipping a round merely delays a genuine transfer.
+// quarantineExpired reports whether an event has been contradicted continuously for
+// longer than the quarantine period, and records the first contradiction if this is
+// the first one seen. A transient disagreement -- a backend a few blocks behind, a
+// node restarting -- resolves well inside the window; a forged event never does.
+func (oc *Orchestrator) quarantineExpired(event *score.InterChainMessageEvent) bool {
+	key := event.ID()
+	firstSeen, ok := oc.firstContradictedTime[key]
+	if !ok {
+		oc.firstContradictedTime[key] = time.Now()
+		return false
+	}
+	return time.Since(firstSeen) > oc.getQuarantinePeriod()
+}
+
+// clearContradicted forgets a past contradiction, so that the quarantine measures a
+// continuous disagreement rather than an accumulation of unrelated blips.
+func (oc *Orchestrator) clearContradicted(event *score.InterChainMessageEvent) {
+	delete(oc.firstContradictedTime, event.ID())
+}
+
+func (oc *Orchestrator) getQuarantinePeriod() time.Duration {
+	seconds := viper.GetInt(scom.CfgSubchainUncorroboratedEventQuarantineInSeconds)
+	if seconds <= 0 {
+		return defaultUncorroboratedEventQuarantine
+	}
+	return time.Duration(seconds) * time.Second
+}
+
 func (oc *Orchestrator) verifyEventAgainstSourceChain(sourceChainID *big.Int, event *score.InterChainMessageEvent) error {
 	tokenBank := oc.getTokenBankForEventType(sourceChainID, event.Type)
-	return siu.VerifyEventAgainstTokenBankState(tokenBank, event)
+	return siu.VerifyEventAgainstTokenBankState(tokenBank, event, oc.getChainHeadHeight(sourceChainID))
 }
 
 // getTokenBankForEventType returns the TokenBank on the given chain that emits
@@ -1102,6 +1153,25 @@ func (oc *Orchestrator) getTNT1155TokenBankAddr(chainID *big.Int) common.Address
 		return oc.mainchainTNT1155TokenBankAddr
 	}
 	return oc.subchainTNT1155TokenBankAddr
+}
+
+// getChainHeadHeight returns the given chain's head as seen by the node this
+// orchestrator queries, or nil if it cannot be read. nil disables the verifier's
+// staleness check rather than failing verification outright.
+func (oc *Orchestrator) getChainHeadHeight(chainID *big.Int) *big.Int {
+	client := oc.getEthRpcClient(chainID)
+	if client == nil {
+		return nil
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), relayRpcTimeout())
+	defer cancel()
+
+	height, err := client.BlockNumber(ctx)
+	if err != nil {
+		logger.Warnf("Could not read the head height of chain %v, skipping the staleness check: %v", chainID, err)
+		return nil
+	}
+	return new(big.Int).SetUint64(height)
 }
 
 func (oc *Orchestrator) getEthRpcClient(chainID *big.Int) *ec.Client {

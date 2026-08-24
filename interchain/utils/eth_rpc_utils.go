@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
@@ -31,10 +32,28 @@ type LogData struct {
 	Type             string   `json:"type"`
 }
 
+// eventLogQueryTimeout bounds the eth_getLogs call. The default http.Client has no
+// timeout at all, so an unresponsive node would hold the witness loop open forever.
+const eventLogQueryTimeout = 30 * time.Second
+
 type RPCResult struct {
 	Jsonrpc string    `json:"jsonrpc"`
 	Id      int64     `json:"id"`
 	Result  []LogData `json:"result"`
+	Error   *RPCError `json:"error"`
+}
+
+// RPCError carries a JSON-RPC error object. Without it, an error response
+// unmarshals into a RPCResult with a nil Result and no indication that anything
+// went wrong, which is indistinguishable from "this block range contained no
+// events".
+type RPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+func (e *RPCError) Error() string {
+	return fmt.Sprintf("JSON-RPC error %v: %v", e.Code, e.Message)
 }
 
 type TransferEvent struct {
@@ -89,7 +108,13 @@ var EventSelectors = map[score.InterChainMessageEventType]string{
 	score.IMCEventTypeCrossChainTokenUnlockTNT1155: crypto.Keccak256Hash([]byte("TNT1155TokenUnlocked(string,address,uint256,uint256,uint256,uint256)")).Hex(),
 }
 
-func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, tfuelTokenbankAddress common.Address, tnt20TokenBankAddress common.Address, tnt721TokenBankAddress common.Address, tnt1155TokenBankAddress common.Address, queryTopics string, url string) []*score.InterChainMessageEvent {
+// QueryInterChainEventLog returns the inter-chain events in [fromBlock, toBlock].
+//
+// It returns an error for every failure mode rather than an empty slice. The caller
+// advances its scan checkpoint on the strength of this result, so "the query failed"
+// and "the range contained no events" must not be conflated: doing so permanently
+// skips the range.
+func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, tfuelTokenbankAddress common.Address, tnt20TokenBankAddress common.Address, tnt721TokenBankAddress common.Address, tnt1155TokenBankAddress common.Address, queryTopics string, url string) ([]*score.InterChainMessageEvent, error) {
 
 	var events []*score.InterChainMessageEvent
 
@@ -98,31 +123,32 @@ func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBloc
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		// logger.Fatal(err)
-		logger.Warnf("Failed to post to %v, err: %v", url, err)
-		return events // ignore, the query is repeated periodically anyway
+		return nil, fmt.Errorf("failed to build the eth_getLogs request for %v: %v", url, err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: eventLogQueryTimeout}
 	response, err := client.Do(request)
 	if err != nil {
-		// logger.Fatalf("response error : %v", err)
-		logger.Warnf("RPC response error %v, err: %v", url, err)
-		return events // ignore, the query is repeated periodically anyway
+		return nil, fmt.Errorf("eth_getLogs request to %v failed: %v", url, err)
 	}
 	defer response.Body.Close()
 
-	body, _ := ioutil.ReadAll(response.Body)
-	var rpcres RPCResult
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("eth_getLogs to %v returned HTTP %v", url, response.Status)
+	}
 
-	err = json.Unmarshal(body, &rpcres)
+	body, err := ioutil.ReadAll(response.Body)
 	if err != nil {
-		fmt.Printf("error decoding response: %v\n", err)
-		if e, ok := err.(*json.SyntaxError); ok {
-			fmt.Printf("syntax error at byte offset %d\n", e.Offset)
-		}
-		fmt.Printf("response: %q\n", body)
+		return nil, fmt.Errorf("failed to read the eth_getLogs response from %v: %v", url, err)
+	}
+
+	var rpcres RPCResult
+	if err := json.Unmarshal(body, &rpcres); err != nil {
+		return nil, fmt.Errorf("failed to decode the eth_getLogs response from %v: %v (body: %.256q)", url, err, body)
+	}
+	if rpcres.Error != nil {
+		return nil, fmt.Errorf("eth_getLogs to %v: %v", url, rpcres.Error)
 	}
 
 	for _, logData := range rpcres.Result {
@@ -172,7 +198,7 @@ func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBloc
 		default:
 		}
 	}
-	return events
+	return events, nil
 }
 
 func extractTFuelTokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {

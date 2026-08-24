@@ -43,6 +43,10 @@ func (f *fakeTokenBank) GetVoucherBurnEventHeight(opts *bind.CallOpts, chainID *
 	return big.NewInt(0), nil
 }
 
+// testHead is a head height well past every event block used below, so the staleness
+// check never fires except where a test sets it deliberately.
+var testHead = big.NewInt(1_000_000)
+
 const (
 	testSubchainID  = 9001
 	testMainchainID = 9000
@@ -74,10 +78,10 @@ func TestVerifyAcceptsCorroboratedEvent(t *testing.T) {
 	assert := assert.New(t)
 
 	bank := &fakeTokenBank{burnHeights: map[string]*big.Int{"9000/42": big.NewInt(1000)}}
-	assert.Nil(VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000)))
+	assert.Nil(VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000), testHead), testHead)
 
 	bank = &fakeTokenBank{lockHeights: map[string]*big.Int{"9001/17": big.NewInt(2000)}}
-	assert.Nil(VerifyEventAgainstTokenBankState(bank, lockEvent(17, 2000)))
+	assert.Nil(VerifyEventAgainstTokenBankState(bank, lockEvent(17, 2000), testHead), testHead)
 }
 
 // A log whose frame reverted: the nonce was never committed, so the height the
@@ -88,7 +92,7 @@ func TestVerifyRejectsEventFromRevertedFrame(t *testing.T) {
 
 	bank := &fakeTokenBank{burnHeights: map[string]*big.Int{"9000/42": big.NewInt(1050)}}
 
-	err := VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000))
+	err := VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000), testHead)
 	assert.NotNil(err)
 	assert.True(IsEventNotCorroborated(err))
 }
@@ -97,7 +101,7 @@ func TestVerifyRejectsEventFromRevertedFrame(t *testing.T) {
 func TestVerifyRejectsUnknownNonce(t *testing.T) {
 	assert := assert.New(t)
 
-	err := VerifyEventAgainstTokenBankState(&fakeTokenBank{}, burnEvent(999, 1000))
+	err := VerifyEventAgainstTokenBankState(&fakeTokenBank{}, burnEvent(999, 1000), testHead)
 	assert.NotNil(err)
 	assert.True(IsEventNotCorroborated(err))
 }
@@ -109,7 +113,7 @@ func TestVerifyDoesNotCrossTheLockAndBurnMaps(t *testing.T) {
 
 	bank := &fakeTokenBank{lockHeights: map[string]*big.Int{"9000/42": big.NewInt(1000)}}
 
-	err := VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000))
+	err := VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000), testHead)
 	assert.NotNil(err)
 	assert.True(IsEventNotCorroborated(err))
 }
@@ -121,12 +125,12 @@ func TestVerifyReportsUnavailableSeparatelyFromContradicted(t *testing.T) {
 
 	bank := &fakeTokenBank{err: errors.New("connection refused")}
 
-	err := VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000))
+	err := VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000), testHead)
 	assert.NotNil(err)
 	assert.False(IsEventNotCorroborated(err))
 	assert.True(errors.Is(err, ErrEventVerificationUnavailable))
 
-	err = VerifyEventAgainstTokenBankState(nil, burnEvent(42, 1000))
+	err = VerifyEventAgainstTokenBankState(nil, burnEvent(42, 1000), testHead)
 	assert.NotNil(err)
 	assert.False(IsEventNotCorroborated(err))
 	assert.True(errors.Is(err, ErrEventVerificationUnavailable))
@@ -139,10 +143,10 @@ func TestVerifySkipsNonRelayedEventTypes(t *testing.T) {
 
 	event := burnEvent(42, 1000)
 	event.Type = score.IMCEventTypeCrossChainVoucherMintTFuel
-	assert.Nil(VerifyEventAgainstTokenBankState(&fakeTokenBank{}, event))
+	assert.Nil(VerifyEventAgainstTokenBankState(&fakeTokenBank{}, event, testHead), testHead)
 
 	event.Type = score.IMCEventTypeCrossChainTokenUnlockTNT20
-	assert.Nil(VerifyEventAgainstTokenBankState(&fakeTokenBank{}, event))
+	assert.Nil(VerifyEventAgainstTokenBankState(&fakeTokenBank{}, event, testHead), testHead)
 }
 
 // A malformed event (missing nonce, height, or target chain) must be rejected
@@ -154,13 +158,40 @@ func TestVerifyRejectsIncompleteEvent(t *testing.T) {
 
 	event := burnEvent(42, 1000)
 	event.TargetChainID = nil
-	assert.True(IsEventNotCorroborated(VerifyEventAgainstTokenBankState(bank, event)))
+	assert.True(IsEventNotCorroborated(VerifyEventAgainstTokenBankState(bank, event, testHead)), testHead)
 
 	event = burnEvent(42, 1000)
 	event.BlockHeight = nil
-	assert.True(IsEventNotCorroborated(VerifyEventAgainstTokenBankState(bank, event)))
+	assert.True(IsEventNotCorroborated(VerifyEventAgainstTokenBankState(bank, event, testHead)), testHead)
 
 	event = burnEvent(42, 1000)
 	event.Nonce = nil
-	assert.True(IsEventNotCorroborated(VerifyEventAgainstTokenBankState(bank, event)))
+	assert.True(IsEventNotCorroborated(VerifyEventAgainstTokenBankState(bank, event, testHead)), testHead)
+}
+
+// A node that has not yet reached the event's block reports no record for a nonce
+// that was in fact committed. That is indistinguishable from a forgery by value, so
+// it must be reported as "cannot check" rather than "contradicted" -- the callers
+// discard on the latter, and discarding a genuine transfer is irreversible.
+func TestVerifyTreatsALaggingNodeAsUnavailableNotContradicted(t *testing.T) {
+	assert := assert.New(t)
+
+	bank := &fakeTokenBank{} // knows nothing yet: it is behind
+	event := burnEvent(42, 1000)
+
+	err := VerifyEventAgainstTokenBankState(bank, event, big.NewInt(999)) // one block short
+	assert.NotNil(err)
+	assert.False(IsEventNotCorroborated(err), "a lagging node must not produce a contradiction")
+	assert.True(errors.Is(err, ErrEventVerificationUnavailable))
+
+	// Once the node has reached the block, the same empty result is a real contradiction.
+	err = VerifyEventAgainstTokenBankState(bank, event, big.NewInt(1000))
+	assert.True(IsEventNotCorroborated(err))
+}
+
+// An unknown head height must not block verification, otherwise an unavailable
+// BlockNumber call would stall every relay.
+func TestVerifyWorksWithoutAHeadHeight(t *testing.T) {
+	bank := &fakeTokenBank{burnHeights: map[string]*big.Int{"9000/42": big.NewInt(1000)}}
+	assert.Nil(t, VerifyEventAgainstTokenBankState(bank, burnEvent(42, 1000), nil))
 }

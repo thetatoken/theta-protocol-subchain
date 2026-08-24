@@ -337,49 +337,86 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	}
 	toBlock := mw.calculateToBlock(fromBlock, queriedChainID)
 	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", fromBlock.String(), toBlock.String(), queriedChainID.String())
-	events := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, tnt1155TokenBankAddr, mw.queryTopics, ethRpcUrl)
-	events = mw.discardUncorroboratedEvents(queriedChainID, events)
-	err = mw.interChainEventCache.InsertList(events)
-	if err != nil { // should not happen
-		logger.Panicf("failed to insert events into cache")
+	events, err := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, tnt1155TokenBankAddr, mw.queryTopics, ethRpcUrl)
+	if err != nil {
+		// The scan checkpoint must NOT advance here. Treating a failed query as an
+		// empty range would skip [fromBlock, toBlock] permanently: nothing rescans
+		// it, so any lock or burn inside it is lost and the nonce sequence jams.
+		logger.Errorf("Failed to query inter-chain events on chain %v for blocks %v-%v, will retry the same range: %v",
+			queriedChainID, fromBlock, toBlock, err)
+		return
 	}
+
+	events = mw.flagUncorroboratedEvents(queriedChainID, events)
+
+	if err := mw.interChainEventCache.InsertList(events); err != nil {
+		// Same reasoning: the events were fetched but not durably stored, so the
+		// range has to be scanned again. InsertList is keyed by (chain, type, nonce)
+		// and overwrites, so re-scanning is idempotent.
+		logger.Errorf("Failed to insert inter-chain events into the cache for chain %v, will retry blocks %v-%v: %v",
+			queriedChainID, fromBlock, toBlock, err)
+		return
+	}
+
+	// Only now is it safe to record that this range has been consumed.
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, toBlock)
 }
 
-// discardUncorroboratedEvents drops events that the emitting TokenBank's own
-// storage contradicts.
+// flagUncorroboratedEvents alarms on events the emitting TokenBank's own storage does
+// not confirm, and returns the list unchanged.
 //
-// A log alone does not establish that the state transition it describes was
-// committed. Cross-checking the event against the on-chain event height map
-// keeps unconfirmed events out of the cache entirely (see
-// VerifyEventAgainstTokenBankState).
+// It deliberately does NOT drop them. An earlier version did, on the reasoning that
+// unconfirmed events should never reach the cache. The problem is that "contradicted"
+// is not reliably distinguishable from "read too early": the corroboration read is
+// served from latest state, so a lagging or load-balanced RPC backend reports no
+// record for a nonce that was in fact committed. Dropping on that verdict discards a
+// real transfer permanently, because the scan window has already moved past the block
+// it came from and nothing rescans it. The resulting jam is exactly the failure this
+// chain is already living with.
 //
-// The check deliberately fails open when it cannot be performed (e.g. the RPC
-// node is unreachable), because the scan window advances regardless and dropping
-// an unverifiable event would lose it permanently. The orchestrator repeats the
-// same check before voting and fails closed there, so an event that cannot be
-// corroborated is never relayed.
-func (mw *MetachainWitness) discardUncorroboratedEvents(queriedChainID *big.Int, events []*score.InterChainMessageEvent) []*score.InterChainMessageEvent {
+// Keeping the event costs nothing in fund safety: the orchestrator repeats the check
+// and fails closed, so an uncorroborated event is never relayed regardless of whether
+// it sits in the cache. It is the orchestrator, not the cache, that gates a vote.
+func (mw *MetachainWitness) flagUncorroboratedEvents(queriedChainID *big.Int, events []*score.InterChainMessageEvent) []*score.InterChainMessageEvent {
 	if len(events) == 0 {
 		return events
 	}
 
-	corroborated := make([]*score.InterChainMessageEvent, 0, len(events))
+	headHeight := mw.getChainHeadHeight(queriedChainID)
+
 	for _, event := range events {
 		tokenBank := mw.getTokenBankForEventType(queriedChainID, event.Type)
-		err := siu.VerifyEventAgainstTokenBankState(tokenBank, event)
-		if err != nil && siu.IsEventNotCorroborated(err) {
-			logger.Errorf("Discarding an inter-chain event on chain %v that the chain state does not confirm: %v", queriedChainID, err)
+		err := siu.VerifyEventAgainstTokenBankState(tokenBank, event, headHeight)
+		if err == nil {
 			continue
 		}
-		if err != nil {
-			logger.Warnf("Could not verify inter-chain event (type: %v, nonce: %v) on chain %v, keeping it for the orchestrator to re-check: %v",
-				event.Type, event.Nonce, queriedChainID, err)
+		if siu.IsEventNotCorroborated(err) {
+			logger.Errorf("Inter-chain event on chain %v is NOT confirmed by chain state; it will not be relayed: %v",
+				queriedChainID, err)
+			continue
 		}
-		corroborated = append(corroborated, event)
+		logger.Warnf("Could not verify inter-chain event (type: %v, nonce: %v) on chain %v, the orchestrator will re-check: %v",
+			event.Type, event.Nonce, queriedChainID, err)
 	}
 
-	return corroborated
+	return events
+}
+
+// getChainHeadHeight returns the queried chain's current head, or nil if it is not
+// available. nil disables the staleness check rather than failing the verification.
+func (mw *MetachainWitness) getChainHeadHeight(queriedChainID *big.Int) *big.Int {
+	var height *big.Int
+	var err error
+	if queriedChainID.Cmp(mw.mainchainID) == 0 {
+		height, err = mw.GetMainchainBlockHeight()
+	} else {
+		height, err = mw.GetSubchainBlockHeight()
+	}
+	if err != nil {
+		logger.Warnf("Could not read the head height of chain %v, skipping the staleness check: %v", queriedChainID, err)
+		return nil
+	}
+	return height
 }
 
 // getTokenBankForEventType returns the TokenBank on the given chain that emits
