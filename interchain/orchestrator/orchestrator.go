@@ -29,10 +29,16 @@ import (
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "orchestrator"})
 
+// defaultRelayDryRunTimeout bounds both the eth_call dry run and the broadcast that
+// follows it, in case the configured value is missing or nonsensical.
+const defaultRelayDryRunTimeout = 5 * time.Second
+
 var (
-	ErrDynastyIsNil        = errors.New("nil dynasty")
-	ErrTargetChainMismatch = errors.New("target chain mismatch")
-	ErrTxWouldRevert       = errors.New("the relay transaction would revert, not broadcasting it")
+	ErrDynastyIsNil           = errors.New("nil dynasty")
+	ErrTargetChainMismatch    = errors.New("target chain mismatch")
+	ErrTxWouldRevert          = errors.New("the relay transaction would revert, not broadcasting it")
+	ErrDryRunTimedOut         = errors.New("the relay dry run did not complete in time, not broadcasting it")
+	ErrUnlockUncollateralized = errors.New("the target chain TokenBank cannot cover the requested unlock")
 )
 
 type Orchestrator struct {
@@ -338,6 +344,10 @@ func (oc *Orchestrator) processNextTNT1155VoucherBurnEvent(sourceChainID *big.In
 }
 
 func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *big.Int, sourceChainEventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, sourceChainEventType) {
+		return // this asset class is suspended in this direction by configuration
+	}
+
 	oc.cleanUpInterChainEventCache(sourceChainID, sourceChainEventType, maxProcessedNonce)
 
 	nextNonce := big.NewInt(0).Add(maxProcessedNonce, big.NewInt(1))
@@ -415,6 +425,62 @@ func (oc *Orchestrator) getTokenBankForEventType(chainID *big.Int, eventType sco
 		return oc.getTNT1155TokenBank(chainID)
 	}
 	return nil
+}
+
+// relayPathEnabled reports whether this node should relay the given asset class in
+// the given direction.
+//
+// CfgSubchainRelayEnabled is all-or-nothing, which is too blunt when one asset's
+// pipeline has to stay closed while the others keep running. The processing tick is
+// strictly sequential -- TFuel, then TNT20, then TNT721, then TNT1155, in both
+// directions -- so an asset that can never make progress otherwise consumes the loop
+// ahead of the healthy ones on every retry. It also lets an operator close a
+// direction that must not accept new traffic, which is the only lever available when
+// the TokenBank contracts cannot be changed.
+//
+// A path that is not configured is enabled, so existing configs keep working.
+func (oc *Orchestrator) relayPathEnabled(sourceChainID *big.Int, eventType score.InterChainMessageEventType) bool {
+	asset := relayAssetName(eventType)
+	if asset == "" {
+		return true // unknown event type, leave it to the rest of the pipeline
+	}
+
+	key := fmt.Sprintf("%v.%v.%v", scom.CfgSubchainRelayPathPrefix, asset, oc.relayDirectionName(sourceChainID))
+	if !viper.IsSet(key) {
+		return true
+	}
+	if enabled := viper.GetBool(key); !enabled {
+		logger.Debugf("Relaying is suspended for %v, skipping", key)
+		return false
+	}
+	return true
+}
+
+// relayDirectionName names the direction of travel from the perspective of the
+// subchain: "inbound" is main chain -> subchain, "outbound" is subchain -> main chain.
+func (oc *Orchestrator) relayDirectionName(sourceChainID *big.Int) string {
+	if sourceChainID.Cmp(oc.mainchainID) == 0 {
+		return "inbound"
+	}
+	return "outbound"
+}
+
+func relayAssetName(eventType score.InterChainMessageEventType) string {
+	switch eventType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherMintTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
+		return "tfuel"
+	case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherMintTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
+		return "tnt20"
+	case score.IMCEventTypeCrossChainTokenLockTNT721, score.IMCEventTypeCrossChainVoucherBurnTNT721,
+		score.IMCEventTypeCrossChainVoucherMintTNT721, score.IMCEventTypeCrossChainTokenUnlockTNT721:
+		return "tnt721"
+	case score.IMCEventTypeCrossChainTokenLockTNT1155, score.IMCEventTypeCrossChainVoucherBurnTNT1155,
+		score.IMCEventTypeCrossChainVoucherMintTNT1155, score.IMCEventTypeCrossChainTokenUnlockTNT1155:
+		return "tnt1155"
+	}
+	return ""
 }
 
 func (oc *Orchestrator) cleanUpInterChainEventCache(sourceChainID *big.Int, eventType score.InterChainMessageEventType, maxProcessedNonce *big.Int) {
@@ -657,6 +723,9 @@ func (oc *Orchestrator) unlockTNT20Tokens(txOpts *bind.TransactOpts, targetChain
 	if !oc.checkChainIDCompatability(se.Denom) {
 		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
 	}
+	if err := oc.verifyTNT20UnlockCollateral(targetChainID, se.Denom, se.BurnedAmount); err != nil {
+		return common.Hash{}, err
+	}
 	TNT20TokenBank := oc.getTNT20TokenBank(targetChainID)
 	tx, err := TNT20TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
 	if err != nil {
@@ -682,6 +751,9 @@ func (oc *Orchestrator) unlockTNT721Tokens(txOpts *bind.TransactOpts, targetChai
 	if !oc.checkChainIDCompatability(se.Denom) {
 		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
 	}
+	if err := oc.verifyTNT721UnlockCollateral(targetChainID, se.Denom, se.TokenID); err != nil {
+		return common.Hash{}, err
+	}
 	TNT721TokenBank := oc.getTNT721TokenBank(targetChainID)
 	tx, err := TNT721TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, dynasty, se.VoucherBurnNonce)
 	if err != nil {
@@ -706,6 +778,9 @@ func (oc *Orchestrator) unlockTNT1155Tokens(txOpts *bind.TransactOpts, targetCha
 	}
 	if !oc.checkChainIDCompatability(se.Denom) {
 		return common.Hash{}, fmt.Errorf("incompatiable chainID (subchainID: %v, denom: %v)", oc.subchainID, se.Denom)
+	}
+	if err := oc.verifyTNT1155UnlockCollateral(targetChainID, se.Denom, se.TokenID, se.BurnedAmount); err != nil {
+		return common.Hash{}, err
 	}
 	TNT1155TokenBank := oc.getTNT1155TokenBank(targetChainID)
 	tx, err := TNT1155TokenBank.UnlockTokens(txOpts, sourceEvent.SourceChainID, se.Denom, se.TargetChainTokenReceiver, se.TokenID, se.BurnedAmount, dynasty, se.VoucherBurnNonce)
@@ -804,15 +879,184 @@ func (oc *Orchestrator) simulateAndSend(chainID *big.Int, tx *types.Transaction)
 		Value:    tx.Value(),
 		Data:     tx.Data(),
 	}
-	if _, err := client.CallContract(context.Background(), callMsg, nil); err != nil {
+	// Bound the dry run. Theta's eth_call retries internally on error, sleeping one
+	// block between attempts, so a reverting dry run takes the better part of a minute
+	// to come back. The processing tick is sequential across all four asset classes in
+	// both directions, so an unbounded call here starves every relay behind it. That is
+	// not hypothetical: a voucher burn the target bank can never cover stays in the
+	// failing state permanently.
+	timeout := time.Duration(viper.GetInt(scom.CfgSubchainRelayDryRunTimeoutInSeconds)) * time.Second
+	if timeout <= 0 {
+		timeout = defaultRelayDryRunTimeout
+	}
+
+	callCtx, cancelCall := context.WithTimeout(context.Background(), timeout)
+	defer cancelCall()
+	if _, err := client.CallContract(callCtx, callMsg, nil); err != nil {
+		if callCtx.Err() != nil {
+			// The dry run did not finish, so we do not know whether the transaction
+			// would succeed. Fail closed: skipping a round only delays a genuine
+			// transfer, whereas broadcasting blind can burn gas indefinitely on a
+			// transaction that cannot succeed.
+			return common.Hash{}, fmt.Errorf("%w on chain %v after %v", ErrDryRunTimedOut, chainID, timeout)
+		}
 		return common.Hash{}, fmt.Errorf("%w on chain %v: %v", ErrTxWouldRevert, chainID, err)
 	}
 
-	if err := client.SendTransaction(context.Background(), tx); err != nil {
+	sendCtx, cancelSend := context.WithTimeout(context.Background(), timeout)
+	defer cancelSend()
+	if err := client.SendTransaction(sendCtx, tx); err != nil {
 		return common.Hash{}, err
 	}
 
 	return tx.Hash(), nil
+}
+
+// Collateral guards.
+//
+// TFuelTokenBank enforces "unlockAmount <= totalLockedAmounts" on-chain, and that
+// single line is what bounded the loss during the 2026-08-09 incident: the drain
+// stopped when the vault ran dry instead of continuing. The TNT banks omit the
+// equivalent check deliberately, because elastic-supply tokens (e.g. AMPL) would
+// violate the conservation rule and stall the pipeline. The side effect is that a
+// forged voucher burn against a TNT bank drains it with nothing to stop it.
+//
+// The dry run does not cover this: TNT unlockTokens() swallows a failed transfer in
+// a try/catch, so the nonce still advances and eth_call still reports success. The
+// bank's holdings therefore have to be read explicitly.
+//
+// These checks are fail-closed, and will stall the nonce sequence for a token whose
+// supply genuinely shrinks out from under the bank. Set
+// subchain.enforceUnlockCollateral to false on a chain that bridges such a token.
+
+// resolveCollateralTarget returns the token contract carried by the denom together
+// with an RPC client for the target chain, or ok=false if the check is switched off.
+func (oc *Orchestrator) resolveCollateralTarget(targetChainID *big.Int, denom string) (tokenAddr common.Address, client *ec.Client, ok bool, err error) {
+	if !viper.GetBool(scom.CfgSubchainEnforceUnlockCollateral) {
+		return common.Address{}, nil, false, nil
+	}
+
+	tokenAddr, err = score.ExtractContractAddressFromDenom(denom)
+	if err != nil {
+		return common.Address{}, nil, false, fmt.Errorf("%w: %v", ErrUnlockUncollateralized, err)
+	}
+
+	client = oc.getEthRpcClient(targetChainID)
+	if client == nil {
+		return common.Address{}, nil, false, fmt.Errorf("no ETH RPC client for chain %v", targetChainID)
+	}
+	return tokenAddr, client, true, nil
+}
+
+// verifyTNT20UnlockCollateral refuses to vote on a TNT20 unlock that the target
+// chain TokenBank cannot cover.
+func (oc *Orchestrator) verifyTNT20UnlockCollateral(targetChainID *big.Int, denom string, unlockAmount *big.Int) error {
+	tokenAddr, client, ok, err := oc.resolveCollateralTarget(targetChainID, denom)
+	if err != nil || !ok {
+		return err
+	}
+	if unlockAmount == nil {
+		return fmt.Errorf("%w: the event carries no unlock amount", ErrUnlockUncollateralized)
+	}
+
+	token, err := scta.NewTNT20VoucherContract(tokenAddr, client)
+	if err != nil {
+		return fmt.Errorf("failed to bind the TNT20 token %v on chain %v: %v", tokenAddr.Hex(), targetChainID, err)
+	}
+
+	bankAddr := oc.getTNT20TokenBankAddr(targetChainID)
+	balance, err := token.BalanceOf(nil, bankAddr)
+	if err != nil {
+		// Could not check. Fail closed, consistent with the rest of the vote path:
+		// skipping a round merely delays a genuine transfer.
+		return fmt.Errorf("failed to read the TNT20 balance of the TokenBank %v on chain %v: %v", bankAddr.Hex(), targetChainID, err)
+	}
+
+	if balance.Cmp(unlockAmount) < 0 {
+		return fmt.Errorf("%w: the TNT20TokenBank %v on chain %v holds %v of token %v, but the unlock asks for %v",
+			ErrUnlockUncollateralized, bankAddr.Hex(), targetChainID, balance, tokenAddr.Hex(), unlockAmount)
+	}
+	return nil
+}
+
+// verifyTNT721UnlockCollateral refuses to vote on an NFT unlock unless the target
+// chain TokenBank actually holds that token. Unlike the fungible case there is no
+// amount to compare: either the bank is the current owner or the unlock is baseless.
+func (oc *Orchestrator) verifyTNT721UnlockCollateral(targetChainID *big.Int, denom string, tokenID *big.Int) error {
+	tokenAddr, client, ok, err := oc.resolveCollateralTarget(targetChainID, denom)
+	if err != nil || !ok {
+		return err
+	}
+	if tokenID == nil {
+		return fmt.Errorf("%w: the event carries no token ID", ErrUnlockUncollateralized)
+	}
+
+	token, err := scta.NewTNT721VoucherContract(tokenAddr, client)
+	if err != nil {
+		return fmt.Errorf("failed to bind the TNT721 token %v on chain %v: %v", tokenAddr.Hex(), targetChainID, err)
+	}
+
+	bankAddr := oc.getTNT721TokenBankAddr(targetChainID)
+	owner, err := token.OwnerOf(nil, tokenID)
+	if err != nil {
+		return fmt.Errorf("failed to read the owner of TNT721 token %v (%v) on chain %v: %v", tokenID, tokenAddr.Hex(), targetChainID, err)
+	}
+
+	if owner != bankAddr {
+		return fmt.Errorf("%w: TNT721 token %v of %v on chain %v is held by %v, not by the TokenBank %v",
+			ErrUnlockUncollateralized, tokenID, tokenAddr.Hex(), targetChainID, owner.Hex(), bankAddr.Hex())
+	}
+	return nil
+}
+
+// verifyTNT1155UnlockCollateral refuses to vote on a TNT1155 unlock the target chain
+// TokenBank cannot cover for that specific token ID.
+func (oc *Orchestrator) verifyTNT1155UnlockCollateral(targetChainID *big.Int, denom string, tokenID *big.Int, unlockAmount *big.Int) error {
+	tokenAddr, client, ok, err := oc.resolveCollateralTarget(targetChainID, denom)
+	if err != nil || !ok {
+		return err
+	}
+	if tokenID == nil || unlockAmount == nil {
+		return fmt.Errorf("%w: the event carries no token ID or no unlock amount", ErrUnlockUncollateralized)
+	}
+
+	token, err := scta.NewTNT1155VoucherContract(tokenAddr, client)
+	if err != nil {
+		return fmt.Errorf("failed to bind the TNT1155 token %v on chain %v: %v", tokenAddr.Hex(), targetChainID, err)
+	}
+
+	bankAddr := oc.getTNT1155TokenBankAddr(targetChainID)
+	balance, err := token.BalanceOf(nil, bankAddr, tokenID)
+	if err != nil {
+		return fmt.Errorf("failed to read the TNT1155 balance of the TokenBank %v on chain %v: %v", bankAddr.Hex(), targetChainID, err)
+	}
+
+	if balance.Cmp(unlockAmount) < 0 {
+		return fmt.Errorf("%w: the TNT1155TokenBank %v on chain %v holds %v of token %v id %v, but the unlock asks for %v",
+			ErrUnlockUncollateralized, bankAddr.Hex(), targetChainID, balance, tokenAddr.Hex(), tokenID, unlockAmount)
+	}
+	return nil
+}
+
+func (oc *Orchestrator) getTNT20TokenBankAddr(chainID *big.Int) common.Address {
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		return oc.mainchainTNT20TokenBankAddr
+	}
+	return oc.subchainTNT20TokenBankAddr
+}
+
+func (oc *Orchestrator) getTNT721TokenBankAddr(chainID *big.Int) common.Address {
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		return oc.mainchainTNT721TokenBankAddr
+	}
+	return oc.subchainTNT721TokenBankAddr
+}
+
+func (oc *Orchestrator) getTNT1155TokenBankAddr(chainID *big.Int) common.Address {
+	if chainID.Cmp(oc.mainchainID) == 0 {
+		return oc.mainchainTNT1155TokenBankAddr
+	}
+	return oc.subchainTNT1155TokenBankAddr
 }
 
 func (oc *Orchestrator) getEthRpcClient(chainID *big.Int) *ec.Client {

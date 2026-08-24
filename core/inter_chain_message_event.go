@@ -889,6 +889,20 @@ func ExtractOriginatedChainIDFromDenom(denom string) (*big.Int, error) {
 	return chainID, nil
 }
 
+// ExtractContractAddressFromDenom returns the token contract address carried by a
+// denom of the form "<originatedChainID>/<tokenType>/<contractAddress>". It mirrors
+// TokenBankUtils.extractContractAddressFromDenom() in TokenBank.sol.
+func ExtractContractAddressFromDenom(denom string) (common.Address, error) {
+	parts := strings.Split(denom, "/")
+	if len(parts) != 3 {
+		return common.Address{}, fmt.Errorf("invalid denom: %v", denom)
+	}
+	if !common.IsHexAddress(parts[2]) {
+		return common.Address{}, fmt.Errorf("invalid contract address in denom: %v", denom)
+	}
+	return common.HexToAddress(parts[2]), nil
+}
+
 func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, error) {
 	parts := strings.Split(denom, "/")
 	if len(parts) != 3 {
