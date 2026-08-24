@@ -155,10 +155,11 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	}
 	eventProcessedTime := make(map[string]time.Time)
 	oc := &Orchestrator{
-		updateInterval:     updateInterval,
-		privateKey:         privateKey,
-		metachainWitness:   metachainWitness,
-		eventProcessedTime: eventProcessedTime,
+		updateInterval:        updateInterval,
+		privateKey:            privateKey,
+		metachainWitness:      metachainWitness,
+		eventProcessedTime:    eventProcessedTime,
+		firstContradictedTime: make(map[string]time.Time),
 
 		mainchainID:                   mainchainID,
 		mainchainEthRpcURL:            mainchainEthRpcURL,
@@ -190,7 +191,39 @@ func (oc *Orchestrator) Start(ctx context.Context) {
 
 	oc.wg.Add(1)
 	go oc.mainloop(ctx)
+	oc.logRelayMatrix()
 	logger.Info("Metachain orchestrator started")
+}
+
+// logRelayMatrix records the relay configuration this node actually came up with.
+//
+// The per-path switches are the only control surface available while the TokenBank
+// contracts cannot be changed, so an operator has to be able to confirm which paths
+// are live from the node's own output rather than by inferring it from a config file
+// that may not be the one loaded.
+func (oc *Orchestrator) logRelayMatrix() {
+	if !viper.GetBool(scom.CfgSubchainRelayEnabled) {
+		logger.Warnf("RELAY MATRIX: relaying is DISABLED for all assets and directions (%v=false)",
+			scom.CfgSubchainRelayEnabled)
+		return
+	}
+
+	for _, asset := range []string{"tfuel", "tnt20", "tnt721", "tnt1155"} {
+		for _, direction := range []string{"inbound", "outbound"} {
+			key := fmt.Sprintf("%v.%v.%v", scom.CfgSubchainRelayPathPrefix, asset, direction)
+			enabled := true
+			if viper.IsSet(key) {
+				enabled = viper.GetBool(key)
+			}
+			state := "ENABLED"
+			if !enabled {
+				state = "disabled"
+			}
+			logger.Infof("RELAY MATRIX: %-8v %-8v %v", asset, direction, state)
+		}
+	}
+	logger.Infof("RELAY MATRIX: collateral guard=%v, dry-run/RPC timeout=%v, uncorroborated quarantine=%v",
+		viper.GetBool(scom.CfgSubchainEnforceUnlockCollateral), relayRpcTimeout(), (&Orchestrator{}).getQuarantinePeriod())
 }
 
 func (oc *Orchestrator) Stop() {
@@ -284,6 +317,10 @@ func (oc *Orchestrator) processNextTokenLockEvent(sourceChainID *big.Int, target
 }
 
 func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainTokenLockTFuel) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -297,6 +334,10 @@ func (oc *Orchestrator) processNextTFuelTokenLockEvent(sourceChainID *big.Int, t
 }
 
 func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainTokenLockTNT20) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -309,6 +350,10 @@ func (oc *Orchestrator) processNextTNT20TokenLockEvent(sourceChainID *big.Int, t
 }
 
 func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainTokenLockTNT721) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -321,6 +366,10 @@ func (oc *Orchestrator) processNextTNT721TokenLockEvent(sourceChainID *big.Int, 
 }
 
 func (oc *Orchestrator) processNextTNT1155TokenLockEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainTokenLockTNT1155) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -340,6 +389,10 @@ func (oc *Orchestrator) processNextVoucherBurnEvent(sourceChainID *big.Int, targ
 }
 
 func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainVoucherBurnTFuel) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTFuelTokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -353,6 +406,10 @@ func (oc *Orchestrator) processNextTFuelVoucherBurnEvent(sourceChainID *big.Int,
 }
 
 func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainVoucherBurnTNT20) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTNT20TokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -366,6 +423,10 @@ func (oc *Orchestrator) processNextTNT20VoucherBurnEvent(sourceChainID *big.Int,
 }
 
 func (oc *Orchestrator) processNextTNT721VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainVoucherBurnTNT721) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTNT721TokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -379,6 +440,10 @@ func (oc *Orchestrator) processNextTNT721VoucherBurnEvent(sourceChainID *big.Int
 }
 
 func (oc *Orchestrator) processNextTNT1155VoucherBurnEvent(sourceChainID *big.Int, targetChainID *big.Int) {
+	if !oc.relayPathEnabled(sourceChainID, score.IMCEventTypeCrossChainVoucherBurnTNT1155) {
+		return // suspended by configuration: do not spend an RPC round trip on it
+	}
+
 	targetChainTokenBank := oc.getTNT1155TokenBank(targetChainID)
 	opts, cancel := boundedCallOpts()
 	defer cancel()
@@ -468,6 +533,14 @@ func (oc *Orchestrator) processNextEvent(sourceChainID *big.Int, targetChainID *
 // the first one seen. A transient disagreement -- a backend a few blocks behind, a
 // node restarting -- resolves well inside the window; a forged event never does.
 func (oc *Orchestrator) quarantineExpired(event *score.InterChainMessageEvent) bool {
+	if oc.firstContradictedTime == nil {
+		// Writing to a nil map panics, and this path is only reached once a
+		// contradiction has already occurred -- i.e. exactly when the node is under
+		// attack or degraded. Tolerate a construction path that missed the map
+		// rather than taking the validator down at that moment.
+		oc.firstContradictedTime = make(map[string]time.Time)
+	}
+
 	key := event.ID()
 	firstSeen, ok := oc.firstContradictedTime[key]
 	if !ok {
@@ -606,10 +679,19 @@ func (oc *Orchestrator) callTargetContract(targetChainID *big.Int, targetEventTy
 	if dynasty != nil {
 		logger.Infof("calling contracts on target chain %v for event type %v, current dynasty: %v", targetChainID, targetEventType, dynasty)
 
-		vsQueriedFromMC, _ := oc.mainchainTFuelTokenBank.GetAdjustedValidatorSet(nil, oc.subchainID, dynasty)
-		vsQueriedFromSC, _ := oc.subchainTNT20TokenBank.GetAdjustedValidatorSet(nil, oc.subchainID, dynasty)
-		logger.Debugf("Subchain %v adjusted ValSet queried from the Mainchain for dynasty %v: %v", oc.subchainID, dynasty, vsQueriedFromMC)
-		logger.Debugf("Subchain %v adjusted ValSet queried from the Subchain  for dynasty %v: %v", oc.subchainID, dynasty, vsQueriedFromSC)
+		// Diagnostic only: the results are used solely for the two Debugf calls
+		// below. Skip the round trips entirely unless debug logging is on, and bound
+		// them when it is -- these run on every relay attempt, so an unresponsive
+		// node would otherwise stall the tick for a log line nobody reads.
+		if logger.Logger.IsLevelEnabled(log.DebugLevel) {
+			opts, cancel := boundedCallOpts()
+			defer cancel()
+
+			vsQueriedFromMC, mcErr := oc.mainchainTFuelTokenBank.GetAdjustedValidatorSet(opts, oc.subchainID, dynasty)
+			vsQueriedFromSC, scErr := oc.subchainTNT20TokenBank.GetAdjustedValidatorSet(opts, oc.subchainID, dynasty)
+			logger.Debugf("Subchain %v adjusted ValSet queried from the Mainchain for dynasty %v: %v (err: %v)", oc.subchainID, dynasty, vsQueriedFromMC, mcErr)
+			logger.Debugf("Subchain %v adjusted ValSet queried from the Subchain  for dynasty %v: %v (err: %v)", oc.subchainID, dynasty, vsQueriedFromSC, scErr)
+		}
 	}
 
 	targetChainEthRpcClient := oc.getEthRpcClient(targetChainID)

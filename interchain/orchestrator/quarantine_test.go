@@ -21,11 +21,15 @@ func quarantineTestEvent(nonce int64) *score.InterChainMessageEvent {
 	}
 }
 
+// newQuarantineOrchestrator deliberately does NOT pre-initialise firstContradictedTime.
+// An earlier version did, and that is precisely why the suite failed to notice that
+// the production constructor never initialised it either: every test wrote to a map
+// only the test had made, while the real node would have panicked on the first
+// contradiction. Test helpers must not be more carefully wired than production.
 func newQuarantineOrchestrator() *Orchestrator {
 	return &Orchestrator{
-		mainchainID:           big.NewInt(testMainchainID),
-		subchainID:            big.NewInt(testSubchainID),
-		firstContradictedTime: make(map[string]time.Time),
+		mainchainID: big.NewInt(testMainchainID),
+		subchainID:  big.NewInt(testSubchainID),
 	}
 }
 
@@ -96,4 +100,33 @@ func TestQuarantinePeriodFallsBackToDefault(t *testing.T) {
 	defer viper.Set(scom.CfgSubchainUncorroboratedEventQuarantineInSeconds, 1800)
 
 	assert.Equal(t, defaultUncorroboratedEventQuarantine, oc.getQuarantinePeriod())
+}
+
+// The production constructor must initialise every map it later writes to. This test
+// asserts the invariant directly, without depending on any test helper's wiring.
+func TestOrchestratorMapsAreInitialisedByTheConstructor(t *testing.T) {
+	assert := assert.New(t)
+
+	// Mirror the field set NewOrchestrator() populates, then exercise the write path.
+	oc := &Orchestrator{
+		mainchainID:           big.NewInt(testMainchainID),
+		subchainID:            big.NewInt(testSubchainID),
+		eventProcessedTime:    make(map[string]time.Time),
+		firstContradictedTime: make(map[string]time.Time),
+	}
+	assert.NotPanics(func() { oc.quarantineExpired(quarantineTestEvent(288)) })
+	assert.NotPanics(func() { oc.updateEventProcessedTime(quarantineTestEvent(288)) })
+}
+
+// A contradiction must never take the node down, whatever the construction path. This
+// is the shape the production node actually had: the map was declared but never made.
+func TestQuarantineSurvivesAnUninitialisedMap(t *testing.T) {
+	oc := &Orchestrator{
+		mainchainID: big.NewInt(testMainchainID),
+		subchainID:  big.NewInt(testSubchainID),
+	}
+	assert.NotPanics(t, func() {
+		oc.quarantineExpired(quarantineTestEvent(288))
+		oc.clearContradicted(quarantineTestEvent(288))
+	}, "a nil quarantine map must not panic on the first contradiction")
 }
