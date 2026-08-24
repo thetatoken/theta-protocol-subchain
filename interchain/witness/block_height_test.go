@@ -139,3 +139,20 @@ func TestStopCancelsTheDerivedContext(t *testing.T) {
 		t.Fatal("Stop(); Wait() hung: mainloop is not watching the context Stop() cancels")
 	}
 }
+
+// The simulated witness repeats the same lifecycle shape, so it gets the same test.
+// The previous round covered only MetachainWitness, which is how the ticker race
+// survived in all three components.
+func TestSimulatedWitnessStopIsClean(t *testing.T) {
+	mw := &SimulatedMetachainWitness{wg: &sync.WaitGroup{}}
+	mw.Start(context.Background())
+
+	done := make(chan struct{})
+	go func() { mw.Stop(); mw.Wait(); close(done) }()
+
+	select {
+	case <-done:
+	case <-time.After(15 * time.Second):
+		t.Fatal("SimulatedMetachainWitness Stop(); Wait() hung")
+	}
+}

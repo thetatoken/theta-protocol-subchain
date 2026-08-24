@@ -70,12 +70,11 @@ var (
 )
 
 type Orchestrator struct {
-	updateInterval        int
-	privateKey            *crypto.PrivateKey
-	ledger                score.Ledger
-	eventProcessingTicker *time.Ticker
-	metachainWitness      witness.ChainWitness
-	eventProcessedTime    map[string]time.Time
+	updateInterval     int
+	privateKey         *crypto.PrivateKey
+	ledger             score.Ledger
+	metachainWitness   witness.ChainWitness
+	eventProcessedTime map[string]time.Time
 	// firstContradictedTime records when an event was first found to be contradicted
 	// by source chain state, keyed the same way as eventProcessedTime. See
 	// quarantineExpired().
@@ -230,9 +229,7 @@ func (oc *Orchestrator) logRelayMatrix() {
 }
 
 func (oc *Orchestrator) Stop() {
-	if oc.eventProcessingTicker != nil {
-		oc.eventProcessingTicker.Stop()
-	}
+	// See MetachainWitness.Stop(): the ticker belongs to mainloop.
 	oc.cancel()
 	logger.Info("Metachain orchestrator stopped")
 }
@@ -289,12 +286,13 @@ func (oc *Orchestrator) SetLedgerAndSubchainTokenBanks(ledger score.Ledger) {
 
 func (oc *Orchestrator) mainloop(ctx context.Context) {
 	defer oc.wg.Done() // Start() does wg.Add(1); without this Wait() blocks forever
-	oc.eventProcessingTicker = time.NewTicker(time.Duration(oc.updateInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(oc.updateInterval) * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-oc.eventProcessingTicker.C:
+		case <-ticker.C:
 			if !viper.GetBool(scom.CfgSubchainRelayEnabled) {
 				// Relaying is suspended by configuration. The witness keeps
 				// collecting events, so the pipeline resumes where it left off

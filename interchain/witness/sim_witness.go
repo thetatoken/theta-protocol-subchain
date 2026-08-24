@@ -23,7 +23,6 @@ type SimulatedMetachainWitness struct {
 
 	witnessedDynasty  *big.Int
 	validatorSetCache map[string]*score.ValidatorSet
-	updateTicker      *time.Ticker
 	startingTime      time.Time
 
 	// Life cycle
@@ -86,9 +85,7 @@ func (mw *SimulatedMetachainWitness) Start(ctx context.Context) {
 }
 
 func (mw *SimulatedMetachainWitness) Stop() {
-	if mw.updateTicker != nil {
-		mw.updateTicker.Stop()
-	}
+	// See MetachainWitness.Stop(): the ticker belongs to mainloop.
 	mw.cancel()
 }
 
@@ -121,12 +118,13 @@ func (mw *SimulatedMetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) 
 
 func (mw *SimulatedMetachainWitness) mainloop(ctx context.Context) {
 	defer mw.wg.Done() // Start() does wg.Add(1); without this Wait() blocks forever
-	mw.updateTicker = time.NewTicker(time.Duration(1000) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(1000) * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-mw.updateTicker.C:
+		case <-ticker.C:
 			mw.update()
 		}
 	}

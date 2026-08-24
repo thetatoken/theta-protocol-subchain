@@ -34,7 +34,6 @@ var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 const blockHeightQueryTimeout = 10 * time.Second
 
 type MetachainWitness struct {
-	updateTicker   *time.Ticker
 	updateInterval int
 	witnessState   *metachainWitnessState
 
@@ -182,9 +181,9 @@ func (mw *MetachainWitness) Start(ctx context.Context) {
 }
 
 func (mw *MetachainWitness) Stop() {
-	if mw.updateTicker != nil {
-		mw.updateTicker.Stop()
-	}
+	// The ticker is owned by mainloop and stopped there; touching it from here is a
+	// data race against mainloop's write of it. Cancelling the context is sufficient
+	// and is what actually ends the loop.
 	mw.cancel()
 }
 
@@ -268,12 +267,13 @@ func (mw *MetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 
 func (mw *MetachainWitness) mainloop(ctx context.Context) {
 	defer mw.wg.Done() // Start() does wg.Add(1); without this Wait() blocks forever
-	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
+	ticker := time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-mw.updateTicker.C:
+		case <-ticker.C:
 			mw.update()
 		}
 	}
