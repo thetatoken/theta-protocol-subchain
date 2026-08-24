@@ -417,9 +417,16 @@ func extractTFuelVoucherMintedEvent(targetChainID *big.Int, logData LogData, eve
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTFuel,
@@ -453,9 +460,16 @@ func extractTNT20VoucherMintedEvent(targetChainID *big.Int, logData LogData, eve
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTNT20,
@@ -489,9 +503,16 @@ func extractTNT721VoucherMintedEvent(targetChainID *big.Int, logData LogData, ev
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTNT721,
@@ -525,9 +546,16 @@ func extractTNT1155VoucherMintedEvent(targetChainID *big.Int, logData LogData, e
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTNT1155,
@@ -561,9 +589,16 @@ func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, eve
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTFuel,
@@ -597,9 +632,16 @@ func extractTNT20VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, eve
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTNT20,
@@ -633,9 +675,16 @@ func extractTNT721VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, ev
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTNT721,
@@ -669,9 +718,16 @@ func extractTNT1155VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, e
 	if err != nil {
 		return err
 	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTNT1155,

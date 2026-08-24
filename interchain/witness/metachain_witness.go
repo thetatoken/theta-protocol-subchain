@@ -29,6 +29,10 @@ import (
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
+// blockHeightQueryTimeout bounds the head-height reads. They run on every witness
+// tick, and an unbounded read against an unresponsive node stalls the whole loop.
+const blockHeightQueryTimeout = 10 * time.Second
+
 type MetachainWitness struct {
 	updateTicker   *time.Ticker
 	updateInterval int
@@ -217,13 +221,15 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
 	subchainTNT1155TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	// Note: this guarded subchainTNT721TokenBankAddr, so a nil TNT1155 address passed
+	// the check and was then dereferenced on the next line.
+	if subchainTNT1155TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT1155TokenBank contract address: %v\n", err)
 	}
 	mw.subchainTNT1155TokenBankAddr = *subchainTNT1155TokenBankAddr
 	mw.subchainTNT1155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
+		logger.Fatalf("failed to set the SubchainTNT1155TokenBank contract: %v\n", err)
 	}
 }
 
@@ -271,7 +277,15 @@ func (mw *MetachainWitness) mainloop(ctx context.Context) {
 
 func (mw *MetachainWitness) update() {
 	// Mainchain
-	mw.updateMainchainBlockHeight()
+	if err := mw.updateMainchainBlockHeight(); err != nil {
+		// CalculateDynasty() divides by the height, and big.Int.Div panics on a nil
+		// operand. On a freshly started node the height is still nil, so a single
+		// failed RPC call here would take the validator down -- precisely during the
+		// degraded conditions that make the call fail. Skip the tick instead; the
+		// next one retries.
+		logger.Warnf("Skipping this witness update: %v", err)
+		return
+	}
 	dynasty := scom.CalculateDynasty(mw.mainchainBlockHeight)
 	if mw.witnessedDynasty == nil || dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
 		mw.updateValidatorSetCache(dynasty)
@@ -281,24 +295,33 @@ func (mw *MetachainWitness) update() {
 
 	// Subchain
 	mw.collectInterChainMessageEventsOnSubchain()
-	mw.updateSubchainBlockHeight()
+	if err := mw.updateSubchainBlockHeight(); err != nil {
+		logger.Warnf("%v", err)
+	}
 }
 
-func (mw *MetachainWitness) updateMainchainBlockHeight() {
-	mbh, err := mw.mainchainEthRpcClient.BlockNumber(context.Background())
+func (mw *MetachainWitness) updateMainchainBlockHeight() error {
+	ctx, cancel := context.WithTimeout(context.Background(), blockHeightQueryTimeout)
+	defer cancel()
+
+	mbh, err := mw.mainchainEthRpcClient.BlockNumber(ctx)
 	if err != nil {
-		logger.Warnf("failed to get the mainchain block height %v\n", err)
-		return
+		return fmt.Errorf("failed to get the mainchain block height: %v", err)
 	}
 	mw.mainchainBlockHeight = big.NewInt(int64(mbh))
+	return nil
 }
 
-func (mw *MetachainWitness) updateSubchainBlockHeight() {
-	sbh, err := mw.subchainEthRpcClient.BlockNumber(context.Background())
+func (mw *MetachainWitness) updateSubchainBlockHeight() error {
+	ctx, cancel := context.WithTimeout(context.Background(), blockHeightQueryTimeout)
+	defer cancel()
+
+	sbh, err := mw.subchainEthRpcClient.BlockNumber(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to get the subchain block height: %v", err)
 	}
 	mw.subchainBlockHeight = big.NewInt(int64(sbh))
+	return nil
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnMainchain() {

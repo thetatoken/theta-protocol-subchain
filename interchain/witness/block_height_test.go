@@ -1,0 +1,93 @@
+package witness
+
+import (
+	"encoding/json"
+	"fmt"
+	"math/big"
+	"net/http"
+	"net/http/httptest"
+	"testing"
+	"time"
+
+	"github.com/stretchr/testify/assert"
+	scom "github.com/thetatoken/thetasubchain/common"
+	ec "github.com/thetatoken/thetasubchain/eth/ethclient"
+)
+
+func heightNode(t *testing.T, result string, rpcErr string, delay time.Duration) *ec.Client {
+	t.Helper()
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var req struct {
+			ID json.RawMessage `json:"id"`
+		}
+		json.NewDecoder(r.Body).Decode(&req)
+		if delay > 0 {
+			select {
+			case <-time.After(delay):
+			case <-r.Context().Done():
+				return
+			}
+		}
+		if rpcErr != "" {
+			fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%s,"error":{"code":-32000,"message":%q}}`, req.ID, rpcErr)
+			return
+		}
+		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":%s,"result":%q}`, req.ID, result)
+	}))
+	t.Cleanup(srv.Close)
+
+	client, err := ec.Dial(srv.URL)
+	if err != nil {
+		t.Fatalf("failed to dial: %v", err)
+	}
+	t.Cleanup(client.Close)
+	return client
+}
+
+// update() feeds the mainchain height straight into CalculateDynasty(), which divides
+// by it -- and big.Int.Div panics on a nil operand. On a freshly started node the
+// height is still nil, so updateMainchainBlockHeight() MUST report failure rather
+// than leaving the field nil and returning silently, or one failed RPC call takes the
+// validator down during exactly the degraded conditions that caused it.
+func TestUpdateMainchainBlockHeightReportsFailure(t *testing.T) {
+	assert := assert.New(t)
+
+	mw := &MetachainWitness{mainchainEthRpcClient: heightNode(t, "", "connection refused", 0)}
+
+	err := mw.updateMainchainBlockHeight()
+	assert.NotNil(err, "a failed height read must be reported, not swallowed")
+	assert.Nil(mw.mainchainBlockHeight, "the height must remain unset after a failure")
+
+	// The contract update() relies on: a nil height would panic here.
+	assert.Panics(func() { scom.CalculateDynasty(mw.mainchainBlockHeight) },
+		"this is why the error must be propagated")
+}
+
+func TestUpdateMainchainBlockHeightSucceeds(t *testing.T) {
+	assert := assert.New(t)
+
+	mw := &MetachainWitness{mainchainEthRpcClient: heightNode(t, "0x2209a59", "", 0)}
+
+	assert.Nil(mw.updateMainchainBlockHeight())
+	assert.Equal(big.NewInt(0x2209a59), mw.mainchainBlockHeight)
+	assert.NotPanics(func() { scom.CalculateDynasty(mw.mainchainBlockHeight) })
+}
+
+// The height reads run on every witness tick, so an unresponsive node must not hold
+// the loop open indefinitely.
+func TestBlockHeightReadIsBounded(t *testing.T) {
+	assert := assert.New(t)
+
+	mw := &MetachainWitness{
+		mainchainEthRpcClient: heightNode(t, "0x1", "", 60*time.Second),
+		subchainEthRpcClient:  heightNode(t, "0x1", "", 60*time.Second),
+	}
+
+	start := time.Now()
+	err := mw.updateMainchainBlockHeight()
+	elapsed := time.Since(start)
+
+	assert.NotNil(err)
+	assert.Less(elapsed, blockHeightQueryTimeout+10*time.Second,
+		"the head-height read must carry a deadline")
+}

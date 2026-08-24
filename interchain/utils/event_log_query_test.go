@@ -5,11 +5,14 @@ import (
 	"math/big"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/thetatoken/theta/common"
 	score "github.com/thetatoken/thetasubchain/core"
+	"github.com/thetatoken/thetasubchain/eth/abi"
+	scta "github.com/thetatoken/thetasubchain/interchain/contracts/accessors"
 )
 
 // The caller advances its scan checkpoint on the strength of this result, so every
@@ -114,4 +117,29 @@ func TestQueryRejectsMalformedMatchingLog(t *testing.T) {
 		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":74,"result":[{"topics":[%q],"data":"0x","blockNumber":"latest"}]}`, burnTopic)
 	})
 	assert.NotNil(err, "a log whose block number will not parse must fail the range")
+}
+
+// The denom decides which chain the tokens originated on. A malformed one previously
+// logged a warning and produced an event with SourceChainID zero, which was cached
+// and counted as scanned -- a corrupt event occupying a real nonce slot.
+func TestQueryRejectsMalformedDenom(t *testing.T) {
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
+	if err != nil {
+		t.Fatalf("failed to parse the ABI: %v", err)
+	}
+	// Well-formed ABI payload, but the denom is not "<chain>/<type>/<address>".
+	data, err := contractAbi.Events["TFuelVoucherMinted"].Inputs.Pack(
+		"not-a-denom",
+		common.HexToAddress("0x8556d1a34013feb0cba9349636895d94831528a0"),
+		big.NewInt(1), big.NewInt(1), big.NewInt(1))
+	if err != nil {
+		t.Fatalf("failed to encode the event: %v", err)
+	}
+
+	topic := EventSelectors[score.IMCEventTypeCrossChainVoucherMintTFuel]
+	_, qErr := queryAgainst(t, func(w http.ResponseWriter, r *http.Request) {
+		fmt.Fprintf(w, `{"jsonrpc":"2.0","id":74,"result":[{"topics":[%q],"data":"0x%x","blockNumber":"0x1"}]}`,
+			topic, data)
+	})
+	assert.NotNil(t, qErr, "a log with an unparseable denom must fail the range, not yield chain ID zero")
 }
