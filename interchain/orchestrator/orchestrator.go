@@ -152,6 +152,15 @@ func NewOrchestrator(db database.Database, updateInterval int, interChainEventCa
 	if err != nil {
 		logger.Fatalf("the ETH client failed to connect to the subchain ETH RPC: %v\n", err)
 	}
+	// Confirm both endpoints actually serve the chains we believe they do, before any
+	// event is read from them. See siu.VerifyChainID().
+	if err := siu.VerifyChainID(mainchainEthRpcClient, mainchainID, "mainchain ETH RPC"); err != nil {
+		logger.Fatalf("%v\n", err)
+	}
+	if err := siu.VerifyChainID(subchainEthRpcClient, subchainID, "subchain ETH RPC"); err != nil {
+		logger.Fatalf("%v\n", err)
+	}
+
 	eventProcessedTime := make(map[string]time.Time)
 	oc := &Orchestrator{
 		updateInterval:        updateInterval,

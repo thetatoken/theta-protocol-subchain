@@ -134,6 +134,17 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		queryTopics = queryTopics + ",\"" + eventTopicString + "\""
 	}
 
+	// Confirm both endpoints actually serve the chains we believe they do, before any
+	// event is read from them. Predeploy addresses are identical across subchains, so a
+	// URL pointing at the wrong one answers plausibly at the expected TokenBank
+	// addresses -- and its events would be relayed under this chain's identity.
+	if err := siu.VerifyChainID(mainchainEthRpcClient, mainchainID, "mainchain ETH RPC"); err != nil {
+		logger.Fatalf("%v\n", err)
+	}
+	if err := siu.VerifyChainID(subchainEthRpcClient, subchainID, "subchain ETH RPC"); err != nil {
+		logger.Fatalf("%v\n", err)
+	}
+
 	mw := &MetachainWitness{
 		updateInterval: updateInterval,
 		witnessState:   witnessState,
