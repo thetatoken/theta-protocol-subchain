@@ -9,6 +9,7 @@ import (
 	"math/big"
 	"net/http"
 	"strings"
+	"time"
 
 	"github.com/thetatoken/theta/common"
 	"github.com/thetatoken/theta/crypto"
@@ -31,10 +32,58 @@ type LogData struct {
 	Type             string   `json:"type"`
 }
 
+// eventLogQueryTimeout bounds the eth_getLogs call. The default http.Client has no
+// timeout at all, so an unresponsive node would hold the witness loop open forever.
+const eventLogQueryTimeout = 30 * time.Second
+
 type RPCResult struct {
-	Jsonrpc string    `json:"jsonrpc"`
-	Id      int64     `json:"id"`
-	Result  []LogData `json:"result"`
+	Jsonrpc string `json:"jsonrpc"`
+	Id      int64  `json:"id"`
+	// Result is a pointer so that an absent or null "result" is distinguishable from
+	// an empty array. Both decode to a zero-length slice otherwise, which the caller
+	// would treat as "this range contained no events" and advance past it.
+	Result *[]LogData `json:"result"`
+	Error  *RPCError  `json:"error"`
+}
+
+// RPCError carries a JSON-RPC error object. Without it, an error response
+// unmarshals into a RPCResult with a nil Result and no indication that anything
+// went wrong, which is indistinguishable from "this block range contained no
+// events".
+type RPCError struct {
+	Code    int    `json:"code"`
+	Message string `json:"message"`
+}
+
+// decodeLogData decodes a log's hex payload. logData.Data[2:] was previously sliced
+// unconditionally, which panics on a value shorter than the "0x" prefix.
+func decodeLogData(logData LogData) ([]byte, error) {
+	if !strings.HasPrefix(logData.Data, "0x") {
+		return nil, fmt.Errorf("log data is not 0x-prefixed: %.64q", logData.Data)
+	}
+	data, err := hex.DecodeString(logData.Data[2:])
+	if err != nil {
+		return nil, fmt.Errorf("log data is not valid hex: %v", err)
+	}
+	return data, nil
+}
+
+// parseLogBlockNumber parses a log's block number. The previous code discarded the
+// failure, yielding an event with a nil BlockHeight that no longer corresponds to
+// anything on chain.
+func parseLogBlockNumber(logData LogData) (*big.Int, error) {
+	if !strings.HasPrefix(logData.BlockNumber, "0x") {
+		return nil, fmt.Errorf("log block number is not 0x-prefixed: %.64q", logData.BlockNumber)
+	}
+	blockHeight, ok := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	if !ok {
+		return nil, fmt.Errorf("log block number is not valid hex: %.64q", logData.BlockNumber)
+	}
+	return blockHeight, nil
+}
+
+func (e *RPCError) Error() string {
+	return fmt.Sprintf("JSON-RPC error %v: %v", e.Code, e.Message)
 }
 
 type TransferEvent struct {
@@ -89,7 +138,13 @@ var EventSelectors = map[score.InterChainMessageEventType]string{
 	score.IMCEventTypeCrossChainTokenUnlockTNT1155: crypto.Keccak256Hash([]byte("TNT1155TokenUnlocked(string,address,uint256,uint256,uint256,uint256)")).Hex(),
 }
 
-func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, tfuelTokenbankAddress common.Address, tnt20TokenBankAddress common.Address, tnt721TokenBankAddress common.Address, tnt1155TokenBankAddress common.Address, queryTopics string, url string) []*score.InterChainMessageEvent {
+// QueryInterChainEventLog returns the inter-chain events in [fromBlock, toBlock].
+//
+// It returns an error for every failure mode rather than an empty slice. The caller
+// advances its scan checkpoint on the strength of this result, so "the query failed"
+// and "the range contained no events" must not be conflated: doing so permanently
+// skips the range.
+func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBlock *big.Int, tfuelTokenbankAddress common.Address, tnt20TokenBankAddress common.Address, tnt721TokenBankAddress common.Address, tnt1155TokenBankAddress common.Address, queryTopics string, url string) ([]*score.InterChainMessageEvent, error) {
 
 	var events []*score.InterChainMessageEvent
 
@@ -98,89 +153,142 @@ func QueryInterChainEventLog(queriedChainID *big.Int, fromBlock *big.Int, toBloc
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 	if err != nil {
-		// logger.Fatal(err)
-		logger.Warnf("Failed to post to %v, err: %v", url, err)
-		return events // ignore, the query is repeated periodically anyway
+		return nil, fmt.Errorf("failed to build the eth_getLogs request for %v: %v", url, err)
 	}
 	request.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
+	client := &http.Client{Timeout: eventLogQueryTimeout}
 	response, err := client.Do(request)
 	if err != nil {
-		// logger.Fatalf("response error : %v", err)
-		logger.Warnf("RPC response error %v, err: %v", url, err)
-		return events // ignore, the query is repeated periodically anyway
+		return nil, fmt.Errorf("eth_getLogs request to %v failed: %v", url, err)
 	}
 	defer response.Body.Close()
 
-	body, _ := ioutil.ReadAll(response.Body)
-	var rpcres RPCResult
-
-	err = json.Unmarshal(body, &rpcres)
-	if err != nil {
-		fmt.Printf("error decoding response: %v\n", err)
-		if e, ok := err.(*json.SyntaxError); ok {
-			fmt.Printf("syntax error at byte offset %d\n", e.Offset)
-		}
-		fmt.Printf("response: %q\n", body)
+	if response.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("eth_getLogs to %v returned HTTP %v", url, response.Status)
 	}
 
-	for _, logData := range rpcres.Result {
+	body, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read the eth_getLogs response from %v: %v", url, err)
+	}
+
+	var rpcres RPCResult
+	if err := json.Unmarshal(body, &rpcres); err != nil {
+		return nil, fmt.Errorf("failed to decode the eth_getLogs response from %v: %v (body: %.256q)", url, err, body)
+	}
+	if rpcres.Error != nil {
+		return nil, fmt.Errorf("eth_getLogs to %v: %v", url, rpcres.Error)
+	}
+	if rpcres.Result == nil {
+		return nil, fmt.Errorf("eth_getLogs to %v returned no result array (body: %.256q)", url, body)
+	}
+
+	for _, logData := range *rpcres.Result {
 		logData := logData
+		// A log with no topics cannot be one of ours, but indexing Topics[0] blindly
+		// would panic on it. The query filters by topic, so this should not occur --
+		// which is exactly why it must be reported rather than assumed away.
+		if len(logData.Topics) == 0 {
+			return nil, fmt.Errorf("eth_getLogs to %v returned a log with no topics at block %v", url, logData.BlockNumber)
+		}
 		switch logData.Topics[0] {
 
 		// TokenLock events
 		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTFuel]:
-			extractTFuelTokenLockedEvent(queriedChainID, logData, &events)
+			if err := extractTFuelTokenLockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TFuelTokenLocked log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTNT20]:
-			extractTNT20TokenLockedEvent(queriedChainID, logData, &events)
+			if err := extractTNT20TokenLockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT20TokenLocked log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTNT721]:
-			extractTNT721TokenLockedEvent(queriedChainID, logData, &events)
+			if err := extractTNT721TokenLockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT721TokenLocked log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainTokenLockTNT1155]:
-			extractTNT1155TokenLockedEvent(queriedChainID, logData, &events)
+			if err := extractTNT1155TokenLockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT1155TokenLocked log at block %v: %v", logData.BlockNumber, err)
+			}
 
 		// VoucherMint events
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTFuel]:
-			extractTFuelVoucherMintedEvent(queriedChainID, logData, &events)
+			if err := extractTFuelVoucherMintedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TFuelVoucherMinted log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTNT20]:
-			extractTNT20VoucherMintedEvent(queriedChainID, logData, &events)
+			if err := extractTNT20VoucherMintedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT20VoucherMinted log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTNT721]:
-			extractTNT721VoucherMintedEvent(queriedChainID, logData, &events)
+			if err := extractTNT721VoucherMintedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT721VoucherMinted log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherMintTNT1155]:
-			extractTNT1155VoucherMintedEvent(queriedChainID, logData, &events)
+			if err := extractTNT1155VoucherMintedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT1155VoucherMinted log at block %v: %v", logData.BlockNumber, err)
+			}
 
 		// VoucherBurn events
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTFuel]:
-			extractTFuelVoucherBurnedEvent(queriedChainID, logData, &events)
+			if err := extractTFuelVoucherBurnedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TFuelVoucherBurned log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTNT20]:
-			extractTNT20VoucherBurnedEvent(queriedChainID, logData, &events)
+			if err := extractTNT20VoucherBurnedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT20VoucherBurned log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTNT721]:
-			extractTNT721VoucherBurnedEvent(queriedChainID, logData, &events)
+			if err := extractTNT721VoucherBurnedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT721VoucherBurned log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainVoucherBurnTNT1155]:
-			extractTNT1155VoucherBurnedEvent(queriedChainID, logData, &events)
+			if err := extractTNT1155VoucherBurnedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT1155VoucherBurned log at block %v: %v", logData.BlockNumber, err)
+			}
 
 		// TokenUnlock events
 		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTFuel]:
-			extractTFuelTokenUnlockedEvent(queriedChainID, logData, &events)
+			if err := extractTFuelTokenUnlockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TFuelTokenUnlocked log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTNT20]:
-			extractTNT20TokenUnlockedEvent(queriedChainID, logData, &events)
+			if err := extractTNT20TokenUnlockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT20TokenUnlocked log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTNT721]:
-			extractTNT721TokenUnlockedEvent(queriedChainID, logData, &events)
+			if err := extractTNT721TokenUnlockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT721TokenUnlocked log at block %v: %v", logData.BlockNumber, err)
+			}
 		case EventSelectors[score.IMCEventTypeCrossChainTokenUnlockTNT1155]:
-			extractTNT1155TokenUnlockedEvent(queriedChainID, logData, &events)
+			if err := extractTNT1155TokenUnlockedEvent(queriedChainID, logData, &events); err != nil {
+				return nil, fmt.Errorf("malformed TNT1155TokenUnlocked log at block %v: %v", logData.BlockNumber, err)
+			}
 
 		default:
 		}
 	}
-	return events
+	return events, nil
 }
 
-func extractTFuelTokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTFuelTokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTFuelTokenLockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TFuelTokenLocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TFuelTokenLocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenLockTFuel,
 		SourceChainID: sourceChainID,
@@ -193,14 +301,26 @@ func extractTFuelTokenLockedEvent(sourceChainID *big.Int, logData LogData, event
 	}
 	logger.Infof("got TFuel locked event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT20TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT20TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT20TokenLockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT20TokenLocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT20TokenLocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenLockTNT20,
 		SourceChainID: sourceChainID,
@@ -213,14 +333,26 @@ func extractTNT20TokenLockedEvent(sourceChainID *big.Int, logData LogData, event
 	}
 	logger.Infof("got TNT20 locked event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT721TokenLockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT721TokenLocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT721TokenLocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT721TokenLocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenLockTNT721,
 		SourceChainID: sourceChainID,
@@ -233,14 +365,26 @@ func extractTNT721TokenLockedEvent(sourceChainID *big.Int, logData LogData, even
 	}
 	logger.Infof("got TNT721 locked event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT1155TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT1155TokenLockedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT1155TokenLockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT1155TokenLocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT1155TokenLocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT1155TokenLocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenLockTNT1155,
 		SourceChainID: sourceChainID,
@@ -253,17 +397,36 @@ func extractTNT1155TokenLockedEvent(sourceChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TNT1155 locked event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTFuelVoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTFuelVoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTFuelVoucherMintedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TFuelVoucherMinted", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TFuelVoucherMinted", data); err != nil {
+		return fmt.Errorf("failed to decode a TFuelVoucherMinted log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTFuel,
@@ -277,17 +440,36 @@ func extractTFuelVoucherMintedEvent(targetChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TFuel voucher mint event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT20VoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT20VoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT20VoucherMintedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherMinted", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherMinted", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT20VoucherMinted log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTNT20,
@@ -301,17 +483,36 @@ func extractTNT20VoucherMintedEvent(targetChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TNT20 voucher mint event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT721VoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT721VoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT721VoucherMintedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT721VoucherMinted", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT721VoucherMinted", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT721VoucherMinted log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTNT721,
@@ -325,17 +526,36 @@ func extractTNT721VoucherMintedEvent(targetChainID *big.Int, logData LogData, ev
 	}
 	logger.Infof("got TNT721 voucher mint event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT1155VoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT1155VoucherMintedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT1155VoucherMintedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT1155VoucherMinted", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT1155VoucherMinted", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT1155VoucherMinted log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherMintTNT1155,
@@ -349,17 +569,36 @@ func extractTNT1155VoucherMintedEvent(targetChainID *big.Int, logData LogData, e
 	}
 	logger.Infof("got TNT1155 voucher mint event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTFuelVoucherBurnedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TFuelVoucherBurned", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TFuelVoucherBurned", data); err != nil {
+		return fmt.Errorf("failed to decode a TFuelVoucherBurned log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTFuel,
@@ -373,17 +612,36 @@ func extractTFuelVoucherBurnedEvent(sourceChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TFuel voucher burn event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT20VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT20VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT20VoucherBurnedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherBurned", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT20VoucherBurned", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT20VoucherBurned log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTNT20,
@@ -397,17 +655,36 @@ func extractTNT20VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TNT20 voucher burn event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT721VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT721VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT721VoucherBurnedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT721VoucherBurned", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT721VoucherBurned", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT721VoucherBurned log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTNT721,
@@ -421,17 +698,36 @@ func extractTNT721VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, ev
 	}
 	logger.Infof("got TNT721 voucher burn event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT1155VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT1155VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT1155VoucherBurnedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT1155VoucherBurned", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT1155VoucherBurned", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT1155VoucherBurned log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
+	// A malformed denom previously produced an event with SourceChainID zero, which
+	// was cached and counted as scanned. Validate the denom fully and fail the range
+	// instead: the denom decides which chain the tokens came from, so an unparseable
+	// one makes the event meaningless rather than merely imprecise.
+	if err := score.ValidateDenom(tma.Denom); err != nil {
+		return fmt.Errorf("invalid denom %q: %v", tma.Denom, err)
+	}
 	originatedChainID, err := score.ExtractOriginatedChainIDFromDenom(tma.Denom)
 	if err != nil {
-		logger.Warnf("Failed to extract originated chain ID from denom: %v", tma.Denom)
+		return fmt.Errorf("failed to extract the originated chain ID from denom %q: %v", tma.Denom, err)
 	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainVoucherBurnTNT1155,
@@ -445,14 +741,26 @@ func extractTNT1155VoucherBurnedEvent(sourceChainID *big.Int, logData LogData, e
 	}
 	logger.Infof("got TNT1155 voucher burn event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTFuelTokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTFuelTokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTFuelTokenUnlockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TFuelTokenUnlocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TFuelTokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TFuelTokenUnlocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TFuelTokenUnlocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenUnlockTFuel,
 		SourceChainID: nil, // don't care
@@ -465,14 +773,26 @@ func extractTFuelTokenUnlockedEvent(targetChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TFuel unlock event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT20TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT20TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT20TokenUnlockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT20TokenUnlocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT20TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT20TokenUnlocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT20TokenUnlocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenUnlockTNT20,
 		SourceChainID: nil, // don't care
@@ -485,14 +805,26 @@ func extractTNT20TokenUnlockedEvent(targetChainID *big.Int, logData LogData, eve
 	}
 	logger.Infof("got TNT20 unlock event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT721TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT721TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT721TokenUnlockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT721TokenUnlocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT721TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT721TokenUnlocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT721TokenUnlocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenUnlockTNT721,
 		SourceChainID: nil, // don't care
@@ -505,14 +837,26 @@ func extractTNT721TokenUnlockedEvent(targetChainID *big.Int, logData LogData, ev
 	}
 	logger.Infof("got TNT721 unlock event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }
 
-func extractTNT1155TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) {
-	data, _ := hex.DecodeString(logData.Data[2:])
+func extractTNT1155TokenUnlockedEvent(targetChainID *big.Int, logData LogData, events *[]*score.InterChainMessageEvent) error {
+	data, err := decodeLogData(logData)
+	if err != nil {
+		return err
+	}
 	var tma score.CrossChainTNT1155TokenUnlockedEvent
-	contractAbi, _ := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
-	contractAbi.UnpackIntoInterface(&tma, "TNT1155TokenUnlocked", data)
-	blockHeight, _ := new(big.Int).SetString(logData.BlockNumber[2:], 16)
+	contractAbi, err := abi.JSON(strings.NewReader(string(scta.TNT1155TokenBankABI)))
+	if err != nil {
+		return err
+	}
+	if err := contractAbi.UnpackIntoInterface(&tma, "TNT1155TokenUnlocked", data); err != nil {
+		return fmt.Errorf("failed to decode a TNT1155TokenUnlocked log: %v", err)
+	}
+	blockHeight, err := parseLogBlockNumber(logData)
+	if err != nil {
+		return err
+	}
 	event := &score.InterChainMessageEvent{
 		Type:          score.IMCEventTypeCrossChainTokenUnlockTNT1155,
 		SourceChainID: nil, // don't care
@@ -525,4 +869,5 @@ func extractTNT1155TokenUnlockedEvent(targetChainID *big.Int, logData LogData, e
 	}
 	logger.Infof("got TNT1155 unlock event : %v, logdata : %v", tma, logData)
 	*events = append(*events, event)
+	return nil
 }

@@ -168,6 +168,38 @@ const (
 	CfgSubchainUpdateIntervalInMilliseconds = "subchain.updateInterval"
 	// CfgSubchainTestID defines the ID of this node in a test case
 	CfgSubchainTestID = "subchain.testID"
+	// CfgSubchainRelayEnabled controls whether this node relays inter-chain events
+	// (i.e. votes on voucher mints and token unlocks). Setting it to false leaves
+	// the witness running and the event cache up to date, but suspends all
+	// cross-chain relaying.
+	CfgSubchainRelayEnabled = "subchain.relayEnabled"
+	// CfgSubchainRelayPathPrefix is the prefix for the per-asset, per-direction relay
+	// switches, e.g. "subchain.relay.tfuel.inbound" or "subchain.relay.tnt20.outbound".
+	// "inbound" means main chain -> subchain, "outbound" means subchain -> main chain.
+	// A path that is not set is enabled, so existing configs keep working unchanged.
+	//
+	// CfgSubchainRelayEnabled remains the master switch; these refine it. They exist
+	// because an asset whose pipeline can never make progress (e.g. a voucher burn the
+	// target bank cannot cover) would otherwise be retried forever ahead of the healthy
+	// asset classes in the same processing tick.
+	CfgSubchainRelayPathPrefix = "subchain.relay"
+	// CfgSubchainRelayDryRunTimeoutInSeconds bounds the eth_call dry run performed
+	// before a relay transaction is broadcast. Theta's eth_call retries internally on
+	// error with a one-block sleep between attempts, so an unbounded dry run of a
+	// reverting transaction blocks the orchestrator for the better part of a minute.
+	CfgSubchainRelayDryRunTimeoutInSeconds = "subchain.relayDryRunTimeout"
+	// CfgSubchainEnforceUnlockCollateral makes this node refuse to vote on a TNT20,
+	// TNT721 or TNT1155 unlock that the target chain TokenBank cannot actually cover.
+	// TFuelTokenBank enforces the equivalent on-chain, but the TNT banks deliberately
+	// do not, so the bound is re-imposed here. See the collateral guards in
+	// interchain/orchestrator for the trade-off this makes, and set it to false on a
+	// chain that bridges a token whose supply can shrink out from under the bank.
+	CfgSubchainEnforceUnlockCollateral = "subchain.enforceUnlockCollateral"
+	// CfgSubchainUncorroboratedEventQuarantineInSeconds is how long an inter-chain
+	// event must remain contradicted by source chain state before this node discards
+	// it. A contradiction can come from a lagging RPC backend as easily as from a
+	// forged event, and discarding is irreversible, so the default is generous.
+	CfgSubchainUncorroboratedEventQuarantineInSeconds = "subchain.uncorroboratedEventQuarantine"
 )
 
 // InitialConfig is the default configuration produced by init command.
@@ -237,6 +269,10 @@ func init() {
 
 	viper.SetDefault(CfgSubchainUpdateIntervalInMilliseconds, 1000)
 	viper.SetDefault(CfgSubchainMainchainBlockIntervalInSeconds, 6)
+	viper.SetDefault(CfgSubchainRelayEnabled, true)
+	viper.SetDefault(CfgSubchainRelayDryRunTimeoutInSeconds, 5)
+	viper.SetDefault(CfgSubchainEnforceUnlockCollateral, true)
+	viper.SetDefault(CfgSubchainUncorroboratedEventQuarantineInSeconds, 1800)
 	viper.SetDefault(CfgMainchainEthRpcURL, "http://127.0.0.1:18888")
 	viper.SetDefault(CfgSubchainEthRpcURL, "http://127.0.0.1:19888")
 	viper.SetDefault(CfgSubchainMainchainWitenessStartScanHeight, -1)

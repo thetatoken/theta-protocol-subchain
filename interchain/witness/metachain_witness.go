@@ -29,8 +29,11 @@ import (
 
 var logger *log.Entry = log.WithFields(log.Fields{"prefix": "witness"})
 
+// blockHeightQueryTimeout bounds the head-height reads. They run on every witness
+// tick, and an unbounded read against an unresponsive node stalls the whole loop.
+const blockHeightQueryTimeout = 10 * time.Second
+
 type MetachainWitness struct {
-	updateTicker   *time.Ticker
 	updateInterval int
 	witnessState   *metachainWitnessState
 
@@ -131,6 +134,17 @@ func NewMetachainWitness(db database.Database, updateInterval int, interChainEve
 		queryTopics = queryTopics + ",\"" + eventTopicString + "\""
 	}
 
+	// Confirm both endpoints actually serve the chains we believe they do, before any
+	// event is read from them. Predeploy addresses are identical across subchains, so a
+	// URL pointing at the wrong one answers plausibly at the expected TokenBank
+	// addresses -- and its events would be relayed under this chain's identity.
+	if err := siu.VerifyChainID(mainchainEthRpcClient, mainchainID, "mainchain ETH RPC"); err != nil {
+		logger.Fatalf("%v\n", err)
+	}
+	if err := siu.VerifyChainID(subchainEthRpcClient, subchainID, "subchain ETH RPC"); err != nil {
+		logger.Fatalf("%v\n", err)
+	}
+
 	mw := &MetachainWitness{
 		updateInterval: updateInterval,
 		witnessState:   witnessState,
@@ -171,13 +185,16 @@ func (mw *MetachainWitness) Start(ctx context.Context) {
 	mw.cancel = cancel
 
 	mw.wg.Add(1)
-	go mw.mainloop(ctx)
+	// Pass the derived context, not the parent: cancel() cancels c, so a mainloop
+	// selecting on the parent would never see Stop() and Wait() would hang. In
+	// production Node.Stop() happens to cancel the shared parent, which masked this.
+	go mw.mainloop(c)
 }
 
 func (mw *MetachainWitness) Stop() {
-	if mw.updateTicker != nil {
-		mw.updateTicker.Stop()
-	}
+	// The ticker is owned by mainloop and stopped there; touching it from here is a
+	// data race against mainloop's write of it. Cancelling the context is sufficient
+	// and is what actually ends the loop.
 	mw.cancel()
 }
 
@@ -217,13 +234,15 @@ func (mw *MetachainWitness) SetSubchainTokenBanks(ledger score.Ledger) {
 		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
 	}
 	subchainTNT1155TokenBankAddr := ledger.GetTokenBankContractAddress(score.CrossChainTokenTypeTNT1155)
-	if subchainTNT721TokenBankAddr == nil || err != nil {
-		logger.Fatalf("failed to obtain SubchainTNT721TokenBank contract address: %v\n", err)
+	// Note: this guarded subchainTNT721TokenBankAddr, so a nil TNT1155 address passed
+	// the check and was then dereferenced on the next line.
+	if subchainTNT1155TokenBankAddr == nil || err != nil {
+		logger.Fatalf("failed to obtain SubchainTNT1155TokenBank contract address: %v\n", err)
 	}
 	mw.subchainTNT1155TokenBankAddr = *subchainTNT1155TokenBankAddr
 	mw.subchainTNT1155TokenBank, err = scta.NewTNT1155TokenBank(*subchainTNT1155TokenBankAddr, mw.subchainEthRpcClient)
 	if err != nil {
-		logger.Fatalf("failed to set the SubchainTNT20TokenBankAddr contract: %v\n", err)
+		logger.Fatalf("failed to set the SubchainTNT1155TokenBank contract: %v\n", err)
 	}
 }
 
@@ -258,12 +277,14 @@ func (mw *MetachainWitness) GetValidatorSetByDynasty(dynasty *big.Int) (*score.V
 }
 
 func (mw *MetachainWitness) mainloop(ctx context.Context) {
-	mw.updateTicker = time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
+	defer mw.wg.Done() // Start() does wg.Add(1); without this Wait() blocks forever
+	ticker := time.NewTicker(time.Duration(mw.updateInterval) * time.Millisecond)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case <-mw.updateTicker.C:
+		case <-ticker.C:
 			mw.update()
 		}
 	}
@@ -271,7 +292,15 @@ func (mw *MetachainWitness) mainloop(ctx context.Context) {
 
 func (mw *MetachainWitness) update() {
 	// Mainchain
-	mw.updateMainchainBlockHeight()
+	if err := mw.updateMainchainBlockHeight(); err != nil {
+		// CalculateDynasty() divides by the height, and big.Int.Div panics on a nil
+		// operand. On a freshly started node the height is still nil, so a single
+		// failed RPC call here would take the validator down -- precisely during the
+		// degraded conditions that make the call fail. Skip the tick instead; the
+		// next one retries.
+		logger.Warnf("Skipping this witness update: %v", err)
+		return
+	}
 	dynasty := scom.CalculateDynasty(mw.mainchainBlockHeight)
 	if mw.witnessedDynasty == nil || dynasty.Cmp(mw.witnessedDynasty) > 0 { // needs to update the cache
 		mw.updateValidatorSetCache(dynasty)
@@ -281,24 +310,33 @@ func (mw *MetachainWitness) update() {
 
 	// Subchain
 	mw.collectInterChainMessageEventsOnSubchain()
-	mw.updateSubchainBlockHeight()
+	if err := mw.updateSubchainBlockHeight(); err != nil {
+		logger.Warnf("%v", err)
+	}
 }
 
-func (mw *MetachainWitness) updateMainchainBlockHeight() {
-	mbh, err := mw.mainchainEthRpcClient.BlockNumber(context.Background())
+func (mw *MetachainWitness) updateMainchainBlockHeight() error {
+	ctx, cancel := context.WithTimeout(context.Background(), blockHeightQueryTimeout)
+	defer cancel()
+
+	mbh, err := mw.mainchainEthRpcClient.BlockNumber(ctx)
 	if err != nil {
-		logger.Warnf("failed to get the mainchain block height %v\n", err)
-		return
+		return fmt.Errorf("failed to get the mainchain block height: %v", err)
 	}
 	mw.mainchainBlockHeight = big.NewInt(int64(mbh))
+	return nil
 }
 
-func (mw *MetachainWitness) updateSubchainBlockHeight() {
-	sbh, err := mw.subchainEthRpcClient.BlockNumber(context.Background())
+func (mw *MetachainWitness) updateSubchainBlockHeight() error {
+	ctx, cancel := context.WithTimeout(context.Background(), blockHeightQueryTimeout)
+	defer cancel()
+
+	sbh, err := mw.subchainEthRpcClient.BlockNumber(ctx)
 	if err != nil {
-		return
+		return fmt.Errorf("failed to get the subchain block height: %v", err)
 	}
 	mw.subchainBlockHeight = big.NewInt(int64(sbh))
+	return nil
 }
 
 func (mw *MetachainWitness) collectInterChainMessageEventsOnMainchain() {
@@ -337,12 +375,121 @@ func (mw *MetachainWitness) collectInterChainMessageEventsOnChain(queriedChainID
 	}
 	toBlock := mw.calculateToBlock(fromBlock, queriedChainID)
 	logger.Infof("Query inter-chain message events from block height %v to %v on chain %v", fromBlock.String(), toBlock.String(), queriedChainID.String())
-	events := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, tnt1155TokenBankAddr, mw.queryTopics, ethRpcUrl)
-	err = mw.interChainEventCache.InsertList(events)
-	if err != nil { // should not happen
-		logger.Panicf("failed to insert events into cache")
+	events, err := siu.QueryInterChainEventLog(queriedChainID, fromBlock, toBlock, tfuelTokenBankAddr, tnt20TokenBankAddr, tnt721TokenBankAddr, tnt1155TokenBankAddr, mw.queryTopics, ethRpcUrl)
+	if err != nil {
+		// The scan checkpoint must NOT advance here. Treating a failed query as an
+		// empty range would skip [fromBlock, toBlock] permanently: nothing rescans
+		// it, so any lock or burn inside it is lost and the nonce sequence jams.
+		logger.Errorf("Failed to query inter-chain events on chain %v for blocks %v-%v, will retry the same range: %v",
+			queriedChainID, fromBlock, toBlock, err)
+		return
 	}
+
+	events = mw.flagUncorroboratedEvents(queriedChainID, events)
+
+	if err := mw.interChainEventCache.InsertList(events); err != nil {
+		// Same reasoning: the events were fetched but not durably stored, so the
+		// range has to be scanned again. InsertList is keyed by (chain, type, nonce)
+		// and overwrites, so re-scanning is idempotent.
+		logger.Errorf("Failed to insert inter-chain events into the cache for chain %v, will retry blocks %v-%v: %v",
+			queriedChainID, fromBlock, toBlock, err)
+		return
+	}
+
+	// Only now is it safe to record that this range has been consumed.
 	mw.witnessState.setLastQueryedHeightForType(queriedChainID, toBlock)
+}
+
+// flagUncorroboratedEvents alarms on events the emitting TokenBank's own storage does
+// not confirm, and returns the list unchanged.
+//
+// It deliberately does NOT drop them. An earlier version did, on the reasoning that
+// unconfirmed events should never reach the cache. The problem is that "contradicted"
+// is not reliably distinguishable from "read too early": the corroboration read is
+// served from latest state, so a lagging or load-balanced RPC backend reports no
+// record for a nonce that was in fact committed. Dropping on that verdict discards a
+// real transfer permanently, because the scan window has already moved past the block
+// it came from and nothing rescans it. The resulting jam is exactly the failure this
+// chain is already living with.
+//
+// Keeping the event costs nothing in fund safety: the orchestrator repeats the check
+// and fails closed, so an uncorroborated event is never relayed regardless of whether
+// it sits in the cache. It is the orchestrator, not the cache, that gates a vote.
+func (mw *MetachainWitness) flagUncorroboratedEvents(queriedChainID *big.Int, events []*score.InterChainMessageEvent) []*score.InterChainMessageEvent {
+	if len(events) == 0 {
+		return events
+	}
+
+	headHeight := mw.getChainHeadHeight(queriedChainID)
+
+	for _, event := range events {
+		tokenBank := mw.getTokenBankForEventType(queriedChainID, event.Type)
+		err := siu.VerifyEventAgainstTokenBankState(tokenBank, event, headHeight)
+		if err == nil {
+			continue
+		}
+		if siu.IsEventNotCorroborated(err) {
+			logger.Errorf("Inter-chain event on chain %v is NOT confirmed by chain state; it will not be relayed: %v",
+				queriedChainID, err)
+			continue
+		}
+		logger.Warnf("Could not verify inter-chain event (type: %v, nonce: %v) on chain %v, the orchestrator will re-check: %v",
+			event.Type, event.Nonce, queriedChainID, err)
+	}
+
+	return events
+}
+
+// getChainHeadHeight returns the queried chain's current head, or nil if it is not
+// available. nil disables the staleness check rather than failing the verification.
+func (mw *MetachainWitness) getChainHeadHeight(queriedChainID *big.Int) *big.Int {
+	var height *big.Int
+	var err error
+	if queriedChainID.Cmp(mw.mainchainID) == 0 {
+		height, err = mw.GetMainchainBlockHeight()
+	} else {
+		height, err = mw.GetSubchainBlockHeight()
+	}
+	if err != nil {
+		logger.Warnf("Could not read the head height of chain %v, skipping the staleness check: %v", queriedChainID, err)
+		return nil
+	}
+	return height
+}
+
+// getTokenBankForEventType returns the TokenBank on the given chain that emits
+// the given event type, or nil if there is no such accessor.
+func (mw *MetachainWitness) getTokenBankForEventType(chainID *big.Int, eventType score.InterChainMessageEventType) siu.TokenBankEventHeightReader {
+	onMainchain := chainID.Cmp(mw.mainchainID) == 0
+
+	switch eventType {
+	case score.IMCEventTypeCrossChainTokenLockTFuel, score.IMCEventTypeCrossChainVoucherBurnTFuel,
+		score.IMCEventTypeCrossChainVoucherMintTFuel, score.IMCEventTypeCrossChainTokenUnlockTFuel:
+		if onMainchain {
+			return mw.mainchainTFuelTokenBank
+		}
+		return mw.subchainTFuelTokenBank
+	case score.IMCEventTypeCrossChainTokenLockTNT20, score.IMCEventTypeCrossChainVoucherBurnTNT20,
+		score.IMCEventTypeCrossChainVoucherMintTNT20, score.IMCEventTypeCrossChainTokenUnlockTNT20:
+		if onMainchain {
+			return mw.mainchainTNT20TokenBank
+		}
+		return mw.subchainTNT20TokenBank
+	case score.IMCEventTypeCrossChainTokenLockTNT721, score.IMCEventTypeCrossChainVoucherBurnTNT721,
+		score.IMCEventTypeCrossChainVoucherMintTNT721, score.IMCEventTypeCrossChainTokenUnlockTNT721:
+		if onMainchain {
+			return mw.mainchainTNT721TokenBank
+		}
+		return mw.subchainTNT721TokenBank
+	case score.IMCEventTypeCrossChainTokenLockTNT1155, score.IMCEventTypeCrossChainVoucherBurnTNT1155,
+		score.IMCEventTypeCrossChainVoucherMintTNT1155, score.IMCEventTypeCrossChainTokenUnlockTNT1155:
+		if onMainchain {
+			return mw.mainchainTNT1155TokenBank
+		}
+		return mw.subchainTNT1155TokenBank
+	}
+
+	return nil
 }
 
 func (mw *MetachainWitness) getBlockScanStartingHeight(queriedChainID *big.Int) *big.Int {

@@ -75,13 +75,15 @@ func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 	if c.Type != x.Type {
 		return false
 	}
-	if c.SourceChainID != x.SourceChainID {
+	// Note: these are *big.Int, so they have to be compared by value. Comparing
+	// the pointers would report two decodings of the same event as different.
+	if !bigIntEquals(c.SourceChainID, x.SourceChainID) {
 		return false
 	}
-	if c.TargetChainID != x.TargetChainID {
+	if !bigIntEquals(c.TargetChainID, x.TargetChainID) {
 		return false
 	}
-	if c.Nonce.Cmp(x.Nonce) != 0 {
+	if !bigIntEquals(c.Nonce, x.Nonce) {
 		return false
 	}
 	if c.Sender.Hex() != x.Sender.Hex() {
@@ -93,10 +95,17 @@ func (c *InterChainMessageEvent) Equals(x *InterChainMessageEvent) bool {
 	if !bytes.Equal(c.Data, x.Data) {
 		return false
 	}
-	if c.BlockHeight.Cmp(x.BlockHeight) != 0 {
+	if !bigIntEquals(c.BlockHeight, x.BlockHeight) {
 		return false
 	}
 	return true
+}
+
+func bigIntEquals(a *big.Int, b *big.Int) bool {
+	if a == nil || b == nil {
+		return a == b
+	}
+	return a.Cmp(b) == 0
 }
 
 // String represents the string representation of the event
@@ -878,6 +887,20 @@ func ExtractOriginatedChainIDFromDenom(denom string) (*big.Int, error) {
 	}
 
 	return chainID, nil
+}
+
+// ExtractContractAddressFromDenom returns the token contract address carried by a
+// denom of the form "<originatedChainID>/<tokenType>/<contractAddress>". It mirrors
+// TokenBankUtils.extractContractAddressFromDenom() in TokenBank.sol.
+func ExtractContractAddressFromDenom(denom string) (common.Address, error) {
+	parts := strings.Split(denom, "/")
+	if len(parts) != 3 {
+		return common.Address{}, fmt.Errorf("invalid denom: %v", denom)
+	}
+	if !common.IsHexAddress(parts[2]) {
+		return common.Address{}, fmt.Errorf("invalid contract address in denom: %v", denom)
+	}
+	return common.HexToAddress(parts[2]), nil
 }
 
 func ExtractCrossChainTokenTypeFromDenom(denom string) (CrossChainTokenType, error) {
