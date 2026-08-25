@@ -189,6 +189,10 @@ func (n *Node) Wait() {
 	n.Consensus.Wait()
 	n.SyncManager.Wait()
 	n.MainchainWitness.Wait()
+	// The orchestrator is started by Start() and must be waited on here too. Without
+	// this the process reports a graceful shutdown while a relay call or an event
+	// update is still in flight.
+	n.Orchestrator.Wait()
 
 	if n.RPC != nil {
 		n.RPC.Wait()
